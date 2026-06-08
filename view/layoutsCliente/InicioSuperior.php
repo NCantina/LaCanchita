@@ -1,3 +1,9 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$usuario_nombre = $_SESSION['usuario_nombre'] ?? 'Usuario';
+?>
 	<!-- Contenido principal del sitio -->
 	<div class="body">
 		<!-- Cabecera (header) del sitio -->
@@ -99,6 +105,7 @@
 											<i class="fas fa-user header-nav-top-icon"></i>
 										</a>
 										<div class="header-nav-features-dropdown header-nav-features-dropdown-mobile-fixed" id="headerUserDropdown" style="background-color:ghostwhite;">
+											<p class="text-center font-weight-bold mt-2 mb-1 text-dark"><?= htmlspecialchars($usuario_nombre) ?></p>
 											<div class="d-flex justify-content-around p-2">
 												<!-- Botón de Perfil -->
 												<button class="btn btn-primary d-flex align-items-center mr-2" style="border-radius: 25px; padding: 10px 20px;">
@@ -111,9 +118,9 @@
 												</a>
 
 												<!-- Botón de Cerrar Sesión -->
-												<button class="btn btn-danger d-flex align-items-center" style="border-radius: 25px; padding: 10px 20px;">
+												<a href="../../logout.php" class="btn btn-danger d-flex align-items-center" style="border-radius: 25px; padding: 10px 20px;">
 													<i class="fas fa-sign-out-alt mr-1"></i> Cerrar Sesión
-												</button>
+												</a>
 											</div>
 										</div>
 									</div>

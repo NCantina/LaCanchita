@@ -1,3 +1,9 @@
+<?php
+session_start();
+$error  = $_SESSION['login_error'] ?? null;
+$ok     = $_SESSION['registro_ok'] ?? null;
+unset($_SESSION['login_error'], $_SESSION['registro_ok']);
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -119,7 +125,13 @@
                     <div class="card login-form">
                         <div class="card-body">
                             <h3 class="text-center mb-4">Iniciar Sesión</h3>
-                            <form action="tu_archivo_de_login.php" method="post">
+                            <?php if ($error): ?>
+                                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+                            <?php endif; ?>
+                            <?php if ($ok): ?>
+                                <div class="alert alert-success"><?= htmlspecialchars($ok) ?></div>
+                            <?php endif; ?>
+                            <form action="procesar_login.php" method="post">
                                 <!-- Campo de Usuario o Email -->
                                 <div class="form-group">
                                     <label for="username">Usuario o Email</label>
