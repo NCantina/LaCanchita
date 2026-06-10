@@ -1,4 +1,5 @@
 <?php
+require_once "../../config/dist/script/php/auth_check.php";
 require_once "../../view/layoutsCliente/InicioHastaElContenido.php";
 require_once "../../view/layoutsCliente/InicioSuperior.php";
 ?>
@@ -294,19 +295,19 @@ require_once "../../view/layoutsCliente/InicioSuperior.php";
             <!-- Cuerpo del modal -->
             <div class="modal-body">
                 <!-- Formulario de inicio de sesión -->
-                <form action="/" id="frmSignIn" method="post">
+                <form action="../../procesar_login.php" id="frmSignIn" method="post">
                     <div class="form-row">
                         <div class="form-group col">
                             <label class="font-weight-bold text-dark text-2">Nombre de Usuario o E-mail</label>
-                            <input type="text" class="form-control form-control-lg"
-                                placeholder="Ingresa tu usuario o email">
+                            <input type="text" class="form-control form-control-lg" name="username"
+                                placeholder="Ingresa tu usuario o email" required>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group col">
                             <label class="font-weight-bold text-dark text-2">Contraseña</label>
-                            <input type="password" class="form-control form-control-lg"
-                                placeholder="Ingresa tu contraseña">
+                            <input type="password" class="form-control form-control-lg" name="password"
+                                placeholder="Ingresa tu contraseña" required>
                             <a class="float-right mt-2" href="#">¿Olvidaste tu contraseña?</a>
                         </div>
                     </div>

@@ -1,3 +1,9 @@
+<?php
+session_start();
+$error  = $_SESSION['registro_error'] ?? null;
+$datos  = $_SESSION['registro_data'] ?? [];
+unset($_SESSION['registro_error'], $_SESSION['registro_data']);
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -82,52 +88,69 @@
                     <div class="card register-form">
                         <div class="card-body">
                             <h3 class="text-center mb-4">Registrar Usuario</h3>
+                            <?php if ($error): ?>
+                                <div class="alert alert-danger"><?= $error ?></div>
+                            <?php endif; ?>
                             <form action="procesar_registro.php" method="post">
                                 <div class="form-row">
-                                    <!-- Campo de nombre de usuario -->
+                                    <!-- Campo de nombre -->
                                     <div class="form-group col-md-6">
-                                        <label for="username">Nombre de Usuario</label>
-                                        <input type="text" class="form-control" id="username" name="username"
-                                            placeholder="Ingresa tu nombre de usuario" required>
+                                        <label for="nombre">Nombre</label>
+                                        <input type="text" class="form-control" id="nombre" name="nombre"
+                                            placeholder="Ingresa tu nombre"
+                                            value="<?= htmlspecialchars($datos['nombre'] ?? '') ?>" required>
                                     </div>
 
                                     <!-- Campo de apellido -->
                                     <div class="form-group col-md-6">
                                         <label for="apellido">Apellido</label>
                                         <input type="text" class="form-control" id="apellido" name="apellido"
-                                            placeholder="Ingresa tu apellido" required>
+                                            placeholder="Ingresa tu apellido"
+                                            value="<?= htmlspecialchars($datos['apellido'] ?? '') ?>" required>
                                     </div>
                                 </div>
 
                                 <div class="form-row">
-                                    <!-- Campo de nombre -->
-                                    <div class="form-group col-md-6">
-                                        <label for="nombre">Nombre</label>
-                                        <input type="text" class="form-control" id="nombre" name="nombre"
-                                            placeholder="Ingresa tu nombre" required>
-                                    </div>
-
                                     <!-- Campo de DNI -->
                                     <div class="form-group col-md-6">
                                         <label for="dni">DNI</label>
                                         <input type="text" class="form-control" id="dni" name="dni"
-                                            placeholder="Ingresa tu DNI" required>
-                                    </div>
-                                </div>
-
-                                <div class="form-row">
-                                    <!-- Campo de Email -->
-                                    <div class="form-group col-md-6">
-                                        <label for="email">Email</label>
-                                        <input type="email" class="form-control" id="email" name="email"
-                                            placeholder="Ingresa tu correo electrónico" required>
+                                            placeholder="Ingresa tu DNI"
+                                            value="<?= htmlspecialchars($datos['dni'] ?? '') ?>" required>
                                     </div>
 
                                     <!-- Campo de teléfono -->
                                     <div class="form-group col-md-6">
                                         <label for="telefono">Teléfono</label>
                                         <input type="tel" class="form-control" id="telefono" name="telefono"
-                                            placeholder="Ingresa tu teléfono" required>
+                                            placeholder="Ingresa tu teléfono"
+                                            value="<?= htmlspecialchars($datos['telefono'] ?? '') ?>" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <!-- Campo de Email -->
+                                    <div class="form-group col-md-12">
+                                        <label for="email">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email"
+                                            placeholder="Ingresa tu correo electrónico"
+                                            value="<?= htmlspecialchars($datos['email'] ?? '') ?>" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <!-- Campo de contraseña -->
+                                    <div class="form-group col-md-6">
+                                        <label for="password">Contraseña</label>
+                                        <input type="password" class="form-control" id="password" name="password"
+                                            placeholder="Mínimo 6 caracteres" required>
+                                    </div>
+
+                                    <!-- Confirmar contraseña -->
+                                    <div class="form-group col-md-6">
+                                        <label for="password2">Confirmar Contraseña</label>
+                                        <input type="password" class="form-control" id="password2" name="password2"
+                                            placeholder="Repetí tu contraseña" required>
                                     </div>
                                 </div>
 
