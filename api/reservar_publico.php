@@ -118,6 +118,21 @@ $comp = mysqli_fetch_assoc(mysqli_query($link,
      WHERE co.COMPLEJO_ID=$complejo_id LIMIT 1"
 ));
 
+// Email de confirmación al cliente
+require_once __DIR__ . '/../config/dist/script/php/mailer.php';
+enviarEmailReserva('pendiente', [
+    'nombre'     => $_SESSION['usuario_nombre']   ?? '',
+    'apellido'   => $_SESSION['usuario_apellido'] ?? '',
+    'email'      => $_SESSION['usuario_email']    ?? '',
+    'cancha'     => $comp['CANCHA_NOMBRE']        ?? '',
+    'complejo'   => $comp['COMPLEJO_NOMBRE']      ?? '',
+    'fecha'      => $fecha,
+    'hora_ini'   => $h_ini,
+    'hora_fin'   => $h_fin,
+    'precio'     => $precio,
+    'reserva_id' => $reserva_id,
+]);
+
 resp(true,'¡Reserva enviada! El predio la confirmará pronto.',[
     'RESERVA_ID'      => $reserva_id,
     'HORA_INICIO'     => substr($h_ini,0,5),
