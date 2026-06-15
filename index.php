@@ -392,11 +392,38 @@ function colorTipo($tipo) {
             background: rgba(76,217,100,0.06);
         }
         .searcher-field select option { background: #1a1a1a; color: var(--text); }
-        .searcher-field input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            opacity: 0.4;
-            cursor: pointer;
+        .s-fecha-display {
+            width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+            color: var(--text); border-radius: 8px; padding: 10px 14px; font-size: 0.92rem;
+            font-family: inherit; cursor: pointer; text-align: left;
+            display: flex; align-items: center; gap: 6px;
+            transition: border-color 0.2s, background 0.2s;
         }
+        .s-fecha-display:hover, .s-fecha-display.open {
+            border-color: var(--green); background: rgba(76,217,100,0.06);
+        }
+        .s-cal-popup {
+            position: absolute; top: calc(100% + 6px); left: 0; z-index: 600;
+            background: #141414; border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            min-width: 280px; display: none;
+        }
+        .s-cal-popup.open { display: block; }
+        /* Calendario compartido */
+        .lc-cal { background: rgba(255,255,255,0.03); border-radius: 0; overflow: hidden; user-select: none; }
+        .lc-cal-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .lc-cal-title { font-size: 13px; font-weight: 700; color: #fff; text-transform: capitalize; }
+        .lc-cal-nav { background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; padding: 5px 9px; border-radius: 7px; font-size: 12px; transition: color 0.15s, background 0.15s; line-height: 1; }
+        .lc-cal-nav:hover:not(:disabled) { color: var(--green); background: rgba(76,217,100,0.08); }
+        .lc-cal-nav:disabled { opacity: 0.2; cursor: not-allowed; }
+        .lc-cal-week { display: grid; grid-template-columns: repeat(7,1fr); padding: 8px 10px 2px; gap: 2px; }
+        .lc-cal-week span { text-align: center; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.35); letter-spacing: 0.4px; }
+        .lc-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); padding: 4px 10px 10px; gap: 3px; }
+        .lc-cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid transparent; background: none; color: #fff; transition: all 0.12s; line-height: 1; padding: 0; }
+        .lc-cal-day:hover:not(:disabled) { background: rgba(76,217,100,0.08); border-color: rgba(76,217,100,0.25); color: var(--green); }
+        .lc-cal-day.today { border-color: rgba(76,217,100,0.5); color: var(--green); font-weight: 700; }
+        .lc-cal-day.selected { background: var(--green) !important; border-color: var(--green) !important; color: #000 !important; font-weight: 700; }
+        .lc-cal-day:disabled { opacity: 0.2; cursor: not-allowed; }
         .btn-search {
             width: 100%;
             padding: 11px 20px;
@@ -1281,9 +1308,16 @@ function colorTipo($tipo) {
                     <option value="">Seleccioná partido</option>
                 </select>
             </div>
-            <div class="searcher-field">
-                <label for="s-fecha"><i class="fas fa-calendar"></i> &nbsp;Fecha</label>
-                <input type="date" id="s-fecha" name="fecha" value="<?= date('Y-m-d') ?>">
+            <div class="searcher-field" style="position:relative">
+                <label><i class="fas fa-calendar"></i> &nbsp;Fecha</label>
+                <input type="hidden" id="s-fecha" name="fecha" value="<?= date('Y-m-d') ?>">
+                <button type="button" id="s-fecha-btn" onclick="toggleCalSearch(event)" class="s-fecha-display">
+                    <span id="s-fecha-label"><?= date('d/m/Y') ?></span>
+                    <i class="fas fa-chevron-down" style="font-size:10px;opacity:0.4;margin-left:auto"></i>
+                </button>
+                <div id="s-cal-popup" class="s-cal-popup">
+                    <div id="s-cal-container"></div>
+                </div>
             </div>
             <div class="searcher-field">
                 <label for="s-horario"><i class="fas fa-clock"></i> &nbsp;Horario</label>
@@ -1817,11 +1851,100 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 animEls.forEach(el => observer.observe(el));
 
-// Default date input to today
-const fechaInput = document.getElementById('s-fecha');
-if (fechaInput && !fechaInput.value) {
-    fechaInput.value = new Date().toISOString().split('T')[0];
+// ── CALENDARIO VISUAL ──────────────────────────────────────────────────────
+class CalendarioLC {
+    constructor(containerId, onSelect) {
+        this.el       = document.getElementById(containerId);
+        this.onSelect = onSelect;
+        this._today   = new Date(); this._today.setHours(0,0,0,0);
+        this.selected = new Date(this._today);
+        this.current  = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        this._render();
+    }
+    setDate(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        this.selected = d;
+        this.current  = new Date(d.getFullYear(), d.getMonth(), 1);
+        this._render();
+    }
+    prevMonth() {
+        const floor = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        if (this.current <= floor) return;
+        this.current.setMonth(this.current.getMonth() - 1);
+        this._render();
+    }
+    nextMonth() {
+        this.current.setMonth(this.current.getMonth() + 1);
+        this._render();
+    }
+    pick(y, m, d) {
+        const date = new Date(y, m, d);
+        if (date < this._today) return;
+        this.selected = date;
+        const yyyy = date.getFullYear();
+        const mm   = String(date.getMonth() + 1).padStart(2, '0');
+        const dd   = String(date.getDate()).padStart(2, '0');
+        this._render();
+        this.onSelect(`${yyyy}-${mm}-${dd}`);
+    }
+    _render() {
+        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const DIA_L = ['L','M','X','J','V','S','D'];
+        const y = this.current.getFullYear(), m = this.current.getMonth();
+        const offset  = (new Date(y, m, 1).getDay() + 6) % 7;
+        const daysInM = new Date(y, m + 1, 0).getDate();
+        const todayMs = this._today.getTime();
+        const selMs   = this.selected ? this.selected.getTime() : -1;
+        const floor   = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        const canPrev = this.current > floor;
+        let cells = '<span></span>'.repeat(offset);
+        for (let d = 1; d <= daysInM; d++) {
+            const ms   = new Date(y, m, d).getTime();
+            const past = ms < todayMs;
+            const cls  = ['lc-cal-day', ms===todayMs?'today':'', ms===selMs?'selected':''].filter(Boolean).join(' ');
+            const act  = past ? 'disabled' : `onclick="window._lcCalSearch.pick(${y},${m},${d})"`;
+            cells += `<button class="${cls}" ${act}>${d}</button>`;
+        }
+        this.el.innerHTML = `
+<div class="lc-cal">
+  <div class="lc-cal-head">
+    <button class="lc-cal-nav" onclick="window._lcCalSearch.prevMonth()" ${canPrev?'':'disabled'}><i class="fas fa-chevron-left"></i></button>
+    <span class="lc-cal-title">${MESES[m]} ${y}</span>
+    <button class="lc-cal-nav" onclick="window._lcCalSearch.nextMonth()"><i class="fas fa-chevron-right"></i></button>
+  </div>
+  <div class="lc-cal-week">${DIA_L.map(d=>`<span>${d}</span>`).join('')}</div>
+  <div class="lc-cal-grid">${cells}</div>
+</div>`;
+    }
 }
+
+let _lcCalSearch = null;
+function toggleCalSearch(e) {
+    if (e) e.stopPropagation();
+    const popup = document.getElementById('s-cal-popup');
+    const btn   = document.getElementById('s-fecha-btn');
+    const open  = popup.classList.toggle('open');
+    btn.classList.toggle('open', open);
+    if (open && !_lcCalSearch) {
+        _lcCalSearch = new CalendarioLC('s-cal-container', function(fecha) {
+            document.getElementById('s-fecha').value = fecha;
+            const [y,m,d] = fecha.split('-');
+            document.getElementById('s-fecha-label').textContent = `${d}/${m}/${y}`;
+            document.getElementById('s-cal-popup').classList.remove('open');
+            document.getElementById('s-fecha-btn').classList.remove('open');
+        });
+        window._lcCalSearch = _lcCalSearch;
+    }
+}
+document.addEventListener('click', function(e) {
+    const popup = document.getElementById('s-cal-popup');
+    const btn   = document.getElementById('s-fecha-btn');
+    if (popup && !popup.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+        popup.classList.remove('open');
+        btn.classList.remove('open');
+    }
+});
+// ── FIN CALENDARIO ──────────────────────────────────────────────────────────
 
 // Pre-cargar partidos de la provincia pre-seleccionada y seleccionar La Plata
 (function() {

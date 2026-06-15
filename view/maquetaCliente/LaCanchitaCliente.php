@@ -516,6 +516,22 @@ $esStaff = $perfil <= 4;
         .slot-btn .slot-price { font-size: 11px; color: var(--text-muted); font-weight: 400; display: block; margin-top: 2px; }
         .slot-btn.selected .slot-price { color: var(--green-dark); }
         .slots-empty { font-size: 12px; color: var(--text-muted); padding: 10px 0; }
+
+        /* ── CALENDARIO VISUAL ── */
+        .lc-cal { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 14px; user-select: none; }
+        .lc-cal-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+        .lc-cal-title { font-size: 13px; font-weight: 700; color: var(--text); text-transform: capitalize; }
+        .lc-cal-nav { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px 9px; border-radius: 7px; font-size: 12px; transition: color 0.15s, background 0.15s; line-height: 1; }
+        .lc-cal-nav:hover:not(:disabled) { color: var(--green); background: rgba(76,217,100,0.08); }
+        .lc-cal-nav:disabled { opacity: 0.2; cursor: not-allowed; }
+        .lc-cal-week { display: grid; grid-template-columns: repeat(7,1fr); padding: 8px 10px 2px; gap: 2px; }
+        .lc-cal-week span { text-align: center; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.4px; }
+        .lc-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); padding: 4px 10px 10px; gap: 3px; }
+        .lc-cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid transparent; background: none; color: var(--text); transition: all 0.12s; line-height: 1; padding: 0; }
+        .lc-cal-day:hover:not(:disabled) { background: rgba(76,217,100,0.08); border-color: rgba(76,217,100,0.25); color: var(--green); }
+        .lc-cal-day.today { border-color: rgba(76,217,100,0.5); color: var(--green); font-weight: 700; }
+        .lc-cal-day.selected { background: var(--green) !important; border-color: var(--green) !important; color: #000 !important; font-weight: 700; }
+        .lc-cal-day:disabled { opacity: 0.2; cursor: not-allowed; }
         .reserva-resumen {
             background: rgba(76,217,100,0.06); border: 1px solid rgba(76,217,100,0.15);
             border-radius: 10px; padding: 11px 14px; margin-bottom: 4px;
@@ -894,10 +910,8 @@ $esStaff = $perfil <= 4;
             <strong id="modalCanchaNombre">—</strong>
             <span id="modalCanchaDetalle">—</span>
         </div>
-        <div class="modal-field">
-            <label>Fecha</label>
-            <input type="date" id="modalFecha" min="<?= date('Y-m-d') ?>">
-        </div>
+        <input type="hidden" id="modalFecha">
+        <div id="calModalContainer"></div>
         <div class="modal-slots-label"><i class="fas fa-clock" style="margin-right:5px"></i>Horarios disponibles</div>
         <div class="slots-grid" id="modalSlotsGrid">
             <span class="slots-empty">Elegí una fecha para ver los horarios.</span>
@@ -1149,9 +1163,15 @@ function abrirReserva(id, nombre, tipo) {
     }
 
     const hoy = new Date().toISOString().split('T')[0];
-    const fechaInput = document.getElementById('modalFecha');
-    fechaInput.value = hoy;
-    fechaInput.min   = hoy;
+    document.getElementById('modalFecha').value = hoy;
+    if (!window._lcCal) {
+        window._lcCal = new CalendarioLC('calModalContainer', function(fecha) {
+            document.getElementById('modalFecha').value = fecha;
+            actualizarSlots(fecha);
+        });
+    } else {
+        window._lcCal.setDate(hoy);
+    }
 
     actualizarSlots(hoy);
     document.getElementById('modalReserva').classList.add('show');
@@ -1437,12 +1457,76 @@ async function cancelarReserva(id) {
     if (j.ok) loadMisReservas();
 }
 
-// Listener fecha del modal → actualizar slots
-document.getElementById('modalFecha').addEventListener('change', function() {
-    actualizarSlots(this.value);
-});
-
 document.getElementById('modalReserva').addEventListener('click', function(e) { if(e.target===this) cerrarModal(); });
+
+// ── CALENDARIO VISUAL ──
+class CalendarioLC {
+    constructor(containerId, onSelect) {
+        this.el       = document.getElementById(containerId);
+        this.onSelect = onSelect;
+        this._today   = new Date(); this._today.setHours(0,0,0,0);
+        this.selected = new Date(this._today);
+        this.current  = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        this._render();
+    }
+    setDate(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        this.selected = d;
+        this.current  = new Date(d.getFullYear(), d.getMonth(), 1);
+        this._render();
+    }
+    prevMonth() {
+        const floor = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        if (this.current <= floor) return;
+        this.current.setMonth(this.current.getMonth() - 1);
+        this._render();
+    }
+    nextMonth() {
+        this.current.setMonth(this.current.getMonth() + 1);
+        this._render();
+    }
+    pick(y, m, d) {
+        const date = new Date(y, m, d);
+        if (date < this._today) return;
+        this.selected = date;
+        const yyyy = date.getFullYear();
+        const mm   = String(date.getMonth() + 1).padStart(2, '0');
+        const dd   = String(date.getDate()).padStart(2, '0');
+        this._render();
+        this.onSelect(`${yyyy}-${mm}-${dd}`);
+    }
+    _render() {
+        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const DIA_L = ['L','M','X','J','V','S','D'];
+        const y = this.current.getFullYear(), m = this.current.getMonth();
+        const offset   = (new Date(y, m, 1).getDay() + 6) % 7;
+        const daysInM  = new Date(y, m + 1, 0).getDate();
+        const todayMs  = this._today.getTime();
+        const selMs    = this.selected ? this.selected.getTime() : -1;
+        const floor    = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        const canPrev  = this.current > floor;
+
+        let cells = '<span></span>'.repeat(offset);
+        for (let d = 1; d <= daysInM; d++) {
+            const ms   = new Date(y, m, d).getTime();
+            const past = ms < todayMs;
+            const cls  = ['lc-cal-day', ms===todayMs?'today':'', ms===selMs?'selected':''].filter(Boolean).join(' ');
+            const act  = past ? 'disabled' : `onclick="window._lcCal.pick(${y},${m},${d})"`;
+            cells += `<button class="${cls}" ${act}>${d}</button>`;
+        }
+
+        this.el.innerHTML = `
+<div class="lc-cal">
+  <div class="lc-cal-head">
+    <button class="lc-cal-nav" onclick="window._lcCal.prevMonth()" ${canPrev?'':'disabled'}><i class="fas fa-chevron-left"></i></button>
+    <span class="lc-cal-title">${MESES[m]} ${y}</span>
+    <button class="lc-cal-nav" onclick="window._lcCal.nextMonth()"><i class="fas fa-chevron-right"></i></button>
+  </div>
+  <div class="lc-cal-week">${DIA_L.map(d=>`<span>${d}</span>`).join('')}</div>
+  <div class="lc-cal-grid">${cells}</div>
+</div>`;
+    }
+}
 
 // ── UTIL ──
 function escHtml(s) {
