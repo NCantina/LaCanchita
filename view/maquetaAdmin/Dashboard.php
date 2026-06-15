@@ -1311,8 +1311,35 @@ if ($perfil >= 2) {
         .main { margin-left: 0 !important; }
         .tb-date { display: none; }
         .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-        .page-header { flex-direction: column; }
+        .page-header { flex-direction: column; align-items: flex-start; }
         th:nth-child(3), td:nth-child(3) { display: none; }
+        /* Grids con ID que usan inline styles */
+        #agendaKpis    { grid-template-columns: repeat(2,1fr) !important; }
+        #predioCanchasGrid { grid-template-columns: 1fr !important; }
+        #horLayoutGrid { grid-template-columns: 1fr !important; }
+        #pagosKpisGrid { grid-template-columns: repeat(3,1fr) !important; }
+        /* Agenda header con filtros */
+        .page-header-right { flex-wrap: wrap; gap: 8px !important; }
+        .page-header-right > * { flex: 1 1 140px; }
+        /* Cards */
+        .card { border-radius: 12px; }
+        /* Topbar */
+        .topbar { padding: 0 12px; gap: 8px; }
+    }
+    @media (max-width: 480px) {
+        .content { padding: 12px; }
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .kpi-val  { font-size: 1.5rem; }
+        .rep-kpi-grid { grid-template-columns: repeat(2,1fr); gap: 10px; }
+        .rep-kpi .kpi-val { font-size: 1.3rem; }
+        #agendaKpis    { grid-template-columns: repeat(2,1fr) !important; }
+        #pagosKpisGrid { grid-template-columns: 1fr !important; }
+        .page-sub { font-size: 12px; }
+        .tb-title { font-size: 13px; }
+        /* Ocultar columnas extra en tablas */
+        th:nth-child(4), td:nth-child(4) { display: none; }
+        /* Modales/form grids */
+        .wiz-2col { grid-template-columns: 1fr !important; }
     }
     </style>
 </head>
@@ -2178,7 +2205,7 @@ if ($perfil >= 2) {
             </div>
 
             <!-- Layout 2 paneles -->
-            <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
+            <div id="horLayoutGrid" style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
 
                 <!-- Panel izquierdo: selector complejo + lista canchas -->
                 <div>
@@ -2422,7 +2449,7 @@ if ($perfil >= 2) {
             </div>
 
             <!-- Resumen rápido -->
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
+            <div id="pagosKpisGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
                 <div class="kpi-card">
                     <div class="kpi-icon g"><i class="fas fa-check-circle"></i></div>
                     <div class="kpi-val" id="pvCobrado">—</div>
