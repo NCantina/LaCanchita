@@ -1087,6 +1087,14 @@ function colorTipo($tipo) {
             color: var(--text-muted);
         }
 
+        /* Modal scroll on small screens */
+        #modal-auth > div,
+        #modal-reserva > div {
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         /* ============ TOAST ============ */
         .toast {
             position: fixed;
@@ -1134,13 +1142,32 @@ function colorTipo($tipo) {
         }
         @media (max-width: 600px) {
             section { padding: 60px 4%; }
+            #inicio { padding: 80px 4% 40px; }
             .hero-title { font-size: 2rem; }
-            .searcher { grid-template-columns: 1fr; }
+            .hero-subtitle { font-size: 0.95rem; margin-bottom: 28px; }
+            .searcher { grid-template-columns: 1fr; gap: 10px; padding: 16px; }
             .canchas-grid { grid-template-columns: 1fr; }
             .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+            .stat-number { font-size: 1.8rem; }
+            .section-header { margin-bottom: 32px; }
             .benefits-list { grid-template-columns: 1fr; }
+            .duenos-visual { padding: 20px 16px; }
             .footer-grid { grid-template-columns: 1fr; gap: 28px; }
             .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+            .res-body { padding: 14px 16px 16px; }
+            .resultados-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .toast { right: 12px; left: 12px; max-width: none; bottom: 16px; }
+        }
+        @media (max-width: 480px) {
+            .hero-badge { font-size: 0.72rem; padding: 4px 11px; }
+            .hero-title { font-size: 1.75rem; }
+            .navbar { padding: 0 4%; }
+            .nav-brand img { height: 28px; }
+            .stats-bar { padding: 20px 4%; }
+            .stat-number { font-size: 1.6rem; }
+            .section-title { font-size: 1.5rem; }
+            .predio-card { padding: 16px; }
+            .step-card { padding: 22px 14px; }
         }
     </style>
 </head>
