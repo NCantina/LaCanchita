@@ -588,7 +588,29 @@ case 'confirmar':
     mysqli_stmt_bind_param($stmt, 'i', $reserva_id);
     mysqli_stmt_execute($stmt);
 
-    resp(true, 'Reserva confirmada.', null);
+    // Traer datos para notificación WhatsApp
+    $notif = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO, u.USUARIOS_TELEFONO,
+                ca.CANCHA_NOMBRE, co.COMPLEJO_NOMBRE, co.COMPLEJO_TELEFONO,
+                r.RESERVA_FECHA, r.RESERVA_HORA_INICIO, r.RESERVA_HORA_FIN, r.RESERVA_PRECIO
+         FROM reserva r
+         JOIN usuarios u  ON u.USUARIOS_ID = r.USUARIOS_ID
+         JOIN cancha ca   ON ca.CANCHA_ID  = r.CANCHA_ID
+         JOIN complejo co ON co.COMPLEJO_ID = ca.COMPLEJO_ID
+         WHERE r.RESERVA_ID = $reserva_id LIMIT 1"
+    ));
+
+    resp(true, 'Reserva confirmada.', $notif ? [
+        'cliente_nombre' => $notif['USUARIOS_NOMBRE'] . ' ' . $notif['USUARIOS_APELLIDO'],
+        'cliente_tel'    => $notif['USUARIOS_TELEFONO'] ?? '',
+        'cancha'         => $notif['CANCHA_NOMBRE'],
+        'complejo'       => $notif['COMPLEJO_NOMBRE'],
+        'complejo_tel'   => $notif['COMPLEJO_TELEFONO'] ?? '',
+        'fecha'          => $notif['RESERVA_FECHA'],
+        'hora_ini'       => substr($notif['RESERVA_HORA_INICIO'],0,5),
+        'hora_fin'       => substr($notif['RESERVA_HORA_FIN'],0,5),
+        'precio'         => $notif['RESERVA_PRECIO'],
+    ] : null);
 
 // ── RECHAZAR (admin/staff) ─────────────────────────────────────────────────
 case 'rechazar':

@@ -5509,7 +5509,11 @@ async function agendaConfirmar(id) {
     try {
         const j = await (await fetch('api/reservas.php',{method:'POST',body:fd})).json();
         toast(j.msg || (j.ok ? 'Reserva confirmada' : 'Error'), j.ok ? 'ok' : 'err');
-        if (j.ok) { loadAgenda(); actualizarBadgePendientes(); }
+        if (j.ok) {
+            loadAgenda();
+            actualizarBadgePendientes();
+            if (j.data?.cliente_tel) notifWspCliente(j.data);
+        }
     } catch(e) { toast('Error de conexión','err'); }
 }
 
@@ -7124,13 +7128,35 @@ function resCardHtml(r) {
     </div>`;
 }
 
+function notifWspCliente(d) {
+    // Normalizar teléfono: sacar todo lo que no sea dígito y agregar 54 si no arranca con él
+    let tel = (d.cliente_tel || '').replace(/\D/g,'');
+    if (!tel) return;
+    if (!tel.startsWith('54')) tel = '54' + tel;
+
+    const fecha = new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-AR',
+        { weekday:'long', day:'numeric', month:'long' });
+    const msg = `¡Hola ${d.cliente_nombre}! ✅ Tu reserva en *${d.complejo}* fue *confirmada*.\n\n` +
+        `📅 ${fecha}\n` +
+        `⏰ ${d.hora_ini} – ${d.hora_fin}\n` +
+        `🏟️ ${d.cancha}\n` +
+        `💰 $${parseFloat(d.precio).toLocaleString('es-AR')}\n\n` +
+        `¡Te esperamos! 🎉`;
+
+    window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
 async function resConfirmar(id) {
     if (!confirm('¿Confirmar esta reserva?')) return;
     const fd = new FormData();
     fd.append('action','confirmar'); fd.append('reserva_id',id);
     const j = await (await fetch(RES_API,{method:'POST',body:fd})).json();
-    if (j.ok) { toast('Reserva confirmada','ok'); loadReservas(); actualizarBadgePendientes(); }
-    else toast(j.msg,'err');
+    if (j.ok) {
+        toast('Reserva confirmada','ok');
+        loadReservas();
+        actualizarBadgePendientes();
+        if (j.data?.cliente_tel) notifWspCliente(j.data);
+    } else toast(j.msg,'err');
 }
 
 async function resRechazar(id) {
