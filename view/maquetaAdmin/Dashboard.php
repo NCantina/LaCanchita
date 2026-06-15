@@ -1517,6 +1517,11 @@ if ($perfil >= 2) {
         <a href="../maquetaCliente/LaCanchitaCliente.php" class="sb-footer-link client">
             <i class="fas fa-arrow-left"></i> Ver panel cliente
         </a>
+        <?php if ($perfil === 1): ?>
+        <a href="../maquetaSuperAdmin/PanelDesarrollador.php" class="sb-footer-link" style="color:#9b59b6;border-color:rgba(155,89,182,.2);background:rgba(155,89,182,.06)">
+            <i class="fas fa-code"></i> Panel desarrollador
+        </a>
+        <?php endif; ?>
         <a href="../../logout.php" class="sb-footer-link logout">
             <i class="fas fa-sign-out-alt"></i> Cerrar sesión
         </a>
