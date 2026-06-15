@@ -1821,7 +1821,7 @@ function handleSearch(e) {
                         <div class="res-name">${escHtml(c.CANCHA_NOMBRE)}</div>
                         <div class="res-complejo">
                             <i class="fas fa-building" style="color:${color};font-size:11px"></i>
-                            ${escHtml(c.COMPLEJO_NOMBRE)}
+                            <a href="predio.php?id=${c.COMPLEJO_ID}" style="color:inherit;text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color=''">${escHtml(c.COMPLEJO_NOMBRE)}</a>
                             ${c.LOCALIDAD_NOMBRE ? ' &mdash; ' + escHtml(c.LOCALIDAD_NOMBRE) : ''}
                         </div>
                         <div class="res-slots">${slotsHtml}</div>
