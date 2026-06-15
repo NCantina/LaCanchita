@@ -591,10 +591,24 @@ $esStaff = $perfil <= 4;
             .franjas-grid { grid-template-columns: repeat(2, 1fr); }
             .predio-header-card { flex-direction: column; }
             .cancha-detalle-header { gap: 10px; }
+            .reserva-card-meta { flex-wrap: wrap; gap: 10px; }
+            .modal-box { padding: 18px 16px; max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .toast { white-space: normal; left: 12px; right: 12px; transform: translateY(20px); width: auto; }
+            .toast.show { transform: translateY(0); }
+            .slots-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        @media (max-width: 400px) {
-            .content { padding: 14px; }
-            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        @media (max-width: 480px) {
+            .content { padding: 12px; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .kpi-value { font-size: 22px; }
+            .greeting h1 { font-size: 18px; }
+            .topbar { padding: 0 12px; gap: 8px; }
+            .topbar-title { font-size: 13px; }
+            .reserva-card { padding: 14px 16px; }
+            .reserva-card-header { flex-wrap: wrap; gap: 6px; }
+            .reserva-card-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .predio-header-card { padding: 14px 16px; gap: 14px; }
+            .activity-box { padding: 12px 14px; }
         }
     </style>
 </head>
