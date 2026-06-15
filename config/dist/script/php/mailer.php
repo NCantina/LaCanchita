@@ -128,8 +128,101 @@ function enviarEmailReserva(string $tipo, array $datos): bool {
         $mail->send();
         return true;
     } catch (Exception $e) {
-        // Silencioso: no romper el flujo de reserva por un error de email
         error_log('Mailer error: ' . $mail->ErrorInfo);
+        return false;
+    }
+}
+
+/**
+ * Envía un recordatorio de cobro pendiente al cliente (dueño de predio).
+ */
+function enviarRecordatorioCobro(array $datos): bool {
+    if (!defined('MAIL_ENABLED') || !MAIL_ENABLED) return false;
+
+    $nombre  = trim(($datos['nombre'] ?? '') . ' ' . ($datos['apellido'] ?? ''));
+    $email   = $datos['email']        ?? '';
+    $plan    = $datos['plan_nombre']  ?? 'Estándar';
+    $precio  = (float)($datos['plan_precio'] ?? 0);
+    $prox    = $datos['proximo_cobro'] ?? '';
+
+    if (!$email) return false;
+
+    $precio_fmt = '$' . number_format($precio, 0, ',', '.');
+
+    $prox_fmt = '';
+    if ($prox) {
+        $d = DateTime::createFromFormat('Y-m-d', $prox);
+        if ($d) {
+            $dias  = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+            $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+            $prox_fmt = $dias[(int)$d->format('w')] . ', ' . $d->format('j') . ' de ' . $meses[(int)$d->format('n')-1] . ' de ' . $d->format('Y');
+        }
+    }
+
+    $html = "<!DOCTYPE html>
+<html lang='es'>
+<head><meta charset='utf-8'><title>Recordatorio de cobro</title></head>
+<body style='margin:0;padding:0;background:#f4f4f4;font-family:Segoe UI,Arial,sans-serif'>
+<table width='100%' cellpadding='0' cellspacing='0' style='background:#f4f4f4;padding:32px 0'>
+  <tr><td align='center'>
+    <table width='560' cellpadding='0' cellspacing='0' style='background:#fff;border-radius:16px;overflow:hidden;max-width:95%'>
+      <tr><td style='background:#0d0d0d;padding:28px 36px;text-align:center'>
+        <div style='color:#4cd964;font-size:22px;font-weight:800'>La Canchita</div>
+        <div style='color:rgba(255,255,255,.5);font-size:13px;margin-top:2px'>Sistema de reservas deportivas</div>
+      </td></tr>
+      <tr><td style='background:#ff950018;border-bottom:3px solid #ff9500;padding:20px 36px;text-align:center'>
+        <div style='font-size:20px;font-weight:800;color:#1a1a1a'>⏰ Recordatorio de pago</div>
+        <div style='font-size:14px;color:#555;margin-top:4px'>Tenés un pago pendiente de tu suscripción.</div>
+      </td></tr>
+      <tr><td style='padding:28px 36px 0'>
+        <p style='margin:0;font-size:15px;color:#333'>Hola <strong>" . htmlspecialchars($nombre) . "</strong>,</p>
+        <p style='margin:12px 0 0;font-size:14px;color:#555'>Te recordamos que tenés un pago pendiente de tu suscripción a La Canchita.</p>
+      </td></tr>
+      <tr><td style='padding:20px 36px'>
+        <table width='100%' cellpadding='0' cellspacing='0' style='background:#f8f9fa;border-radius:12px;overflow:hidden'>
+          <tr><td colspan='2' style='background:#1a1a1a;padding:12px 18px;font-size:12px;font-weight:700;color:#4cd964;text-transform:uppercase;letter-spacing:.06em'>Detalle de tu suscripción</td></tr>
+          <tr style='border-bottom:1px solid #eee'>
+            <td style='padding:12px 18px;font-size:13px;color:#888;width:40%'>📦 Plan</td>
+            <td style='padding:12px 18px;font-size:13px;font-weight:600;color:#333'>" . htmlspecialchars($plan) . "</td>
+          </tr>
+          <tr style='border-bottom:1px solid #eee'>
+            <td style='padding:12px 18px;font-size:13px;color:#888'>💰 Monto</td>
+            <td style='padding:12px 18px;font-size:14px;font-weight:800;color:#ff9500'>{$precio_fmt}</td>
+          </tr>
+          " . ($prox_fmt ? "<tr><td style='padding:12px 18px;font-size:13px;color:#888'>📅 Vence</td><td style='padding:12px 18px;font-size:13px;font-weight:600;color:#e74c3c'>" . htmlspecialchars(ucfirst($prox_fmt)) . "</td></tr>" : '') . "
+        </table>
+      </td></tr>
+      <tr><td style='padding:0 36px 28px;text-align:center'>
+        <p style='margin:0;font-size:13px;color:#555'>Para consultas o realizar el pago, contactate con el equipo de La Canchita.</p>
+      </td></tr>
+      <tr><td style='padding:20px 36px 28px;text-align:center;border-top:1px solid #eee'>
+        <p style='margin:0;font-size:12px;color:#aaa'>La Canchita · Sistema de reservas deportivas<br>Este email fue generado automáticamente.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>";
+
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = MAIL_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = MAIL_USER;
+        $mail->Password   = MAIL_PASS;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = MAIL_PORT;
+        $mail->CharSet    = 'UTF-8';
+        $mail->setFrom(MAIL_FROM, MAIL_FROM_NAME);
+        $mail->addAddress($email, $nombre);
+        $mail->isHTML(true);
+        $mail->Subject = '⏰ Recordatorio de pago — La Canchita';
+        $mail->Body    = $html;
+        $mail->AltBody = "Recordatorio de pago | Plan: $plan | Monto: $precio_fmt" . ($prox_fmt ? " | Vence: $prox_fmt" : '');
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log('Mailer recordatorio error: ' . $mail->ErrorInfo);
         return false;
     }
 }
