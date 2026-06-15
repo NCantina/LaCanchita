@@ -121,8 +121,6 @@ if ($action === 'mrr_historico') {
     $result = [];
     for ($i = 5; $i >= 0; $i--) {
         $mes   = date('Y-m', strtotime("-$i months"));
-        $label = ucfirst(strftime('%b', strtotime("-$i months")));
-        // Fallback label if strftime not available
         $meses = ['Jan'=>'Ene','Feb'=>'Feb','Mar'=>'Mar','Apr'=>'Abr','May'=>'May','Jun'=>'Jun',
                   'Jul'=>'Jul','Aug'=>'Ago','Sep'=>'Sep','Oct'=>'Oct','Nov'=>'Nov','Dec'=>'Dic'];
         $label = $meses[date('M', strtotime("-$i months"))] ?? date('M', strtotime("-$i months"));
