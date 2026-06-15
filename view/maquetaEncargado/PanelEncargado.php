@@ -1,16 +1,9 @@
 <?php
-session_start();
-require_once '../../config/dist/script/php/conn.php';
-require_once '../../config/dist/script/php/tenancy.php';
+require_once '../../config/dist/script/php/auth_view.php';
+require_view(3, 4);
 
-// Solo encargados y empleados
-$perfil = (int)($_SESSION['usuario_perfil'] ?? 0);
-if (!$perfil) { header('Location: ../../login.php'); exit; }
-if ($perfil === 5) { header('Location: ../maquetaCliente/LaCanchitaCliente.php'); exit; }
-if ($perfil <= 2)  { header('Location: ../maquetaAdmin/Dashboard.php'); exit; }
-
-$nombre  = $_SESSION['usuario_nombre']   ?? 'Encargado';
-$apellido= $_SESSION['usuario_apellido'] ?? '';
+$nombre   = $_SESSION['usuario_nombre']   ?? 'Encargado';
+$apellido = $_SESSION['usuario_apellido'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -274,7 +267,7 @@ $apellido= $_SESSION['usuario_apellido'] ?? '';
 <div class="toast" id="toast"></div>
 
 <script>
-const API = '../maquetaAdmin/api/reservas.php';
+const API = 'api/reservas.php';
 let _fecha    = new Date().toISOString().split('T')[0];
 let _reservas = [];
 let _cobroId  = null;

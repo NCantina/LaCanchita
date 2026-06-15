@@ -1,15 +1,9 @@
 <?php
 session_start();
 header('Content-Type: application/json; charset=utf-8');
-
 require_once '../../../config/dist/script/php/conn.php';
-
-// Solo perfiles 1 y 2 pueden gestionar catálogos
-if (!isset($_SESSION['usuario_perfil']) || $_SESSION['usuario_perfil'] > 2) {
-    http_response_code(403);
-    echo json_encode(['ok' => false, 'msg' => 'Sin permisos.']);
-    exit;
-}
+require_once '../../../config/dist/script/php/tenancy.php';
+require_perfil(2);
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 $tabla  = $_POST['tabla']  ?? $_GET['tabla']  ?? '';
