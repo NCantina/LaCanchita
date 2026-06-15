@@ -7710,6 +7710,8 @@ const WIZ = {
     step: 1,
     duenoId: null,
     duenoNombre: '',
+    duenoEmail: '',
+    duenoPass: '',
     complejoId: null,
     complejoNombre: '',
     canchas: [],          // [{id, nombre, tipoId, tipoNombre, icono}]
@@ -7723,8 +7725,8 @@ const DIAS_NOMBRE = {1:'Dom',2:'Lun',3:'Mar',4:'Mié',5:'Jue',6:'Vie',7:'Sáb'};
 async function abrirWizard() {
     // Reset
     Object.assign(WIZ, {
-        step:1, duenoId:null, duenoNombre:'', complejoId:null, complejoNombre:'',
-        canchas:[], franjas:{}, horTabActivo:null,
+        step:1, duenoId:null, duenoNombre:'', duenoEmail:'', duenoPass:'',
+        complejoId:null, complejoNombre:'', canchas:[], franjas:{}, horTabActivo:null,
     });
     ['wNombre','wApellido','wDni','wTelefono','wEmail','wPass','wPass2',
      'wCmpNombre','wCmpDir','wCmpTel','wCmpEmail','wCaName']
@@ -7766,8 +7768,11 @@ function wizPoblarSelects() {
 }
 
 function wizCerrar() {
+    if (WIZ.duenoId && WIZ.step < 5) {
+        if (!confirm('¿Cerrar el wizard? El dueño quedará creado pero inactivo (sin acceso) hasta que completes la configuración desde la lista de clientes.')) return;
+    }
     document.getElementById('modalWizard').classList.remove('show');
-    if (WIZ.duenoId) loadClientes(); // refrescar si creó algo
+    if (WIZ.duenoId) loadClientes();
 }
 
 function wizRenderStep(step) {
@@ -7859,6 +7864,8 @@ async function wizGuardarCuenta() {
 
         WIZ.duenoId     = j.data.id;
         WIZ.duenoNombre = nombre + ' ' + apellido;
+        WIZ.duenoEmail  = email;
+        WIZ.duenoPass   = pass;
         toast('Cuenta creada correctamente.','ok');
         wizRenderStep(2);
     } catch(e) { toast('Error de conexión.','err'); }
@@ -8075,9 +8082,21 @@ function wizRenderFranjasList() {
 }
 
 // ── PASO 5: Pantalla final ────────────────────────────────────────
-function wizFinalizar() {
+async function wizFinalizar() {
+    // Activar cuenta del dueño (fue creada inactiva)
+    if (WIZ.duenoId) {
+        try {
+            const fd = new FormData();
+            fd.append('action','activar_dueno');
+            fd.append('id', WIZ.duenoId);
+            const j = await fetch('api/usuarios.php',{method:'POST',body:fd}).then(r=>r.json());
+            if (!j.ok) { toast('No se pudo activar la cuenta: ' + (j.msg||'Error'),'err'); return; }
+        } catch(e) { toast('Error de conexión al activar cuenta.','err'); return; }
+    }
+
     const totalFranjas = Object.values(WIZ.franjas).reduce((s,a)=>s+a.length, 0);
 
+    const credText = `Usuario: ${WIZ.duenoEmail}\nContraseña: ${WIZ.duenoPass}`;
     document.getElementById('wizSummary').innerHTML = `
         <div class="wiz-summary-row">
             <span class="lbl"><i class="fas fa-user" style="width:14px;opacity:.6"></i> Dueño</span>
@@ -8095,9 +8114,29 @@ function wizFinalizar() {
             <span class="lbl"><i class="fas fa-clock" style="width:14px;opacity:.6"></i> Turnos cargados</span>
             <span class="val" style="color:var(--green)">${totalFranjas} franja${totalFranjas!==1?'s':''}</span>
         </div>
+        <div style="margin-top:14px;background:rgba(76,217,100,0.06);border:1px solid rgba(76,217,100,0.2);
+                    border-radius:10px;padding:12px 14px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+                        color:var(--muted);margin-bottom:8px">
+                <i class="fas fa-key" style="margin-right:5px"></i>Credenciales de acceso
+            </div>
+            <div style="font-size:12px;margin-bottom:4px">
+                <span style="color:var(--muted)">Email:</span>
+                <strong style="margin-left:6px">${escHtml(WIZ.duenoEmail)}</strong>
+            </div>
+            <div style="font-size:12px;margin-bottom:10px">
+                <span style="color:var(--muted)">Contraseña:</span>
+                <strong style="margin-left:6px">${escHtml(WIZ.duenoPass)}</strong>
+            </div>
+            <button onclick="navigator.clipboard.writeText(${JSON.stringify(credText)}).then(()=>toast('Credenciales copiadas','ok'))"
+                    style="width:100%;padding:8px;background:rgba(76,217,100,0.12);border:1px solid rgba(76,217,100,0.3);
+                           border-radius:8px;color:var(--green);font-size:12px;font-weight:700;cursor:pointer">
+                <i class="fas fa-copy"></i> Copiar credenciales
+            </button>
+        </div>
     `;
     document.getElementById('wizDoneMsg').textContent =
-        `${escHtml(WIZ.duenoNombre)} ya puede entrar al sistema y gestionar su predio.`;
+        `Compartí las credenciales con ${escHtml(WIZ.duenoNombre)} para que pueda ingresar.`;
 
     wizRenderStep(5);
 }

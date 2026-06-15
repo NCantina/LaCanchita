@@ -101,6 +101,11 @@ case 'crear':
         $owner = current_uid();
     } else {
         $owner = ($_POST['usuarios_id'] ?? '') !== '' ? (int)$_POST['usuarios_id'] : null;
+        if ($owner) {
+            $ownerCheck = mysqli_fetch_assoc(mysqli_query($link,
+                "SELECT USUARIOS_ID FROM usuarios WHERE USUARIOS_ID=$owner AND PERFIL_ID=2"));
+            if (!$ownerCheck) resp(false,'El usuario indicado no existe o no es dueño.');
+        }
     }
     $ownerSql = $owner ? $owner : 'NULL';
 

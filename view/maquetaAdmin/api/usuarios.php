@@ -121,9 +121,20 @@ case 'crear_dueno':
     mysqli_query($link,
         "INSERT INTO usuarios (USUARIOS_NOMBRE,USUARIOS_APELLIDO,USUARIOS_DNI,USUARIOS_EMAIL,
          USUARIOS_TELEFONO,USUARIOS_PASSWORD,PERFIL_ID,ACTIVO)
-         VALUES ('$nombre','$apellido','$dni','$email','$tel','$hash',2,1)"
+         VALUES ('$nombre','$apellido','$dni','$email','$tel','$hash',2,0)"
     );
     resp(true,'Dueño creado correctamente.',['id'=>mysqli_insert_id($link)]);
+
+// ── ACTIVAR DUEÑO (paso final del wizard) ───────────────────────────────
+case 'activar_dueno':
+    if (!is_superadmin()) resp(false,'Sin permisos.');
+    $id = (int)($_POST['id'] ?? 0);
+    if (!$id) resp(false,'ID inválido.');
+    $u = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT PERFIL_ID FROM usuarios WHERE USUARIOS_ID=$id AND PERFIL_ID=2"));
+    if (!$u) resp(false,'Dueño no encontrado.');
+    mysqli_query($link,"UPDATE usuarios SET ACTIVO=1 WHERE USUARIOS_ID=$id");
+    resp(true,'Cuenta activada correctamente.');
 
 // ── EDITAR ──────────────────────────────────────────────────────────────
 case 'editar':

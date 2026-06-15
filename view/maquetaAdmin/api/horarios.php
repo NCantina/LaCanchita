@@ -77,6 +77,25 @@ case 'crear':
     if(empty($dias)) resp(false,'Seleccioná al menos un día.');
     assert_cancha($link, $cancha);
 
+    // Verificar solapamiento con franjas existentes en los mismos días
+    $diasList = implode(',', array_map('intval', $dias));
+    $solape = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT fh.FRANJA_HORA_INICIO, fh.FRANJA_HORA_FIN
+         FROM franja_horaria fh
+         JOIN franja_dia fd ON fd.FRANJA_ID = fh.FRANJA_ID
+         WHERE fh.CANCHA_ID = $cancha
+           AND fh.ACTIVO = 1
+           AND fd.DIA_ID IN ($diasList)
+           AND fh.FRANJA_HORA_INICIO < '$fin'
+           AND fh.FRANJA_HORA_FIN > '$inicio'
+         LIMIT 1"
+    ));
+    if ($solape) {
+        $ini = substr($solape['FRANJA_HORA_INICIO'],0,5);
+        $fi  = substr($solape['FRANJA_HORA_FIN'],0,5);
+        resp(false,"El horario se superpone con una franja existente ($ini–$fi). Modificá el horario o eliminá la franja anterior.");
+    }
+
     mysqli_begin_transaction($link);
     try {
         mysqli_query($link,
@@ -110,6 +129,28 @@ case 'editar':
     if($precio<=0) resp(false,'El precio debe ser mayor a 0.');
     if(empty($dias)) resp(false,'Seleccioná al menos un día.');
     assert_franja($link, $fid);
+
+    // Obtener cancha de esta franja para el chequeo de solapamiento
+    $fRow = mysqli_fetch_assoc(mysqli_query($link,"SELECT CANCHA_ID FROM franja_horaria WHERE FRANJA_ID=$fid"));
+    $fCancha = (int)($fRow['CANCHA_ID'] ?? 0);
+    $diasList = implode(',', array_map('intval', $dias));
+    $solape = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT fh.FRANJA_HORA_INICIO, fh.FRANJA_HORA_FIN
+         FROM franja_horaria fh
+         JOIN franja_dia fd ON fd.FRANJA_ID = fh.FRANJA_ID
+         WHERE fh.CANCHA_ID = $fCancha
+           AND fh.ACTIVO = 1
+           AND fh.FRANJA_ID != $fid
+           AND fd.DIA_ID IN ($diasList)
+           AND fh.FRANJA_HORA_INICIO < '$fin'
+           AND fh.FRANJA_HORA_FIN > '$inicio'
+         LIMIT 1"
+    ));
+    if ($solape) {
+        $ini = substr($solape['FRANJA_HORA_INICIO'],0,5);
+        $fi  = substr($solape['FRANJA_HORA_FIN'],0,5);
+        resp(false,"El horario se superpone con una franja existente ($ini–$fi). Modificá el horario o eliminá la franja anterior.");
+    }
 
     mysqli_begin_transaction($link);
     try {
