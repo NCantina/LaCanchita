@@ -1,2289 +1,325 @@
+# La Canchita
+
+Plataforma SaaS para gestión de reservas de canchas deportivas. Permite a dueños de predios administrar sus complejos, canchas y turnos desde un panel web; a encargados gestionar el día a día operativo; y a clientes reservar en línea desde la página pública del predio.
+
+---
+
+## Características principales
+
+- **Multi-tenant**: cada dueño administra sus propios complejos y canchas de forma aislada
+- **Roles granulares**: 5 niveles de acceso con paneles separados por rol
+- **Reservas públicas**: página pública del predio sin login, con calendario visual
+- **Notificaciones por email**: confirmación, cancelación y recordatorios vía PHPMailer
+- **Billing integrado**: el SuperAdmin gestiona suscripciones y cobra a los dueños desde el Panel Desarrollador
+- **Sin dependencias de Node**: stack PHP puro + jQuery/Bootstrap del lado del cliente
+
+---
+
+## Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Lenguaje backend | PHP 8+ |
+| Base de datos | MySQL 5.7+ / MariaDB |
+| Email | PHPMailer 7.1 (vía Composer) |
+| Frontend | Bootstrap 4, jQuery 3, Font Awesome 5 |
+| Autenticación | Sesiones PHP nativas |
+| Control de acceso | Tenancy personalizado (roles por perfil) |
+
+---
+
+## Estructura de roles
+
+| Perfil ID | Nombre | Acceso |
+|---|---|---|
+| 1 | SuperAdmin / Desarrollador | Panel Desarrollador — gestión global de clientes SaaS, billing, MRR |
+| 2 | Dueño | Dashboard Admin — complejos, canchas, reservas, reportes, usuarios |
+| 3 | Encargado | Panel Encargado — reservas del día, confirmaciones, cobros |
+| 4 | Empleado | Panel Encargado (vista reducida) — mismas vistas que encargado |
+| 5 | Cliente | Panel Cliente — mis reservas, historial |
+
+---
+
+## Estructura del proyecto
 
 ```
+LaCanchita/
+├─ api/                          # Endpoints públicos (sin autenticación requerida)
+│  ├─ buscar_canchas.php         # Búsqueda de canchas por localidad/deporte
+│  ├─ login_ajax.php             # Login por AJAX
+│  ├─ predio_publico.php         # Info pública del predio + disponibilidad
+│  ├─ register_ajax.php          # Registro de nuevos clientes
+│  └─ reservar_publico.php       # Alta de reserva pública
+│
+├─ view/
+│  ├─ maquetaAdmin/              # Dashboard del Dueño (perfil 2) y SuperAdmin (perfil 1)
+│  │  ├─ Dashboard.php
+│  │  └─ api/                   # APIs privadas del admin (autenticadas con tenancy)
+│  │     ├─ canchas.php
+│  │     ├─ complejos.php
+│  │     ├─ reservas.php
+│  │     ├─ horarios.php
+│  │     ├─ turnos_fijos.php
+│  │     ├─ cierres.php
+│  │     ├─ catalogo.php
+│  │     ├─ usuarios.php
+│  │     ├─ perfil.php
+│  │     ├─ reportes.php
+│  │     ├─ export_reportes.php
+│  │     ├─ geo.php
+│  │     └─ admin_context.php
+│  │
+│  ├─ maquetaEncargado/          # Panel del Encargado/Empleado (perfiles 3–4)
+│  │  ├─ PanelEncargado.php
+│  │  └─ api/
+│  │     └─ reservas.php         # Proxy con whitelist → delega a maquetaAdmin/api/reservas.php
+│  │
+│  ├─ maquetaCliente/            # Panel del Cliente (perfil 5)
+│  │  ├─ LaCanchitaCliente.php
+│  │  ├─ HomeCliente.php
+│  │  └─ api/
+│  │     ├─ reservas.php
+│  │     ├─ predios.php
+│  │     └─ perfil.php
+│  │
+│  └─ maquetaSuperAdmin/         # Panel Desarrollador (perfil 1)
+│     ├─ PanelDesarrollador.php  # Gestión de clientes SaaS, billing, MRR
+│     └─ api/
+│        └─ clientes.php         # API de billing y suscripciones
+│
+├─ config/
+│  ├─ mail.php                   # Credenciales SMTP (no commitear con datos reales)
+│  └─ dist/script/php/
+│     ├─ conn.php                # Conexión MySQL
+│     ├─ tenancy.php             # Control de acceso multi-tenant para APIs
+│     ├─ auth_view.php           # Guard de redirección para vistas HTML
+│     ├─ auth_check.php          # Guard básico (legacy)
+│     └─ mailer.php              # Funciones de envío de email
+│
+├─ sql/
+│  └─ suscripcion_plataforma.sql # DDL: tablas suscripcion_plataforma + cobro_plataforma
+│
+├─ vendor/                       # Composer (PHPMailer)
+├─ composer.json
+├─ index.php                     # Landing / home pública
+├─ login.php                     # Formulario de login
+├─ procesar_login.php            # Procesador de login → redirige según perfil
+├─ logout.php
+├─ register.php                  # Formulario de registro de clientes
+└─ predio.php                    # Página pública del predio (calendario de reservas)
 ```
-Lacanchita
-├─ config
-│  ├─ css
-│  │  ├─ custom.css
-│  │  ├─ fonts
-│  │  │  ├─ minicart-font.eot
-│  │  │  ├─ minicart-font.svg
-│  │  │  ├─ minicart-font.ttf
-│  │  │  ├─ minicart-font.woff
-│  │  │  ├─ star.eot
-│  │  │  ├─ star.svg
-│  │  │  ├─ star.ttf
-│  │  │  └─ star.woff
-│  │  ├─ skins
-│  │  │  ├─ default.css
-│  │  │  ├─ skin-app-landing.css
-│  │  │  ├─ skin-architecture-interior.css
-│  │  │  ├─ skin-band.css
-│  │  │  ├─ skin-barber.css
-│  │  │  ├─ skin-business-consulting.css
-│  │  │  ├─ skin-church.css
-│  │  │  ├─ skin-coffee.css
-│  │  │  ├─ skin-construction.css
-│  │  │  ├─ skin-corporate-10.css
-│  │  │  ├─ skin-corporate-11.css
-│  │  │  ├─ skin-corporate-12.css
-│  │  │  ├─ skin-corporate-13.css
-│  │  │  ├─ skin-corporate-14.css
-│  │  │  ├─ skin-corporate-15.css
-│  │  │  ├─ skin-corporate-16.css
-│  │  │  ├─ skin-corporate-17.css
-│  │  │  ├─ skin-corporate-18.css
-│  │  │  ├─ skin-corporate-19.css
-│  │  │  ├─ skin-corporate-20.css
-│  │  │  ├─ skin-corporate-3.css
-│  │  │  ├─ skin-corporate-4.css
-│  │  │  ├─ skin-corporate-5.css
-│  │  │  ├─ skin-corporate-6.css
-│  │  │  ├─ skin-corporate-7.css
-│  │  │  ├─ skin-corporate-8.css
-│  │  │  ├─ skin-corporate-9.css
-│  │  │  ├─ skin-corporate-hosting.css
-│  │  │  ├─ skin-digital-agency.css
-│  │  │  ├─ skin-education.css
-│  │  │  ├─ skin-event.css
-│  │  │  ├─ skin-finance.css
-│  │  │  ├─ skin-gym.css
-│  │  │  ├─ skin-hotel.css
-│  │  │  ├─ skin-insurance.css
-│  │  │  ├─ skin-landing.css
-│  │  │  ├─ skin-law-firm.css
-│  │  │  ├─ skin-medical.css
-│  │  │  ├─ skin-one-page-agency.css
-│  │  │  ├─ skin-photography.css
-│  │  │  ├─ skin-product-landing.css
-│  │  │  ├─ skin-real-estate.css
-│  │  │  ├─ skin-restaurant.css
-│  │  │  ├─ skin-resume.css
-│  │  │  ├─ skin-sass.css
-│  │  │  ├─ skin-seo.css
-│  │  │  └─ skin-wedding.css
-│  │  ├─ theme-blog.css
-│  │  ├─ theme-elements.css
-│  │  ├─ theme-shop.css
-│  │  └─ theme.css
-│  ├─ dist
-│  │  ├─ img
-│  │  │  ├─ blank.gif
-│  │  │  ├─ ESTADIO.webp
-│  │  │  ├─ icons
-│  │  │  │  └─ icon-cart-light.svg
-│  │  │  └─ loguito_lacanchita.webp
-│  │  └─ js
-│  │     ├─ custom.js
-│  │     ├─ theme.init.js
-│  │     └─ theme.js
-│  └─ pluggins
-│     └─ vendor
-│        ├─ animate
-│        │  └─ animate.min.css
-│        ├─ bootstrap
-│        │  ├─ css
-│        │  │  ├─ bootstrap-grid.css
-│        │  │  ├─ bootstrap-grid.css.map
-│        │  │  ├─ bootstrap-grid.min.css
-│        │  │  ├─ bootstrap-grid.min.css.map
-│        │  │  ├─ bootstrap-reboot.css
-│        │  │  ├─ bootstrap-reboot.css.map
-│        │  │  ├─ bootstrap-reboot.min.css
-│        │  │  ├─ bootstrap-reboot.min.css.map
-│        │  │  ├─ bootstrap.css
-│        │  │  ├─ bootstrap.css.map
-│        │  │  ├─ bootstrap.min.css
-│        │  │  └─ bootstrap.min.css.map
-│        │  └─ js
-│        │     ├─ bootstrap.bundle.js
-│        │     ├─ bootstrap.bundle.js.map
-│        │     ├─ bootstrap.bundle.min.js
-│        │     ├─ bootstrap.bundle.min.js.map
-│        │     ├─ bootstrap.js
-│        │     ├─ bootstrap.js.map
-│        │     ├─ bootstrap.min.js
-│        │     └─ bootstrap.min.js.map
-│        ├─ bootstrap-datepicker
-│        │  ├─ css
-│        │  │  ├─ bootstrap-datepicker.css
-│        │  │  ├─ bootstrap-datepicker.css.map
-│        │  │  ├─ bootstrap-datepicker.min.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css.map
-│        │  │  ├─ bootstrap-datepicker.standalone.min.css
-│        │  │  ├─ bootstrap-datepicker3.css
-│        │  │  ├─ bootstrap-datepicker3.css.map
-│        │  │  ├─ bootstrap-datepicker3.min.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css.map
-│        │  │  └─ bootstrap-datepicker3.standalone.min.css
-│        │  ├─ js
-│        │  │  ├─ bootstrap-datepicker.js
-│        │  │  └─ bootstrap-datepicker.min.js
-│        │  └─ locales
-│        │     ├─ bootstrap-datepicker-en-CA.min.js
-│        │     ├─ bootstrap-datepicker.ar-tn.min.js
-│        │     ├─ bootstrap-datepicker.ar.min.js
-│        │     ├─ bootstrap-datepicker.uz-cyrl.min.js
-│        │     ├─ bootstrap-datepicker.uz-latn.min.js
-│        │     ├─ bootstrap-datepicker.vi.min.js
-│        │     ├─ bootstrap-datepicker.zh-CN.min.js
-│        │     └─ bootstrap-datepicker.zh-TW.min.js
-│        ├─ common
-│        │  ├─ common.init.js
-│        │  ├─ common.js
-│        │  └─ common.min.js
-│        ├─ fontawesome-free
-│        │  ├─ css
-│        │  │  └─ all.min.css
-│        │  └─ webfonts
-│        │     ├─ fa-brands-400.eot
-│        │     ├─ fa-brands-400.svg
-│        │     ├─ fa-brands-400.ttf
-│        │     ├─ fa-brands-400.woff
-│        │     ├─ fa-brands-400.woff2
-│        │     ├─ fa-regular-400.eot
-│        │     ├─ fa-regular-400.svg
-│        │     ├─ fa-regular-400.ttf
-│        │     ├─ fa-regular-400.woff
-│        │     ├─ fa-regular-400.woff2
-│        │     ├─ fa-solid-900.eot
-│        │     ├─ fa-solid-900.svg
-│        │     ├─ fa-solid-900.ttf
-│        │     ├─ fa-solid-900.woff
-│        │     └─ fa-solid-900.woff2
-│        ├─ isotope
-│        │  └─ jquery.isotope.min.js
-│        ├─ jquery
-│        │  ├─ core.js
-│        │  ├─ jquery.js
-│        │  ├─ jquery.min.js
-│        │  ├─ jquery.min.map
-│        │  ├─ jquery.slim.js
-│        │  ├─ jquery.slim.min.js
-│        │  └─ jquery.slim.min.map
-│        ├─ jquery.appear
-│        │  ├─ jquery.appear.js
-│        │  └─ jquery.appear.min.js
-│        ├─ jquery.cookie
-│        │  ├─ jquery.cookie.js
-│        │  └─ jquery.cookie.min.js
-│        ├─ jquery.easing
-│        │  └─ jquery.easing.min.js
-│        ├─ jquery.easy-pie-chart
-│        │  ├─ angular.easypiechart.js
-│        │  ├─ angular.easypiechart.min.js
-│        │  ├─ easypiechart.js
-│        │  ├─ easypiechart.min.js
-│        │  ├─ jquery.easypiechart.js
-│        │  └─ jquery.easypiechart.min.js
-│        ├─ jquery.gmap
-│        │  ├─ jquery.gmap.js
-│        │  └─ jquery.gmap.min.js
-│        ├─ jquery.lazyload
-│        │  ├─ jquery.lazyload.js
-│        │  └─ jquery.lazyload.min.js
-│        ├─ jquery.validation
-│        │  ├─ additional-methods.js
-│        │  ├─ additional-methods.min.js
-│        │  ├─ jquery.validate.js
-│        │  ├─ jquery.validate.min.js
-│        │  └─ localization
-│        │     ├─ messages_ar.js
-│        │     ├─ messages_ar.min.js
-│        │     └─ product-grey-6.jpg
-│        ├─ magnific-popup
-│        │  ├─ jquery.magnific-popup.js
-│        │  ├─ jquery.magnific-popup.min.js
-│        │  ├─ magnific-popup.css
-│        │  └─ magnific-popup.min.css
-│        ├─ modernizr
-│        │  └─ modernizr.min.js
-│        ├─ owl.carousel
-│        │  ├─ assets
-│        │  │  ├─ ajax-loader.gif
-│        │  │  ├─ owl.carousel.css
-│        │  │  ├─ owl.carousel.min.css
-│        │  │  ├─ owl.theme.default.css
-│        │  │  ├─ owl.theme.default.min.css
-│        │  │  ├─ owl.theme.green.css
-│        │  │  ├─ owl.theme.green.min.css
-│        │  │  └─ owl.video.play.png
-│        │  ├─ LICENSE
-│        │  ├─ owl.carousel.js
-│        │  ├─ owl.carousel.min.js
-│        │  └─ README.md
-│        ├─ popper
-│        │  └─ umd
-│        │     ├─ popper-utils.js
-│        │     ├─ popper-utils.js.map
-│        │     ├─ popper-utils.min.js
-│        │     ├─ popper-utils.min.js.map
-│        │     ├─ popper.js
-│        │     ├─ popper.js.flow
-│        │     ├─ popper.js.map
-│        │     ├─ popper.min.js
-│        │     └─ popper.min.js.map
-│        ├─ rs-plugin
-│        │  ├─ css
-│        │  │  ├─ closedhand.cur
-│        │  │  ├─ index.php
-│        │  │  ├─ layers.css
-│        │  │  ├─ navigation-skins
-│        │  │  │  ├─ ares.css
-│        │  │  │  ├─ custom.css
-│        │  │  │  ├─ dione.css
-│        │  │  │  ├─ erinyen.css
-│        │  │  │  ├─ gyges.css
-│        │  │  │  ├─ hades.css
-│        │  │  │  ├─ hebe.css
-│        │  │  │  ├─ hephaistos.css
-│        │  │  │  ├─ hermes.css
-│        │  │  │  ├─ hesperiden.css
-│        │  │  │  ├─ metis.css
-│        │  │  │  ├─ persephone.css
-│        │  │  │  ├─ uranus.css
-│        │  │  │  └─ zeus.css
-│        │  │  ├─ navigation.css
-│        │  │  ├─ openhand.cur
-│        │  │  ├─ settings-source.css
-│        │  │  ├─ settings.css
-│        │  │  └─ tp-color-picker.css
-│        │  └─ js
-│        │     ├─ extensions
-│        │     │  ├─ index.php
-│        │     │  ├─ revolution.extension.actions.min.js
-│        │     │  ├─ revolution.extension.carousel.min.js
-│        │     │  ├─ revolution.extension.kenburn.min.js
-│        │     │  ├─ revolution.extension.layeranimation.min.js
-│        │     │  ├─ revolution.extension.migration.min.js
-│        │     │  ├─ revolution.extension.navigation.min.js
-│        │     │  ├─ revolution.extension.parallax.min.js
-│        │     │  ├─ revolution.extension.slideanims.min.js
-│        │     │  ├─ revolution.extension.video.min.js
-│        │     │  └─ source
-│        │     │     ├─ index.php
-│        │     │     ├─ revolution.extension.actions.js
-│        │     │     ├─ revolution.extension.carousel.js
-│        │     │     ├─ revolution.extension.kenburn.js
-│        │     │     ├─ revolution.extension.layeranimation.js
-│        │     │     ├─ revolution.extension.migration.js
-│        │     │     ├─ revolution.extension.navigation.js
-│        │     │     ├─ revolution.extension.parallax.js
-│        │     │     ├─ revolution.extension.slideanims.js
-│        │     │     └─ revolution.extension.video.js
-│        │     ├─ index.php
-│        │     ├─ jquery.themepunch.enablelog.js
-│        │     ├─ jquery.themepunch.revolution.min.js
-│        │     ├─ jquery.themepunch.tools.min.js
-│        │     ├─ source
-│        │     │  ├─ index.php
-│        │     │  ├─ jquery.themepunch.enablelog.js
-│        │     │  ├─ jquery.themepunch.revolution.js
-│        │     │  ├─ jquery.themepunch.tools.min.js
-│        │     │  └─ tp-color-picker.js
-│        │     └─ tp-color-picker.min.js
-│        ├─ simple-line-icons
-│        │  ├─ bower.json
-│        │  ├─ CODE_OF_CONDUCT.md
-│        │  ├─ CONTRIBUTING.md
-│        │  ├─ css
-│        │  │  ├─ simple-line-icons.css
-│        │  │  └─ simple-line-icons.min.css
-│        │  ├─ fonts
-│        │  │  ├─ Simple-Line-Icons.eot
-│        │  │  ├─ Simple-Line-Icons.svg
-│        │  │  ├─ Simple-Line-Icons.ttf
-│        │  │  ├─ Simple-Line-Icons.woff
-│        │  │  └─ Simple-Line-Icons.woff2
-│        │  ├─ History.md
-│        │  ├─ less
-│        │  │  └─ simple-line-icons.less
-│        │  ├─ LICENSE.md
-│        │  ├─ package.json
-│        │  ├─ README.md
-│        │  └─ scss
-│        │     └─ simple-line-icons.scss
-│        ├─ vide
-│        │  ├─ jquery.vide.js
-│        │  └─ jquery.vide.min.js
-│        └─ vivus
-│           ├─ vivus.js
-│           └─ vivus.min.js
-├─ LaCanchita.php
-├─ README.md
-└─ view
+
+---
+
+## Instalación
+
+### Requisitos previos
+
+- PHP 8.0 o superior
+- MySQL 5.7+ / MariaDB 10.3+
+- Apache con `mod_rewrite` habilitado (o Nginx equivalente)
+- Composer
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/ncantina/lacanchita.git
+cd lacanchita
+```
+
+### 2. Instalar dependencias PHP
+
+```bash
+composer install
+```
+
+### 3. Configurar la base de datos
+
+Crear la base de datos e importar el schema:
+
+```bash
+mysql -u root -p -e "CREATE DATABASE lacanchita CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p lacanchita < sql/suscripcion_plataforma.sql
+```
+
+### 4. Configurar la conexión a la base de datos
+
+Editar `config/dist/script/php/conn.php`:
+
+```php
+$host     = "localhost";
+$user     = "tu_usuario";
+$password = "tu_contraseña";
+$database = "lacanchita";
+```
+
+### 5. Configurar el email (opcional)
+
+Editar `config/mail.php`:
+
+```php
+define('MAIL_HOST',     'smtp.gmail.com');
+define('MAIL_PORT',     587);
+define('MAIL_USER',     'tu-cuenta@gmail.com');
+define('MAIL_PASS',     'xxxx xxxx xxxx xxxx');   // Contraseña de aplicación de Google
+define('MAIL_FROM',     'tu-cuenta@gmail.com');
+define('MAIL_FROM_NAME','La Canchita');
+define('MAIL_ENABLED',  true);
+```
+
+Para Gmail: activar verificación en dos pasos y generar una **Contraseña de aplicación** en myaccount.google.com/apppasswords.
+
+Mientras `MAIL_ENABLED` sea `false`, las funciones de envío no realizan ninguna petición SMTP — seguro para desarrollo.
+
+---
+
+## Flujo de autenticación
 
 ```
+POST /procesar_login.php
+        │
+        ├─ perfil 5 (Cliente)         →  view/maquetaCliente/LaCanchitaCliente.php
+        ├─ perfil 3 o 4 (Staff)       →  view/maquetaEncargado/PanelEncargado.php
+        └─ perfil 1 o 2 (Admin/Dev)   →  view/maquetaAdmin/Dashboard.php
 ```
-Lacanchita
-├─ config
-│  ├─ css
-│  │  ├─ custom.css
-│  │  ├─ fonts
-│  │  │  ├─ minicart-font.eot
-│  │  │  ├─ minicart-font.svg
-│  │  │  ├─ minicart-font.ttf
-│  │  │  ├─ minicart-font.woff
-│  │  │  ├─ star.eot
-│  │  │  ├─ star.svg
-│  │  │  ├─ star.ttf
-│  │  │  └─ star.woff
-│  │  ├─ skins
-│  │  │  ├─ default.css
-│  │  │  ├─ skin-app-landing.css
-│  │  │  ├─ skin-architecture-interior.css
-│  │  │  ├─ skin-band.css
-│  │  │  ├─ skin-barber.css
-│  │  │  ├─ skin-business-consulting.css
-│  │  │  ├─ skin-church.css
-│  │  │  ├─ skin-coffee.css
-│  │  │  ├─ skin-construction.css
-│  │  │  ├─ skin-corporate-10.css
-│  │  │  ├─ skin-corporate-11.css
-│  │  │  ├─ skin-corporate-12.css
-│  │  │  ├─ skin-corporate-13.css
-│  │  │  ├─ skin-corporate-14.css
-│  │  │  ├─ skin-corporate-15.css
-│  │  │  ├─ skin-corporate-16.css
-│  │  │  ├─ skin-corporate-17.css
-│  │  │  ├─ skin-corporate-18.css
-│  │  │  ├─ skin-corporate-19.css
-│  │  │  ├─ skin-corporate-20.css
-│  │  │  ├─ skin-corporate-3.css
-│  │  │  ├─ skin-corporate-4.css
-│  │  │  ├─ skin-corporate-5.css
-│  │  │  ├─ skin-corporate-6.css
-│  │  │  ├─ skin-corporate-7.css
-│  │  │  ├─ skin-corporate-8.css
-│  │  │  ├─ skin-corporate-9.css
-│  │  │  ├─ skin-corporate-hosting.css
-│  │  │  ├─ skin-digital-agency.css
-│  │  │  ├─ skin-education.css
-│  │  │  ├─ skin-event.css
-│  │  │  ├─ skin-finance.css
-│  │  │  ├─ skin-gym.css
-│  │  │  ├─ skin-hotel.css
-│  │  │  ├─ skin-insurance.css
-│  │  │  ├─ skin-landing.css
-│  │  │  ├─ skin-law-firm.css
-│  │  │  ├─ skin-medical.css
-│  │  │  ├─ skin-one-page-agency.css
-│  │  │  ├─ skin-photography.css
-│  │  │  ├─ skin-product-landing.css
-│  │  │  ├─ skin-real-estate.css
-│  │  │  ├─ skin-restaurant.css
-│  │  │  ├─ skin-resume.css
-│  │  │  ├─ skin-sass.css
-│  │  │  ├─ skin-seo.css
-│  │  │  └─ skin-wedding.css
-│  │  ├─ theme-blog.css
-│  │  ├─ theme-elements.css
-│  │  ├─ theme-shop.css
-│  │  └─ theme.css
-│  ├─ dist
-│  │  ├─ img
-│  │  │  ├─ blank.gif
-│  │  │  ├─ cancha.PNG
-│  │  │  ├─ ESTADIO.webp
-│  │  │  ├─ icons
-│  │  │  │  └─ icon-cart-light.svg
-│  │  │  ├─ loguito_lacanchita.webp
-│  │  │  └─ maqueta
-│  │  │     └─ maqueta_imagen_principal.jpg
-│  │  └─ js
-│  │     ├─ custom.js
-│  │     ├─ theme.init.js
-│  │     └─ theme.js
-│  └─ pluggins
-│     └─ vendor
-│        ├─ animate
-│        │  └─ animate.min.css
-│        ├─ bootstrap
-│        │  ├─ css
-│        │  │  ├─ bootstrap-grid.css
-│        │  │  ├─ bootstrap-grid.css.map
-│        │  │  ├─ bootstrap-grid.min.css
-│        │  │  ├─ bootstrap-grid.min.css.map
-│        │  │  ├─ bootstrap-reboot.css
-│        │  │  ├─ bootstrap-reboot.css.map
-│        │  │  ├─ bootstrap-reboot.min.css
-│        │  │  ├─ bootstrap-reboot.min.css.map
-│        │  │  ├─ bootstrap.css
-│        │  │  ├─ bootstrap.css.map
-│        │  │  ├─ bootstrap.min.css
-│        │  │  └─ bootstrap.min.css.map
-│        │  └─ js
-│        │     ├─ bootstrap.bundle.js
-│        │     ├─ bootstrap.bundle.js.map
-│        │     ├─ bootstrap.bundle.min.js
-│        │     ├─ bootstrap.bundle.min.js.map
-│        │     ├─ bootstrap.js
-│        │     ├─ bootstrap.js.map
-│        │     ├─ bootstrap.min.js
-│        │     └─ bootstrap.min.js.map
-│        ├─ bootstrap-datepicker
-│        │  ├─ css
-│        │  │  ├─ bootstrap-datepicker.css
-│        │  │  ├─ bootstrap-datepicker.css.map
-│        │  │  ├─ bootstrap-datepicker.min.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css.map
-│        │  │  ├─ bootstrap-datepicker.standalone.min.css
-│        │  │  ├─ bootstrap-datepicker3.css
-│        │  │  ├─ bootstrap-datepicker3.css.map
-│        │  │  ├─ bootstrap-datepicker3.min.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css.map
-│        │  │  └─ bootstrap-datepicker3.standalone.min.css
-│        │  ├─ js
-│        │  │  ├─ bootstrap-datepicker.js
-│        │  │  └─ bootstrap-datepicker.min.js
-│        │  └─ locales
-│        │     ├─ bootstrap-datepicker-en-CA.min.js
-│        │     ├─ bootstrap-datepicker.ar-tn.min.js
-│        │     ├─ bootstrap-datepicker.ar.min.js
-│        │     ├─ bootstrap-datepicker.uz-cyrl.min.js
-│        │     ├─ bootstrap-datepicker.uz-latn.min.js
-│        │     ├─ bootstrap-datepicker.vi.min.js
-│        │     ├─ bootstrap-datepicker.zh-CN.min.js
-│        │     └─ bootstrap-datepicker.zh-TW.min.js
-│        ├─ common
-│        │  ├─ common.init.js
-│        │  ├─ common.js
-│        │  └─ common.min.js
-│        ├─ fontawesome-free
-│        │  ├─ css
-│        │  │  └─ all.min.css
-│        │  └─ webfonts
-│        │     ├─ fa-brands-400.eot
-│        │     ├─ fa-brands-400.svg
-│        │     ├─ fa-brands-400.ttf
-│        │     ├─ fa-brands-400.woff
-│        │     ├─ fa-brands-400.woff2
-│        │     ├─ fa-regular-400.eot
-│        │     ├─ fa-regular-400.svg
-│        │     ├─ fa-regular-400.ttf
-│        │     ├─ fa-regular-400.woff
-│        │     ├─ fa-regular-400.woff2
-│        │     ├─ fa-solid-900.eot
-│        │     ├─ fa-solid-900.svg
-│        │     ├─ fa-solid-900.ttf
-│        │     ├─ fa-solid-900.woff
-│        │     └─ fa-solid-900.woff2
-│        ├─ isotope
-│        │  └─ jquery.isotope.min.js
-│        ├─ jquery
-│        │  ├─ core.js
-│        │  ├─ jquery.js
-│        │  ├─ jquery.min.js
-│        │  ├─ jquery.min.map
-│        │  ├─ jquery.slim.js
-│        │  ├─ jquery.slim.min.js
-│        │  └─ jquery.slim.min.map
-│        ├─ jquery.appear
-│        │  ├─ jquery.appear.js
-│        │  └─ jquery.appear.min.js
-│        ├─ jquery.cookie
-│        │  ├─ jquery.cookie.js
-│        │  └─ jquery.cookie.min.js
-│        ├─ jquery.easing
-│        │  └─ jquery.easing.min.js
-│        ├─ jquery.easy-pie-chart
-│        │  ├─ angular.easypiechart.js
-│        │  ├─ angular.easypiechart.min.js
-│        │  ├─ easypiechart.js
-│        │  ├─ easypiechart.min.js
-│        │  ├─ jquery.easypiechart.js
-│        │  └─ jquery.easypiechart.min.js
-│        ├─ jquery.gmap
-│        │  ├─ jquery.gmap.js
-│        │  └─ jquery.gmap.min.js
-│        ├─ jquery.lazyload
-│        │  ├─ jquery.lazyload.js
-│        │  └─ jquery.lazyload.min.js
-│        ├─ jquery.validation
-│        │  ├─ additional-methods.js
-│        │  ├─ additional-methods.min.js
-│        │  ├─ jquery.validate.js
-│        │  ├─ jquery.validate.min.js
-│        │  └─ localization
-│        │     ├─ messages_ar.js
-│        │     ├─ messages_ar.min.js
-│        │     └─ product-grey-6.jpg
-│        ├─ magnific-popup
-│        │  ├─ jquery.magnific-popup.js
-│        │  ├─ jquery.magnific-popup.min.js
-│        │  ├─ magnific-popup.css
-│        │  └─ magnific-popup.min.css
-│        ├─ modernizr
-│        │  └─ modernizr.min.js
-│        ├─ owl.carousel
-│        │  ├─ assets
-│        │  │  ├─ ajax-loader.gif
-│        │  │  ├─ owl.carousel.css
-│        │  │  ├─ owl.carousel.min.css
-│        │  │  ├─ owl.theme.default.css
-│        │  │  ├─ owl.theme.default.min.css
-│        │  │  ├─ owl.theme.green.css
-│        │  │  ├─ owl.theme.green.min.css
-│        │  │  └─ owl.video.play.png
-│        │  ├─ LICENSE
-│        │  ├─ owl.carousel.js
-│        │  ├─ owl.carousel.min.js
-│        │  └─ README.md
-│        ├─ popper
-│        │  └─ umd
-│        │     ├─ popper-utils.js
-│        │     ├─ popper-utils.js.map
-│        │     ├─ popper-utils.min.js
-│        │     ├─ popper-utils.min.js.map
-│        │     ├─ popper.js
-│        │     ├─ popper.js.flow
-│        │     ├─ popper.js.map
-│        │     ├─ popper.min.js
-│        │     └─ popper.min.js.map
-│        ├─ rs-plugin
-│        │  ├─ css
-│        │  │  ├─ closedhand.cur
-│        │  │  ├─ index.php
-│        │  │  ├─ layers.css
-│        │  │  ├─ navigation-skins
-│        │  │  │  ├─ ares.css
-│        │  │  │  ├─ custom.css
-│        │  │  │  ├─ dione.css
-│        │  │  │  ├─ erinyen.css
-│        │  │  │  ├─ gyges.css
-│        │  │  │  ├─ hades.css
-│        │  │  │  ├─ hebe.css
-│        │  │  │  ├─ hephaistos.css
-│        │  │  │  ├─ hermes.css
-│        │  │  │  ├─ hesperiden.css
-│        │  │  │  ├─ metis.css
-│        │  │  │  ├─ persephone.css
-│        │  │  │  ├─ uranus.css
-│        │  │  │  └─ zeus.css
-│        │  │  ├─ navigation.css
-│        │  │  ├─ openhand.cur
-│        │  │  ├─ settings-source.css
-│        │  │  ├─ settings.css
-│        │  │  └─ tp-color-picker.css
-│        │  └─ js
-│        │     ├─ extensions
-│        │     │  ├─ index.php
-│        │     │  ├─ revolution.extension.actions.min.js
-│        │     │  ├─ revolution.extension.carousel.min.js
-│        │     │  ├─ revolution.extension.kenburn.min.js
-│        │     │  ├─ revolution.extension.layeranimation.min.js
-│        │     │  ├─ revolution.extension.migration.min.js
-│        │     │  ├─ revolution.extension.navigation.min.js
-│        │     │  ├─ revolution.extension.parallax.min.js
-│        │     │  ├─ revolution.extension.slideanims.min.js
-│        │     │  ├─ revolution.extension.video.min.js
-│        │     │  └─ source
-│        │     │     ├─ index.php
-│        │     │     ├─ revolution.extension.actions.js
-│        │     │     ├─ revolution.extension.carousel.js
-│        │     │     ├─ revolution.extension.kenburn.js
-│        │     │     ├─ revolution.extension.layeranimation.js
-│        │     │     ├─ revolution.extension.migration.js
-│        │     │     ├─ revolution.extension.navigation.js
-│        │     │     ├─ revolution.extension.parallax.js
-│        │     │     ├─ revolution.extension.slideanims.js
-│        │     │     └─ revolution.extension.video.js
-│        │     ├─ index.php
-│        │     ├─ jquery.themepunch.enablelog.js
-│        │     ├─ jquery.themepunch.revolution.min.js
-│        │     ├─ jquery.themepunch.tools.min.js
-│        │     ├─ source
-│        │     │  ├─ index.php
-│        │     │  ├─ jquery.themepunch.enablelog.js
-│        │     │  ├─ jquery.themepunch.revolution.js
-│        │     │  ├─ jquery.themepunch.tools.min.js
-│        │     │  └─ tp-color-picker.js
-│        │     └─ tp-color-picker.min.js
-│        ├─ simple-line-icons
-│        │  ├─ bower.json
-│        │  ├─ CODE_OF_CONDUCT.md
-│        │  ├─ CONTRIBUTING.md
-│        │  ├─ css
-│        │  │  ├─ simple-line-icons.css
-│        │  │  └─ simple-line-icons.min.css
-│        │  ├─ fonts
-│        │  │  ├─ Simple-Line-Icons.eot
-│        │  │  ├─ Simple-Line-Icons.svg
-│        │  │  ├─ Simple-Line-Icons.ttf
-│        │  │  ├─ Simple-Line-Icons.woff
-│        │  │  └─ Simple-Line-Icons.woff2
-│        │  ├─ History.md
-│        │  ├─ less
-│        │  │  └─ simple-line-icons.less
-│        │  ├─ LICENSE.md
-│        │  ├─ package.json
-│        │  ├─ README.md
-│        │  └─ scss
-│        │     └─ simple-line-icons.scss
-│        ├─ vide
-│        │  ├─ jquery.vide.js
-│        │  └─ jquery.vide.min.js
-│        └─ vivus
-│           ├─ vivus.js
-│           └─ vivus.min.js
-├─ LaCanchita.php
-├─ README.md
-└─ view
-   └─ LaCanchita-Estadio22.php
 
-```
-```
-Lacanchita
-├─ config
-│  ├─ css
-│  │  ├─ custom.css
-│  │  ├─ fonts
-│  │  │  ├─ minicart-font.eot
-│  │  │  ├─ minicart-font.svg
-│  │  │  ├─ minicart-font.ttf
-│  │  │  ├─ minicart-font.woff
-│  │  │  ├─ star.eot
-│  │  │  ├─ star.svg
-│  │  │  ├─ star.ttf
-│  │  │  └─ star.woff
-│  │  ├─ skins
-│  │  │  ├─ default.css
-│  │  │  ├─ skin-app-landing.css
-│  │  │  ├─ skin-architecture-interior.css
-│  │  │  ├─ skin-band.css
-│  │  │  ├─ skin-barber.css
-│  │  │  ├─ skin-business-consulting.css
-│  │  │  ├─ skin-church.css
-│  │  │  ├─ skin-coffee.css
-│  │  │  ├─ skin-construction.css
-│  │  │  ├─ skin-corporate-10.css
-│  │  │  ├─ skin-corporate-11.css
-│  │  │  ├─ skin-corporate-12.css
-│  │  │  ├─ skin-corporate-13.css
-│  │  │  ├─ skin-corporate-14.css
-│  │  │  ├─ skin-corporate-15.css
-│  │  │  ├─ skin-corporate-16.css
-│  │  │  ├─ skin-corporate-17.css
-│  │  │  ├─ skin-corporate-18.css
-│  │  │  ├─ skin-corporate-19.css
-│  │  │  ├─ skin-corporate-20.css
-│  │  │  ├─ skin-corporate-3.css
-│  │  │  ├─ skin-corporate-4.css
-│  │  │  ├─ skin-corporate-5.css
-│  │  │  ├─ skin-corporate-6.css
-│  │  │  ├─ skin-corporate-7.css
-│  │  │  ├─ skin-corporate-8.css
-│  │  │  ├─ skin-corporate-9.css
-│  │  │  ├─ skin-corporate-hosting.css
-│  │  │  ├─ skin-digital-agency.css
-│  │  │  ├─ skin-education.css
-│  │  │  ├─ skin-event.css
-│  │  │  ├─ skin-finance.css
-│  │  │  ├─ skin-gym.css
-│  │  │  ├─ skin-hotel.css
-│  │  │  ├─ skin-insurance.css
-│  │  │  ├─ skin-landing.css
-│  │  │  ├─ skin-law-firm.css
-│  │  │  ├─ skin-medical.css
-│  │  │  ├─ skin-one-page-agency.css
-│  │  │  ├─ skin-photography.css
-│  │  │  ├─ skin-product-landing.css
-│  │  │  ├─ skin-real-estate.css
-│  │  │  ├─ skin-restaurant.css
-│  │  │  ├─ skin-resume.css
-│  │  │  ├─ skin-sass.css
-│  │  │  ├─ skin-seo.css
-│  │  │  └─ skin-wedding.css
-│  │  ├─ theme-blog.css
-│  │  ├─ theme-elements.css
-│  │  ├─ theme-shop.css
-│  │  └─ theme.css
-│  ├─ dist
-│  │  ├─ img
-│  │  │  ├─ blank.gif
-│  │  │  ├─ cancha.PNG
-│  │  │  ├─ ESTADIO.webp
-│  │  │  ├─ icons
-│  │  │  │  └─ icon-cart-light.svg
-│  │  │  ├─ loguito_lacanchita.webp
-│  │  │  └─ maqueta
-│  │  │     └─ maqueta_imagen_principal.jpg
-│  │  └─ js
-│  │     ├─ custom.js
-│  │     ├─ theme.init.js
-│  │     └─ theme.js
-│  └─ pluggins
-│     └─ vendor
-│        ├─ animate
-│        │  └─ animate.min.css
-│        ├─ bootstrap
-│        │  ├─ css
-│        │  │  ├─ bootstrap-grid.css
-│        │  │  ├─ bootstrap-grid.css.map
-│        │  │  ├─ bootstrap-grid.min.css
-│        │  │  ├─ bootstrap-grid.min.css.map
-│        │  │  ├─ bootstrap-reboot.css
-│        │  │  ├─ bootstrap-reboot.css.map
-│        │  │  ├─ bootstrap-reboot.min.css
-│        │  │  ├─ bootstrap-reboot.min.css.map
-│        │  │  ├─ bootstrap.css
-│        │  │  ├─ bootstrap.css.map
-│        │  │  ├─ bootstrap.min.css
-│        │  │  └─ bootstrap.min.css.map
-│        │  └─ js
-│        │     ├─ bootstrap.bundle.js
-│        │     ├─ bootstrap.bundle.js.map
-│        │     ├─ bootstrap.bundle.min.js
-│        │     ├─ bootstrap.bundle.min.js.map
-│        │     ├─ bootstrap.js
-│        │     ├─ bootstrap.js.map
-│        │     ├─ bootstrap.min.js
-│        │     └─ bootstrap.min.js.map
-│        ├─ bootstrap-datepicker
-│        │  ├─ css
-│        │  │  ├─ bootstrap-datepicker.css
-│        │  │  ├─ bootstrap-datepicker.css.map
-│        │  │  ├─ bootstrap-datepicker.min.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css.map
-│        │  │  ├─ bootstrap-datepicker.standalone.min.css
-│        │  │  ├─ bootstrap-datepicker3.css
-│        │  │  ├─ bootstrap-datepicker3.css.map
-│        │  │  ├─ bootstrap-datepicker3.min.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css.map
-│        │  │  └─ bootstrap-datepicker3.standalone.min.css
-│        │  ├─ js
-│        │  │  ├─ bootstrap-datepicker.js
-│        │  │  └─ bootstrap-datepicker.min.js
-│        │  └─ locales
-│        │     ├─ bootstrap-datepicker-en-CA.min.js
-│        │     ├─ bootstrap-datepicker.ar-tn.min.js
-│        │     ├─ bootstrap-datepicker.ar.min.js
-│        │     ├─ bootstrap-datepicker.uz-cyrl.min.js
-│        │     ├─ bootstrap-datepicker.uz-latn.min.js
-│        │     ├─ bootstrap-datepicker.vi.min.js
-│        │     ├─ bootstrap-datepicker.zh-CN.min.js
-│        │     └─ bootstrap-datepicker.zh-TW.min.js
-│        ├─ common
-│        │  ├─ common.init.js
-│        │  ├─ common.js
-│        │  └─ common.min.js
-│        ├─ fontawesome-free
-│        │  ├─ css
-│        │  │  └─ all.min.css
-│        │  └─ webfonts
-│        │     ├─ fa-brands-400.eot
-│        │     ├─ fa-brands-400.svg
-│        │     ├─ fa-brands-400.ttf
-│        │     ├─ fa-brands-400.woff
-│        │     ├─ fa-brands-400.woff2
-│        │     ├─ fa-regular-400.eot
-│        │     ├─ fa-regular-400.svg
-│        │     ├─ fa-regular-400.ttf
-│        │     ├─ fa-regular-400.woff
-│        │     ├─ fa-regular-400.woff2
-│        │     ├─ fa-solid-900.eot
-│        │     ├─ fa-solid-900.svg
-│        │     ├─ fa-solid-900.ttf
-│        │     ├─ fa-solid-900.woff
-│        │     └─ fa-solid-900.woff2
-│        ├─ isotope
-│        │  └─ jquery.isotope.min.js
-│        ├─ jquery
-│        │  ├─ core.js
-│        │  ├─ jquery.js
-│        │  ├─ jquery.min.js
-│        │  ├─ jquery.min.map
-│        │  ├─ jquery.slim.js
-│        │  ├─ jquery.slim.min.js
-│        │  └─ jquery.slim.min.map
-│        ├─ jquery.appear
-│        │  ├─ jquery.appear.js
-│        │  └─ jquery.appear.min.js
-│        ├─ jquery.cookie
-│        │  ├─ jquery.cookie.js
-│        │  └─ jquery.cookie.min.js
-│        ├─ jquery.easing
-│        │  └─ jquery.easing.min.js
-│        ├─ jquery.easy-pie-chart
-│        │  ├─ angular.easypiechart.js
-│        │  ├─ angular.easypiechart.min.js
-│        │  ├─ easypiechart.js
-│        │  ├─ easypiechart.min.js
-│        │  ├─ jquery.easypiechart.js
-│        │  └─ jquery.easypiechart.min.js
-│        ├─ jquery.gmap
-│        │  ├─ jquery.gmap.js
-│        │  └─ jquery.gmap.min.js
-│        ├─ jquery.lazyload
-│        │  ├─ jquery.lazyload.js
-│        │  └─ jquery.lazyload.min.js
-│        ├─ jquery.validation
-│        │  ├─ additional-methods.js
-│        │  ├─ additional-methods.min.js
-│        │  ├─ jquery.validate.js
-│        │  ├─ jquery.validate.min.js
-│        │  └─ localization
-│        │     ├─ messages_ar.js
-│        │     ├─ messages_ar.min.js
-│        │     └─ product-grey-6.jpg
-│        ├─ magnific-popup
-│        │  ├─ jquery.magnific-popup.js
-│        │  ├─ jquery.magnific-popup.min.js
-│        │  ├─ magnific-popup.css
-│        │  └─ magnific-popup.min.css
-│        ├─ modernizr
-│        │  └─ modernizr.min.js
-│        ├─ owl.carousel
-│        │  ├─ assets
-│        │  │  ├─ ajax-loader.gif
-│        │  │  ├─ owl.carousel.css
-│        │  │  ├─ owl.carousel.min.css
-│        │  │  ├─ owl.theme.default.css
-│        │  │  ├─ owl.theme.default.min.css
-│        │  │  ├─ owl.theme.green.css
-│        │  │  ├─ owl.theme.green.min.css
-│        │  │  └─ owl.video.play.png
-│        │  ├─ LICENSE
-│        │  ├─ owl.carousel.js
-│        │  ├─ owl.carousel.min.js
-│        │  └─ README.md
-│        ├─ popper
-│        │  └─ umd
-│        │     ├─ popper-utils.js
-│        │     ├─ popper-utils.js.map
-│        │     ├─ popper-utils.min.js
-│        │     ├─ popper-utils.min.js.map
-│        │     ├─ popper.js
-│        │     ├─ popper.js.flow
-│        │     ├─ popper.js.map
-│        │     ├─ popper.min.js
-│        │     └─ popper.min.js.map
-│        ├─ rs-plugin
-│        │  ├─ css
-│        │  │  ├─ closedhand.cur
-│        │  │  ├─ index.php
-│        │  │  ├─ layers.css
-│        │  │  ├─ navigation-skins
-│        │  │  │  ├─ ares.css
-│        │  │  │  ├─ custom.css
-│        │  │  │  ├─ dione.css
-│        │  │  │  ├─ erinyen.css
-│        │  │  │  ├─ gyges.css
-│        │  │  │  ├─ hades.css
-│        │  │  │  ├─ hebe.css
-│        │  │  │  ├─ hephaistos.css
-│        │  │  │  ├─ hermes.css
-│        │  │  │  ├─ hesperiden.css
-│        │  │  │  ├─ metis.css
-│        │  │  │  ├─ persephone.css
-│        │  │  │  ├─ uranus.css
-│        │  │  │  └─ zeus.css
-│        │  │  ├─ navigation.css
-│        │  │  ├─ openhand.cur
-│        │  │  ├─ settings-source.css
-│        │  │  ├─ settings.css
-│        │  │  └─ tp-color-picker.css
-│        │  └─ js
-│        │     ├─ extensions
-│        │     │  ├─ index.php
-│        │     │  ├─ revolution.extension.actions.min.js
-│        │     │  ├─ revolution.extension.carousel.min.js
-│        │     │  ├─ revolution.extension.kenburn.min.js
-│        │     │  ├─ revolution.extension.layeranimation.min.js
-│        │     │  ├─ revolution.extension.migration.min.js
-│        │     │  ├─ revolution.extension.navigation.min.js
-│        │     │  ├─ revolution.extension.parallax.min.js
-│        │     │  ├─ revolution.extension.slideanims.min.js
-│        │     │  ├─ revolution.extension.video.min.js
-│        │     │  └─ source
-│        │     │     ├─ index.php
-│        │     │     ├─ revolution.extension.actions.js
-│        │     │     ├─ revolution.extension.carousel.js
-│        │     │     ├─ revolution.extension.kenburn.js
-│        │     │     ├─ revolution.extension.layeranimation.js
-│        │     │     ├─ revolution.extension.migration.js
-│        │     │     ├─ revolution.extension.navigation.js
-│        │     │     ├─ revolution.extension.parallax.js
-│        │     │     ├─ revolution.extension.slideanims.js
-│        │     │     └─ revolution.extension.video.js
-│        │     ├─ index.php
-│        │     ├─ jquery.themepunch.enablelog.js
-│        │     ├─ jquery.themepunch.revolution.min.js
-│        │     ├─ jquery.themepunch.tools.min.js
-│        │     ├─ source
-│        │     │  ├─ index.php
-│        │     │  ├─ jquery.themepunch.enablelog.js
-│        │     │  ├─ jquery.themepunch.revolution.js
-│        │     │  ├─ jquery.themepunch.tools.min.js
-│        │     │  └─ tp-color-picker.js
-│        │     └─ tp-color-picker.min.js
-│        ├─ simple-line-icons
-│        │  ├─ bower.json
-│        │  ├─ CODE_OF_CONDUCT.md
-│        │  ├─ CONTRIBUTING.md
-│        │  ├─ css
-│        │  │  ├─ simple-line-icons.css
-│        │  │  └─ simple-line-icons.min.css
-│        │  ├─ fonts
-│        │  │  ├─ Simple-Line-Icons.eot
-│        │  │  ├─ Simple-Line-Icons.svg
-│        │  │  ├─ Simple-Line-Icons.ttf
-│        │  │  ├─ Simple-Line-Icons.woff
-│        │  │  └─ Simple-Line-Icons.woff2
-│        │  ├─ History.md
-│        │  ├─ less
-│        │  │  └─ simple-line-icons.less
-│        │  ├─ LICENSE.md
-│        │  ├─ package.json
-│        │  ├─ README.md
-│        │  └─ scss
-│        │     └─ simple-line-icons.scss
-│        ├─ vide
-│        │  ├─ jquery.vide.js
-│        │  └─ jquery.vide.min.js
-│        └─ vivus
-│           ├─ vivus.js
-│           └─ vivus.min.js
-├─ LaCanchita.php
-├─ README.md
-└─ view
-   ├─ estadio22
-   ├─ layoutsCliente
-   └─ maquetaCliente
-      ├─ HomeCliente.php
-      ├─ LaCanchitaCliente.php
-      └─ SoporteGenericoCliente.php
+Las **vistas** protegidas usan `require_view($min, $max)` de `auth_view.php` — redirige al panel correcto si el rol no coincide.  
+Las **APIs** protegidas usan `require_perfil($max)` de `tenancy.php` — responde `403 JSON` si el rol no coincide.
 
-```
-```
-Lacanchita
-├─ config
-│  ├─ css
-│  │  ├─ custom.css
-│  │  ├─ fonts
-│  │  │  ├─ minicart-font.eot
-│  │  │  ├─ minicart-font.svg
-│  │  │  ├─ minicart-font.ttf
-│  │  │  ├─ minicart-font.woff
-│  │  │  ├─ star.eot
-│  │  │  ├─ star.svg
-│  │  │  ├─ star.ttf
-│  │  │  └─ star.woff
-│  │  ├─ skins
-│  │  │  ├─ default.css
-│  │  │  ├─ skin-app-landing.css
-│  │  │  ├─ skin-architecture-interior.css
-│  │  │  ├─ skin-band.css
-│  │  │  ├─ skin-barber.css
-│  │  │  ├─ skin-business-consulting.css
-│  │  │  ├─ skin-church.css
-│  │  │  ├─ skin-coffee.css
-│  │  │  ├─ skin-construction.css
-│  │  │  ├─ skin-corporate-10.css
-│  │  │  ├─ skin-corporate-11.css
-│  │  │  ├─ skin-corporate-12.css
-│  │  │  ├─ skin-corporate-13.css
-│  │  │  ├─ skin-corporate-14.css
-│  │  │  ├─ skin-corporate-15.css
-│  │  │  ├─ skin-corporate-16.css
-│  │  │  ├─ skin-corporate-17.css
-│  │  │  ├─ skin-corporate-18.css
-│  │  │  ├─ skin-corporate-19.css
-│  │  │  ├─ skin-corporate-20.css
-│  │  │  ├─ skin-corporate-3.css
-│  │  │  ├─ skin-corporate-4.css
-│  │  │  ├─ skin-corporate-5.css
-│  │  │  ├─ skin-corporate-6.css
-│  │  │  ├─ skin-corporate-7.css
-│  │  │  ├─ skin-corporate-8.css
-│  │  │  ├─ skin-corporate-9.css
-│  │  │  ├─ skin-corporate-hosting.css
-│  │  │  ├─ skin-digital-agency.css
-│  │  │  ├─ skin-education.css
-│  │  │  ├─ skin-event.css
-│  │  │  ├─ skin-finance.css
-│  │  │  ├─ skin-gym.css
-│  │  │  ├─ skin-hotel.css
-│  │  │  ├─ skin-insurance.css
-│  │  │  ├─ skin-landing.css
-│  │  │  ├─ skin-law-firm.css
-│  │  │  ├─ skin-medical.css
-│  │  │  ├─ skin-one-page-agency.css
-│  │  │  ├─ skin-photography.css
-│  │  │  ├─ skin-product-landing.css
-│  │  │  ├─ skin-real-estate.css
-│  │  │  ├─ skin-restaurant.css
-│  │  │  ├─ skin-resume.css
-│  │  │  ├─ skin-sass.css
-│  │  │  ├─ skin-seo.css
-│  │  │  └─ skin-wedding.css
-│  │  ├─ theme-blog.css
-│  │  ├─ theme-elements.css
-│  │  ├─ theme-shop.css
-│  │  └─ theme.css
-│  ├─ dist
-│  │  ├─ img
-│  │  │  ├─ blank.gif
-│  │  │  ├─ cancha.PNG
-│  │  │  ├─ ESTADIO.webp
-│  │  │  ├─ icons
-│  │  │  │  └─ icon-cart-light.svg
-│  │  │  ├─ loguito_lacanchita.webp
-│  │  │  └─ maqueta
-│  │  │     └─ maqueta_imagen_principal.jpg
-│  │  └─ js
-│  │     ├─ custom.js
-│  │     ├─ theme.init.js
-│  │     └─ theme.js
-│  └─ pluggins
-│     └─ vendor
-│        ├─ animate
-│        │  └─ animate.min.css
-│        ├─ bootstrap
-│        │  ├─ css
-│        │  │  ├─ bootstrap-grid.css
-│        │  │  ├─ bootstrap-grid.css.map
-│        │  │  ├─ bootstrap-grid.min.css
-│        │  │  ├─ bootstrap-grid.min.css.map
-│        │  │  ├─ bootstrap-reboot.css
-│        │  │  ├─ bootstrap-reboot.css.map
-│        │  │  ├─ bootstrap-reboot.min.css
-│        │  │  ├─ bootstrap-reboot.min.css.map
-│        │  │  ├─ bootstrap.css
-│        │  │  ├─ bootstrap.css.map
-│        │  │  ├─ bootstrap.min.css
-│        │  │  └─ bootstrap.min.css.map
-│        │  └─ js
-│        │     ├─ bootstrap.bundle.js
-│        │     ├─ bootstrap.bundle.js.map
-│        │     ├─ bootstrap.bundle.min.js
-│        │     ├─ bootstrap.bundle.min.js.map
-│        │     ├─ bootstrap.js
-│        │     ├─ bootstrap.js.map
-│        │     ├─ bootstrap.min.js
-│        │     └─ bootstrap.min.js.map
-│        ├─ bootstrap-datepicker
-│        │  ├─ css
-│        │  │  ├─ bootstrap-datepicker.css
-│        │  │  ├─ bootstrap-datepicker.css.map
-│        │  │  ├─ bootstrap-datepicker.min.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css.map
-│        │  │  ├─ bootstrap-datepicker.standalone.min.css
-│        │  │  ├─ bootstrap-datepicker3.css
-│        │  │  ├─ bootstrap-datepicker3.css.map
-│        │  │  ├─ bootstrap-datepicker3.min.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css.map
-│        │  │  └─ bootstrap-datepicker3.standalone.min.css
-│        │  ├─ js
-│        │  │  ├─ bootstrap-datepicker.js
-│        │  │  └─ bootstrap-datepicker.min.js
-│        │  └─ locales
-│        │     ├─ bootstrap-datepicker-en-CA.min.js
-│        │     ├─ bootstrap-datepicker.ar-tn.min.js
-│        │     ├─ bootstrap-datepicker.ar.min.js
-│        │     ├─ bootstrap-datepicker.uz-cyrl.min.js
-│        │     ├─ bootstrap-datepicker.uz-latn.min.js
-│        │     ├─ bootstrap-datepicker.vi.min.js
-│        │     ├─ bootstrap-datepicker.zh-CN.min.js
-│        │     └─ bootstrap-datepicker.zh-TW.min.js
-│        ├─ common
-│        │  ├─ common.init.js
-│        │  ├─ common.js
-│        │  └─ common.min.js
-│        ├─ fontawesome-free
-│        │  ├─ css
-│        │  │  └─ all.min.css
-│        │  └─ webfonts
-│        │     ├─ fa-brands-400.eot
-│        │     ├─ fa-brands-400.svg
-│        │     ├─ fa-brands-400.ttf
-│        │     ├─ fa-brands-400.woff
-│        │     ├─ fa-brands-400.woff2
-│        │     ├─ fa-regular-400.eot
-│        │     ├─ fa-regular-400.svg
-│        │     ├─ fa-regular-400.ttf
-│        │     ├─ fa-regular-400.woff
-│        │     ├─ fa-regular-400.woff2
-│        │     ├─ fa-solid-900.eot
-│        │     ├─ fa-solid-900.svg
-│        │     ├─ fa-solid-900.ttf
-│        │     ├─ fa-solid-900.woff
-│        │     └─ fa-solid-900.woff2
-│        ├─ isotope
-│        │  └─ jquery.isotope.min.js
-│        ├─ jquery
-│        │  ├─ core.js
-│        │  ├─ jquery.js
-│        │  ├─ jquery.min.js
-│        │  ├─ jquery.min.map
-│        │  ├─ jquery.slim.js
-│        │  ├─ jquery.slim.min.js
-│        │  └─ jquery.slim.min.map
-│        ├─ jquery.appear
-│        │  ├─ jquery.appear.js
-│        │  └─ jquery.appear.min.js
-│        ├─ jquery.cookie
-│        │  ├─ jquery.cookie.js
-│        │  └─ jquery.cookie.min.js
-│        ├─ jquery.easing
-│        │  └─ jquery.easing.min.js
-│        ├─ jquery.easy-pie-chart
-│        │  ├─ angular.easypiechart.js
-│        │  ├─ angular.easypiechart.min.js
-│        │  ├─ easypiechart.js
-│        │  ├─ easypiechart.min.js
-│        │  ├─ jquery.easypiechart.js
-│        │  └─ jquery.easypiechart.min.js
-│        ├─ jquery.gmap
-│        │  ├─ jquery.gmap.js
-│        │  └─ jquery.gmap.min.js
-│        ├─ jquery.lazyload
-│        │  ├─ jquery.lazyload.js
-│        │  └─ jquery.lazyload.min.js
-│        ├─ jquery.validation
-│        │  ├─ additional-methods.js
-│        │  ├─ additional-methods.min.js
-│        │  ├─ jquery.validate.js
-│        │  ├─ jquery.validate.min.js
-│        │  └─ localization
-│        │     ├─ messages_ar.js
-│        │     ├─ messages_ar.min.js
-│        │     └─ product-grey-6.jpg
-│        ├─ magnific-popup
-│        │  ├─ jquery.magnific-popup.js
-│        │  ├─ jquery.magnific-popup.min.js
-│        │  ├─ magnific-popup.css
-│        │  └─ magnific-popup.min.css
-│        ├─ modernizr
-│        │  └─ modernizr.min.js
-│        ├─ owl.carousel
-│        │  ├─ assets
-│        │  │  ├─ ajax-loader.gif
-│        │  │  ├─ owl.carousel.css
-│        │  │  ├─ owl.carousel.min.css
-│        │  │  ├─ owl.theme.default.css
-│        │  │  ├─ owl.theme.default.min.css
-│        │  │  ├─ owl.theme.green.css
-│        │  │  ├─ owl.theme.green.min.css
-│        │  │  └─ owl.video.play.png
-│        │  ├─ LICENSE
-│        │  ├─ owl.carousel.js
-│        │  ├─ owl.carousel.min.js
-│        │  └─ README.md
-│        ├─ popper
-│        │  └─ umd
-│        │     ├─ popper-utils.js
-│        │     ├─ popper-utils.js.map
-│        │     ├─ popper-utils.min.js
-│        │     ├─ popper-utils.min.js.map
-│        │     ├─ popper.js
-│        │     ├─ popper.js.flow
-│        │     ├─ popper.js.map
-│        │     ├─ popper.min.js
-│        │     └─ popper.min.js.map
-│        ├─ rs-plugin
-│        │  ├─ css
-│        │  │  ├─ closedhand.cur
-│        │  │  ├─ index.php
-│        │  │  ├─ layers.css
-│        │  │  ├─ navigation-skins
-│        │  │  │  ├─ ares.css
-│        │  │  │  ├─ custom.css
-│        │  │  │  ├─ dione.css
-│        │  │  │  ├─ erinyen.css
-│        │  │  │  ├─ gyges.css
-│        │  │  │  ├─ hades.css
-│        │  │  │  ├─ hebe.css
-│        │  │  │  ├─ hephaistos.css
-│        │  │  │  ├─ hermes.css
-│        │  │  │  ├─ hesperiden.css
-│        │  │  │  ├─ metis.css
-│        │  │  │  ├─ persephone.css
-│        │  │  │  ├─ uranus.css
-│        │  │  │  └─ zeus.css
-│        │  │  ├─ navigation.css
-│        │  │  ├─ openhand.cur
-│        │  │  ├─ settings-source.css
-│        │  │  ├─ settings.css
-│        │  │  └─ tp-color-picker.css
-│        │  └─ js
-│        │     ├─ extensions
-│        │     │  ├─ index.php
-│        │     │  ├─ revolution.extension.actions.min.js
-│        │     │  ├─ revolution.extension.carousel.min.js
-│        │     │  ├─ revolution.extension.kenburn.min.js
-│        │     │  ├─ revolution.extension.layeranimation.min.js
-│        │     │  ├─ revolution.extension.migration.min.js
-│        │     │  ├─ revolution.extension.navigation.min.js
-│        │     │  ├─ revolution.extension.parallax.min.js
-│        │     │  ├─ revolution.extension.slideanims.min.js
-│        │     │  ├─ revolution.extension.video.min.js
-│        │     │  └─ source
-│        │     │     ├─ index.php
-│        │     │     ├─ revolution.extension.actions.js
-│        │     │     ├─ revolution.extension.carousel.js
-│        │     │     ├─ revolution.extension.kenburn.js
-│        │     │     ├─ revolution.extension.layeranimation.js
-│        │     │     ├─ revolution.extension.migration.js
-│        │     │     ├─ revolution.extension.navigation.js
-│        │     │     ├─ revolution.extension.parallax.js
-│        │     │     ├─ revolution.extension.slideanims.js
-│        │     │     └─ revolution.extension.video.js
-│        │     ├─ index.php
-│        │     ├─ jquery.themepunch.enablelog.js
-│        │     ├─ jquery.themepunch.revolution.min.js
-│        │     ├─ jquery.themepunch.tools.min.js
-│        │     ├─ source
-│        │     │  ├─ index.php
-│        │     │  ├─ jquery.themepunch.enablelog.js
-│        │     │  ├─ jquery.themepunch.revolution.js
-│        │     │  ├─ jquery.themepunch.tools.min.js
-│        │     │  └─ tp-color-picker.js
-│        │     └─ tp-color-picker.min.js
-│        ├─ simple-line-icons
-│        │  ├─ bower.json
-│        │  ├─ CODE_OF_CONDUCT.md
-│        │  ├─ CONTRIBUTING.md
-│        │  ├─ css
-│        │  │  ├─ simple-line-icons.css
-│        │  │  └─ simple-line-icons.min.css
-│        │  ├─ fonts
-│        │  │  ├─ Simple-Line-Icons.eot
-│        │  │  ├─ Simple-Line-Icons.svg
-│        │  │  ├─ Simple-Line-Icons.ttf
-│        │  │  ├─ Simple-Line-Icons.woff
-│        │  │  └─ Simple-Line-Icons.woff2
-│        │  ├─ History.md
-│        │  ├─ less
-│        │  │  └─ simple-line-icons.less
-│        │  ├─ LICENSE.md
-│        │  ├─ package.json
-│        │  ├─ README.md
-│        │  └─ scss
-│        │     └─ simple-line-icons.scss
-│        ├─ vide
-│        │  ├─ jquery.vide.js
-│        │  └─ jquery.vide.min.js
-│        └─ vivus
-│           ├─ vivus.js
-│           └─ vivus.min.js
-├─ LaCanchita.php
-├─ README.md
-└─ view
-   ├─ estadio22
-   ├─ layoutsCliente
-   │  └─ InicioHastaElContenido.php
-   └─ maquetaCliente
-      ├─ HomeCliente.php
-      ├─ LaCanchitaCliente.php
-      └─ SoporteGenericoCliente.php
+---
 
-```
-```
-Lacanchita
-├─ config
-│  ├─ css
-│  │  ├─ custom.css
-│  │  ├─ fonts
-│  │  │  ├─ minicart-font.eot
-│  │  │  ├─ minicart-font.svg
-│  │  │  ├─ minicart-font.ttf
-│  │  │  ├─ minicart-font.woff
-│  │  │  ├─ star.eot
-│  │  │  ├─ star.svg
-│  │  │  ├─ star.ttf
-│  │  │  └─ star.woff
-│  │  ├─ skins
-│  │  │  ├─ default.css
-│  │  │  ├─ skin-app-landing.css
-│  │  │  ├─ skin-architecture-interior.css
-│  │  │  ├─ skin-band.css
-│  │  │  ├─ skin-barber.css
-│  │  │  ├─ skin-business-consulting.css
-│  │  │  ├─ skin-church.css
-│  │  │  ├─ skin-coffee.css
-│  │  │  ├─ skin-construction.css
-│  │  │  ├─ skin-corporate-10.css
-│  │  │  ├─ skin-corporate-11.css
-│  │  │  ├─ skin-corporate-12.css
-│  │  │  ├─ skin-corporate-13.css
-│  │  │  ├─ skin-corporate-14.css
-│  │  │  ├─ skin-corporate-15.css
-│  │  │  ├─ skin-corporate-16.css
-│  │  │  ├─ skin-corporate-17.css
-│  │  │  ├─ skin-corporate-18.css
-│  │  │  ├─ skin-corporate-19.css
-│  │  │  ├─ skin-corporate-20.css
-│  │  │  ├─ skin-corporate-3.css
-│  │  │  ├─ skin-corporate-4.css
-│  │  │  ├─ skin-corporate-5.css
-│  │  │  ├─ skin-corporate-6.css
-│  │  │  ├─ skin-corporate-7.css
-│  │  │  ├─ skin-corporate-8.css
-│  │  │  ├─ skin-corporate-9.css
-│  │  │  ├─ skin-corporate-hosting.css
-│  │  │  ├─ skin-digital-agency.css
-│  │  │  ├─ skin-education.css
-│  │  │  ├─ skin-event.css
-│  │  │  ├─ skin-finance.css
-│  │  │  ├─ skin-gym.css
-│  │  │  ├─ skin-hotel.css
-│  │  │  ├─ skin-insurance.css
-│  │  │  ├─ skin-landing.css
-│  │  │  ├─ skin-law-firm.css
-│  │  │  ├─ skin-medical.css
-│  │  │  ├─ skin-one-page-agency.css
-│  │  │  ├─ skin-photography.css
-│  │  │  ├─ skin-product-landing.css
-│  │  │  ├─ skin-real-estate.css
-│  │  │  ├─ skin-restaurant.css
-│  │  │  ├─ skin-resume.css
-│  │  │  ├─ skin-sass.css
-│  │  │  ├─ skin-seo.css
-│  │  │  └─ skin-wedding.css
-│  │  ├─ theme-blog.css
-│  │  ├─ theme-elements.css
-│  │  ├─ theme-shop.css
-│  │  └─ theme.css
-│  ├─ dist
-│  │  ├─ img
-│  │  │  ├─ blank.gif
-│  │  │  ├─ cancha.PNG
-│  │  │  ├─ ESTADIO.webp
-│  │  │  ├─ icons
-│  │  │  │  └─ icon-cart-light.svg
-│  │  │  ├─ loguito_lacanchita.webp
-│  │  │  └─ maqueta
-│  │  │     └─ maqueta_imagen_principal.jpg
-│  │  └─ js
-│  │     ├─ custom.js
-│  │     ├─ soporte
-│  │     │  └─ soporte.js
-│  │     ├─ theme.init.js
-│  │     └─ theme.js
-│  └─ pluggins
-│     └─ vendor
-│        ├─ animate
-│        │  └─ animate.min.css
-│        ├─ bootstrap
-│        │  ├─ css
-│        │  │  ├─ bootstrap-grid.css
-│        │  │  ├─ bootstrap-grid.css.map
-│        │  │  ├─ bootstrap-grid.min.css
-│        │  │  ├─ bootstrap-grid.min.css.map
-│        │  │  ├─ bootstrap-reboot.css
-│        │  │  ├─ bootstrap-reboot.css.map
-│        │  │  ├─ bootstrap-reboot.min.css
-│        │  │  ├─ bootstrap-reboot.min.css.map
-│        │  │  ├─ bootstrap.css
-│        │  │  ├─ bootstrap.css.map
-│        │  │  ├─ bootstrap.min.css
-│        │  │  └─ bootstrap.min.css.map
-│        │  └─ js
-│        │     ├─ bootstrap.bundle.js
-│        │     ├─ bootstrap.bundle.js.map
-│        │     ├─ bootstrap.bundle.min.js
-│        │     ├─ bootstrap.bundle.min.js.map
-│        │     ├─ bootstrap.js
-│        │     ├─ bootstrap.js.map
-│        │     ├─ bootstrap.min.js
-│        │     └─ bootstrap.min.js.map
-│        ├─ bootstrap-datepicker
-│        │  ├─ css
-│        │  │  ├─ bootstrap-datepicker.css
-│        │  │  ├─ bootstrap-datepicker.css.map
-│        │  │  ├─ bootstrap-datepicker.min.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css.map
-│        │  │  ├─ bootstrap-datepicker.standalone.min.css
-│        │  │  ├─ bootstrap-datepicker3.css
-│        │  │  ├─ bootstrap-datepicker3.css.map
-│        │  │  ├─ bootstrap-datepicker3.min.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css.map
-│        │  │  └─ bootstrap-datepicker3.standalone.min.css
-│        │  ├─ js
-│        │  │  ├─ bootstrap-datepicker.js
-│        │  │  └─ bootstrap-datepicker.min.js
-│        │  └─ locales
-│        │     ├─ bootstrap-datepicker-en-CA.min.js
-│        │     ├─ bootstrap-datepicker.ar-tn.min.js
-│        │     ├─ bootstrap-datepicker.ar.min.js
-│        │     ├─ bootstrap-datepicker.uz-cyrl.min.js
-│        │     ├─ bootstrap-datepicker.uz-latn.min.js
-│        │     ├─ bootstrap-datepicker.vi.min.js
-│        │     ├─ bootstrap-datepicker.zh-CN.min.js
-│        │     └─ bootstrap-datepicker.zh-TW.min.js
-│        ├─ common
-│        │  ├─ common.init.js
-│        │  ├─ common.js
-│        │  └─ common.min.js
-│        ├─ fontawesome-free
-│        │  ├─ css
-│        │  │  └─ all.min.css
-│        │  └─ webfonts
-│        │     ├─ fa-brands-400.eot
-│        │     ├─ fa-brands-400.svg
-│        │     ├─ fa-brands-400.ttf
-│        │     ├─ fa-brands-400.woff
-│        │     ├─ fa-brands-400.woff2
-│        │     ├─ fa-regular-400.eot
-│        │     ├─ fa-regular-400.svg
-│        │     ├─ fa-regular-400.ttf
-│        │     ├─ fa-regular-400.woff
-│        │     ├─ fa-regular-400.woff2
-│        │     ├─ fa-solid-900.eot
-│        │     ├─ fa-solid-900.svg
-│        │     ├─ fa-solid-900.ttf
-│        │     ├─ fa-solid-900.woff
-│        │     └─ fa-solid-900.woff2
-│        ├─ isotope
-│        │  └─ jquery.isotope.min.js
-│        ├─ jquery
-│        │  ├─ core.js
-│        │  ├─ jquery.js
-│        │  ├─ jquery.min.js
-│        │  ├─ jquery.min.map
-│        │  ├─ jquery.slim.js
-│        │  ├─ jquery.slim.min.js
-│        │  └─ jquery.slim.min.map
-│        ├─ jquery.appear
-│        │  ├─ jquery.appear.js
-│        │  └─ jquery.appear.min.js
-│        ├─ jquery.cookie
-│        │  ├─ jquery.cookie.js
-│        │  └─ jquery.cookie.min.js
-│        ├─ jquery.easing
-│        │  └─ jquery.easing.min.js
-│        ├─ jquery.easy-pie-chart
-│        │  ├─ angular.easypiechart.js
-│        │  ├─ angular.easypiechart.min.js
-│        │  ├─ easypiechart.js
-│        │  ├─ easypiechart.min.js
-│        │  ├─ jquery.easypiechart.js
-│        │  └─ jquery.easypiechart.min.js
-│        ├─ jquery.gmap
-│        │  ├─ jquery.gmap.js
-│        │  └─ jquery.gmap.min.js
-│        ├─ jquery.lazyload
-│        │  ├─ jquery.lazyload.js
-│        │  └─ jquery.lazyload.min.js
-│        ├─ jquery.validation
-│        │  ├─ additional-methods.js
-│        │  ├─ additional-methods.min.js
-│        │  ├─ jquery.validate.js
-│        │  ├─ jquery.validate.min.js
-│        │  └─ localization
-│        │     ├─ messages_ar.js
-│        │     ├─ messages_ar.min.js
-│        │     └─ product-grey-6.jpg
-│        ├─ magnific-popup
-│        │  ├─ jquery.magnific-popup.js
-│        │  ├─ jquery.magnific-popup.min.js
-│        │  ├─ magnific-popup.css
-│        │  └─ magnific-popup.min.css
-│        ├─ modernizr
-│        │  └─ modernizr.min.js
-│        ├─ owl.carousel
-│        │  ├─ assets
-│        │  │  ├─ ajax-loader.gif
-│        │  │  ├─ owl.carousel.css
-│        │  │  ├─ owl.carousel.min.css
-│        │  │  ├─ owl.theme.default.css
-│        │  │  ├─ owl.theme.default.min.css
-│        │  │  ├─ owl.theme.green.css
-│        │  │  ├─ owl.theme.green.min.css
-│        │  │  └─ owl.video.play.png
-│        │  ├─ LICENSE
-│        │  ├─ owl.carousel.js
-│        │  ├─ owl.carousel.min.js
-│        │  └─ README.md
-│        ├─ popper
-│        │  └─ umd
-│        │     ├─ popper-utils.js
-│        │     ├─ popper-utils.js.map
-│        │     ├─ popper-utils.min.js
-│        │     ├─ popper-utils.min.js.map
-│        │     ├─ popper.js
-│        │     ├─ popper.js.flow
-│        │     ├─ popper.js.map
-│        │     ├─ popper.min.js
-│        │     └─ popper.min.js.map
-│        ├─ rs-plugin
-│        │  ├─ css
-│        │  │  ├─ closedhand.cur
-│        │  │  ├─ index.php
-│        │  │  ├─ layers.css
-│        │  │  ├─ navigation-skins
-│        │  │  │  ├─ ares.css
-│        │  │  │  ├─ custom.css
-│        │  │  │  ├─ dione.css
-│        │  │  │  ├─ erinyen.css
-│        │  │  │  ├─ gyges.css
-│        │  │  │  ├─ hades.css
-│        │  │  │  ├─ hebe.css
-│        │  │  │  ├─ hephaistos.css
-│        │  │  │  ├─ hermes.css
-│        │  │  │  ├─ hesperiden.css
-│        │  │  │  ├─ metis.css
-│        │  │  │  ├─ persephone.css
-│        │  │  │  ├─ uranus.css
-│        │  │  │  └─ zeus.css
-│        │  │  ├─ navigation.css
-│        │  │  ├─ openhand.cur
-│        │  │  ├─ settings-source.css
-│        │  │  ├─ settings.css
-│        │  │  └─ tp-color-picker.css
-│        │  └─ js
-│        │     ├─ extensions
-│        │     │  ├─ index.php
-│        │     │  ├─ revolution.extension.actions.min.js
-│        │     │  ├─ revolution.extension.carousel.min.js
-│        │     │  ├─ revolution.extension.kenburn.min.js
-│        │     │  ├─ revolution.extension.layeranimation.min.js
-│        │     │  ├─ revolution.extension.migration.min.js
-│        │     │  ├─ revolution.extension.navigation.min.js
-│        │     │  ├─ revolution.extension.parallax.min.js
-│        │     │  ├─ revolution.extension.slideanims.min.js
-│        │     │  ├─ revolution.extension.video.min.js
-│        │     │  └─ source
-│        │     │     ├─ index.php
-│        │     │     ├─ revolution.extension.actions.js
-│        │     │     ├─ revolution.extension.carousel.js
-│        │     │     ├─ revolution.extension.kenburn.js
-│        │     │     ├─ revolution.extension.layeranimation.js
-│        │     │     ├─ revolution.extension.migration.js
-│        │     │     ├─ revolution.extension.navigation.js
-│        │     │     ├─ revolution.extension.parallax.js
-│        │     │     ├─ revolution.extension.slideanims.js
-│        │     │     └─ revolution.extension.video.js
-│        │     ├─ index.php
-│        │     ├─ jquery.themepunch.enablelog.js
-│        │     ├─ jquery.themepunch.revolution.min.js
-│        │     ├─ jquery.themepunch.tools.min.js
-│        │     ├─ source
-│        │     │  ├─ index.php
-│        │     │  ├─ jquery.themepunch.enablelog.js
-│        │     │  ├─ jquery.themepunch.revolution.js
-│        │     │  ├─ jquery.themepunch.tools.min.js
-│        │     │  └─ tp-color-picker.js
-│        │     └─ tp-color-picker.min.js
-│        ├─ simple-line-icons
-│        │  ├─ bower.json
-│        │  ├─ CODE_OF_CONDUCT.md
-│        │  ├─ CONTRIBUTING.md
-│        │  ├─ css
-│        │  │  ├─ simple-line-icons.css
-│        │  │  └─ simple-line-icons.min.css
-│        │  ├─ fonts
-│        │  │  ├─ Simple-Line-Icons.eot
-│        │  │  ├─ Simple-Line-Icons.svg
-│        │  │  ├─ Simple-Line-Icons.ttf
-│        │  │  ├─ Simple-Line-Icons.woff
-│        │  │  └─ Simple-Line-Icons.woff2
-│        │  ├─ History.md
-│        │  ├─ less
-│        │  │  └─ simple-line-icons.less
-│        │  ├─ LICENSE.md
-│        │  ├─ package.json
-│        │  ├─ README.md
-│        │  └─ scss
-│        │     └─ simple-line-icons.scss
-│        ├─ vide
-│        │  ├─ jquery.vide.js
-│        │  └─ jquery.vide.min.js
-│        └─ vivus
-│           ├─ vivus.js
-│           └─ vivus.min.js
-├─ LaCanchita.php
-├─ README.md
-└─ view
-   ├─ estadio22
-   ├─ layoutsCliente
-   │  ├─ InicioHastaElContenido.php
-   │  └─ InicioSuperior.php
-   └─ maquetaCliente
-      ├─ HomeCliente.php
-      ├─ LaCanchitaCliente.php
-      └─ SoporteGenericoCliente.php
+## APIs — referencia rápida
 
-```
-```
-Lacanchita
-├─ config
-│  ├─ css
-│  │  ├─ custom.css
-│  │  ├─ fonts
-│  │  │  ├─ minicart-font.eot
-│  │  │  ├─ minicart-font.svg
-│  │  │  ├─ minicart-font.ttf
-│  │  │  ├─ minicart-font.woff
-│  │  │  ├─ star.eot
-│  │  │  ├─ star.svg
-│  │  │  ├─ star.ttf
-│  │  │  └─ star.woff
-│  │  ├─ skins
-│  │  │  ├─ default.css
-│  │  │  ├─ skin-app-landing.css
-│  │  │  ├─ skin-architecture-interior.css
-│  │  │  ├─ skin-band.css
-│  │  │  ├─ skin-barber.css
-│  │  │  ├─ skin-business-consulting.css
-│  │  │  ├─ skin-church.css
-│  │  │  ├─ skin-coffee.css
-│  │  │  ├─ skin-construction.css
-│  │  │  ├─ skin-corporate-10.css
-│  │  │  ├─ skin-corporate-11.css
-│  │  │  ├─ skin-corporate-12.css
-│  │  │  ├─ skin-corporate-13.css
-│  │  │  ├─ skin-corporate-14.css
-│  │  │  ├─ skin-corporate-15.css
-│  │  │  ├─ skin-corporate-16.css
-│  │  │  ├─ skin-corporate-17.css
-│  │  │  ├─ skin-corporate-18.css
-│  │  │  ├─ skin-corporate-19.css
-│  │  │  ├─ skin-corporate-20.css
-│  │  │  ├─ skin-corporate-3.css
-│  │  │  ├─ skin-corporate-4.css
-│  │  │  ├─ skin-corporate-5.css
-│  │  │  ├─ skin-corporate-6.css
-│  │  │  ├─ skin-corporate-7.css
-│  │  │  ├─ skin-corporate-8.css
-│  │  │  ├─ skin-corporate-9.css
-│  │  │  ├─ skin-corporate-hosting.css
-│  │  │  ├─ skin-digital-agency.css
-│  │  │  ├─ skin-education.css
-│  │  │  ├─ skin-event.css
-│  │  │  ├─ skin-finance.css
-│  │  │  ├─ skin-gym.css
-│  │  │  ├─ skin-hotel.css
-│  │  │  ├─ skin-insurance.css
-│  │  │  ├─ skin-landing.css
-│  │  │  ├─ skin-law-firm.css
-│  │  │  ├─ skin-medical.css
-│  │  │  ├─ skin-one-page-agency.css
-│  │  │  ├─ skin-photography.css
-│  │  │  ├─ skin-product-landing.css
-│  │  │  ├─ skin-real-estate.css
-│  │  │  ├─ skin-restaurant.css
-│  │  │  ├─ skin-resume.css
-│  │  │  ├─ skin-sass.css
-│  │  │  ├─ skin-seo.css
-│  │  │  └─ skin-wedding.css
-│  │  ├─ theme-blog.css
-│  │  ├─ theme-elements.css
-│  │  ├─ theme-shop.css
-│  │  └─ theme.css
-│  ├─ dist
-│  │  ├─ img
-│  │  │  ├─ blank.gif
-│  │  │  ├─ cancha.PNG
-│  │  │  ├─ ESTADIO.webp
-│  │  │  ├─ icons
-│  │  │  │  └─ icon-cart-light.svg
-│  │  │  ├─ loguito_lacanchita.webp
-│  │  │  └─ maqueta
-│  │  │     └─ maqueta_imagen_principal.jpg
-│  │  ├─ js
-│  │  │  ├─ custom.js
-│  │  │  ├─ soporte
-│  │  │  │  └─ soporte.js
-│  │  │  ├─ theme.init.js
-│  │  │  └─ theme.js
-│  │  └─ script
-│  │     └─ php
-│  │        ├─ conn.php
-│  │        └─ routes.php
-│  └─ pluggins
-│     └─ vendor
-│        ├─ animate
-│        │  └─ animate.min.css
-│        ├─ bootstrap
-│        │  ├─ css
-│        │  │  ├─ bootstrap-grid.css
-│        │  │  ├─ bootstrap-grid.css.map
-│        │  │  ├─ bootstrap-grid.min.css
-│        │  │  ├─ bootstrap-grid.min.css.map
-│        │  │  ├─ bootstrap-reboot.css
-│        │  │  ├─ bootstrap-reboot.css.map
-│        │  │  ├─ bootstrap-reboot.min.css
-│        │  │  ├─ bootstrap-reboot.min.css.map
-│        │  │  ├─ bootstrap.css
-│        │  │  ├─ bootstrap.css.map
-│        │  │  ├─ bootstrap.min.css
-│        │  │  └─ bootstrap.min.css.map
-│        │  └─ js
-│        │     ├─ bootstrap.bundle.js
-│        │     ├─ bootstrap.bundle.js.map
-│        │     ├─ bootstrap.bundle.min.js
-│        │     ├─ bootstrap.bundle.min.js.map
-│        │     ├─ bootstrap.js
-│        │     ├─ bootstrap.js.map
-│        │     ├─ bootstrap.min.js
-│        │     └─ bootstrap.min.js.map
-│        ├─ bootstrap-datepicker
-│        │  ├─ css
-│        │  │  ├─ bootstrap-datepicker.css
-│        │  │  ├─ bootstrap-datepicker.css.map
-│        │  │  ├─ bootstrap-datepicker.min.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css.map
-│        │  │  ├─ bootstrap-datepicker.standalone.min.css
-│        │  │  ├─ bootstrap-datepicker3.css
-│        │  │  ├─ bootstrap-datepicker3.css.map
-│        │  │  ├─ bootstrap-datepicker3.min.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css.map
-│        │  │  └─ bootstrap-datepicker3.standalone.min.css
-│        │  ├─ js
-│        │  │  ├─ bootstrap-datepicker.js
-│        │  │  └─ bootstrap-datepicker.min.js
-│        │  └─ locales
-│        │     ├─ bootstrap-datepicker-en-CA.min.js
-│        │     ├─ bootstrap-datepicker.ar-tn.min.js
-│        │     ├─ bootstrap-datepicker.ar.min.js
-│        │     ├─ bootstrap-datepicker.uz-cyrl.min.js
-│        │     ├─ bootstrap-datepicker.uz-latn.min.js
-│        │     ├─ bootstrap-datepicker.vi.min.js
-│        │     ├─ bootstrap-datepicker.zh-CN.min.js
-│        │     └─ bootstrap-datepicker.zh-TW.min.js
-│        ├─ common
-│        │  ├─ common.init.js
-│        │  ├─ common.js
-│        │  └─ common.min.js
-│        ├─ fontawesome-free
-│        │  ├─ css
-│        │  │  └─ all.min.css
-│        │  └─ webfonts
-│        │     ├─ fa-brands-400.eot
-│        │     ├─ fa-brands-400.svg
-│        │     ├─ fa-brands-400.ttf
-│        │     ├─ fa-brands-400.woff
-│        │     ├─ fa-brands-400.woff2
-│        │     ├─ fa-regular-400.eot
-│        │     ├─ fa-regular-400.svg
-│        │     ├─ fa-regular-400.ttf
-│        │     ├─ fa-regular-400.woff
-│        │     ├─ fa-regular-400.woff2
-│        │     ├─ fa-solid-900.eot
-│        │     ├─ fa-solid-900.svg
-│        │     ├─ fa-solid-900.ttf
-│        │     ├─ fa-solid-900.woff
-│        │     └─ fa-solid-900.woff2
-│        ├─ isotope
-│        │  └─ jquery.isotope.min.js
-│        ├─ jquery
-│        │  ├─ core.js
-│        │  ├─ jquery.js
-│        │  ├─ jquery.min.js
-│        │  ├─ jquery.min.map
-│        │  ├─ jquery.slim.js
-│        │  ├─ jquery.slim.min.js
-│        │  └─ jquery.slim.min.map
-│        ├─ jquery.appear
-│        │  ├─ jquery.appear.js
-│        │  └─ jquery.appear.min.js
-│        ├─ jquery.cookie
-│        │  ├─ jquery.cookie.js
-│        │  └─ jquery.cookie.min.js
-│        ├─ jquery.easing
-│        │  └─ jquery.easing.min.js
-│        ├─ jquery.easy-pie-chart
-│        │  ├─ angular.easypiechart.js
-│        │  ├─ angular.easypiechart.min.js
-│        │  ├─ easypiechart.js
-│        │  ├─ easypiechart.min.js
-│        │  ├─ jquery.easypiechart.js
-│        │  └─ jquery.easypiechart.min.js
-│        ├─ jquery.gmap
-│        │  ├─ jquery.gmap.js
-│        │  └─ jquery.gmap.min.js
-│        ├─ jquery.lazyload
-│        │  ├─ jquery.lazyload.js
-│        │  └─ jquery.lazyload.min.js
-│        ├─ jquery.validation
-│        │  ├─ additional-methods.js
-│        │  ├─ additional-methods.min.js
-│        │  ├─ jquery.validate.js
-│        │  ├─ jquery.validate.min.js
-│        │  └─ localization
-│        │     ├─ messages_ar.js
-│        │     ├─ messages_ar.min.js
-│        │     └─ product-grey-6.jpg
-│        ├─ magnific-popup
-│        │  ├─ jquery.magnific-popup.js
-│        │  ├─ jquery.magnific-popup.min.js
-│        │  ├─ magnific-popup.css
-│        │  └─ magnific-popup.min.css
-│        ├─ modernizr
-│        │  └─ modernizr.min.js
-│        ├─ owl.carousel
-│        │  ├─ assets
-│        │  │  ├─ ajax-loader.gif
-│        │  │  ├─ owl.carousel.css
-│        │  │  ├─ owl.carousel.min.css
-│        │  │  ├─ owl.theme.default.css
-│        │  │  ├─ owl.theme.default.min.css
-│        │  │  ├─ owl.theme.green.css
-│        │  │  ├─ owl.theme.green.min.css
-│        │  │  └─ owl.video.play.png
-│        │  ├─ LICENSE
-│        │  ├─ owl.carousel.js
-│        │  ├─ owl.carousel.min.js
-│        │  └─ README.md
-│        ├─ popper
-│        │  └─ umd
-│        │     ├─ popper-utils.js
-│        │     ├─ popper-utils.js.map
-│        │     ├─ popper-utils.min.js
-│        │     ├─ popper-utils.min.js.map
-│        │     ├─ popper.js
-│        │     ├─ popper.js.flow
-│        │     ├─ popper.js.map
-│        │     ├─ popper.min.js
-│        │     └─ popper.min.js.map
-│        ├─ rs-plugin
-│        │  ├─ css
-│        │  │  ├─ closedhand.cur
-│        │  │  ├─ index.php
-│        │  │  ├─ layers.css
-│        │  │  ├─ navigation-skins
-│        │  │  │  ├─ ares.css
-│        │  │  │  ├─ custom.css
-│        │  │  │  ├─ dione.css
-│        │  │  │  ├─ erinyen.css
-│        │  │  │  ├─ gyges.css
-│        │  │  │  ├─ hades.css
-│        │  │  │  ├─ hebe.css
-│        │  │  │  ├─ hephaistos.css
-│        │  │  │  ├─ hermes.css
-│        │  │  │  ├─ hesperiden.css
-│        │  │  │  ├─ metis.css
-│        │  │  │  ├─ persephone.css
-│        │  │  │  ├─ uranus.css
-│        │  │  │  └─ zeus.css
-│        │  │  ├─ navigation.css
-│        │  │  ├─ openhand.cur
-│        │  │  ├─ settings-source.css
-│        │  │  ├─ settings.css
-│        │  │  └─ tp-color-picker.css
-│        │  └─ js
-│        │     ├─ extensions
-│        │     │  ├─ index.php
-│        │     │  ├─ revolution.extension.actions.min.js
-│        │     │  ├─ revolution.extension.carousel.min.js
-│        │     │  ├─ revolution.extension.kenburn.min.js
-│        │     │  ├─ revolution.extension.layeranimation.min.js
-│        │     │  ├─ revolution.extension.migration.min.js
-│        │     │  ├─ revolution.extension.navigation.min.js
-│        │     │  ├─ revolution.extension.parallax.min.js
-│        │     │  ├─ revolution.extension.slideanims.min.js
-│        │     │  ├─ revolution.extension.video.min.js
-│        │     │  └─ source
-│        │     │     ├─ index.php
-│        │     │     ├─ revolution.extension.actions.js
-│        │     │     ├─ revolution.extension.carousel.js
-│        │     │     ├─ revolution.extension.kenburn.js
-│        │     │     ├─ revolution.extension.layeranimation.js
-│        │     │     ├─ revolution.extension.migration.js
-│        │     │     ├─ revolution.extension.navigation.js
-│        │     │     ├─ revolution.extension.parallax.js
-│        │     │     ├─ revolution.extension.slideanims.js
-│        │     │     └─ revolution.extension.video.js
-│        │     ├─ index.php
-│        │     ├─ jquery.themepunch.enablelog.js
-│        │     ├─ jquery.themepunch.revolution.min.js
-│        │     ├─ jquery.themepunch.tools.min.js
-│        │     ├─ source
-│        │     │  ├─ index.php
-│        │     │  ├─ jquery.themepunch.enablelog.js
-│        │     │  ├─ jquery.themepunch.revolution.js
-│        │     │  ├─ jquery.themepunch.tools.min.js
-│        │     │  └─ tp-color-picker.js
-│        │     └─ tp-color-picker.min.js
-│        ├─ simple-line-icons
-│        │  ├─ bower.json
-│        │  ├─ CODE_OF_CONDUCT.md
-│        │  ├─ CONTRIBUTING.md
-│        │  ├─ css
-│        │  │  ├─ simple-line-icons.css
-│        │  │  └─ simple-line-icons.min.css
-│        │  ├─ fonts
-│        │  │  ├─ Simple-Line-Icons.eot
-│        │  │  ├─ Simple-Line-Icons.svg
-│        │  │  ├─ Simple-Line-Icons.ttf
-│        │  │  ├─ Simple-Line-Icons.woff
-│        │  │  └─ Simple-Line-Icons.woff2
-│        │  ├─ History.md
-│        │  ├─ less
-│        │  │  └─ simple-line-icons.less
-│        │  ├─ LICENSE.md
-│        │  ├─ package.json
-│        │  ├─ README.md
-│        │  └─ scss
-│        │     └─ simple-line-icons.scss
-│        ├─ vide
-│        │  ├─ jquery.vide.js
-│        │  └─ jquery.vide.min.js
-│        └─ vivus
-│           ├─ vivus.js
-│           └─ vivus.min.js
-├─ index.php
-├─ login.php
-├─ README.md
-├─ register.php
-└─ view
-   ├─ estadio22
-   ├─ layoutsCliente
-   │  ├─ InicioHastaElContenido.php
-   │  └─ InicioSuperior.php
-   └─ maquetaCliente
-      ├─ HomeCliente.php
-      ├─ LaCanchitaCliente.php
-      └─ SoporteGenericoCliente.php
+### Públicas (`/api/`)
 
-```
-```
-Lacanchita
-├─ config
-│  ├─ css
-│  │  ├─ custom.css
-│  │  ├─ fonts
-│  │  │  ├─ minicart-font.eot
-│  │  │  ├─ minicart-font.svg
-│  │  │  ├─ minicart-font.ttf
-│  │  │  ├─ minicart-font.woff
-│  │  │  ├─ star.eot
-│  │  │  ├─ star.svg
-│  │  │  ├─ star.ttf
-│  │  │  └─ star.woff
-│  │  ├─ skins
-│  │  │  ├─ default.css
-│  │  │  ├─ skin-app-landing.css
-│  │  │  ├─ skin-architecture-interior.css
-│  │  │  ├─ skin-band.css
-│  │  │  ├─ skin-barber.css
-│  │  │  ├─ skin-business-consulting.css
-│  │  │  ├─ skin-church.css
-│  │  │  ├─ skin-coffee.css
-│  │  │  ├─ skin-construction.css
-│  │  │  ├─ skin-corporate-10.css
-│  │  │  ├─ skin-corporate-11.css
-│  │  │  ├─ skin-corporate-12.css
-│  │  │  ├─ skin-corporate-13.css
-│  │  │  ├─ skin-corporate-14.css
-│  │  │  ├─ skin-corporate-15.css
-│  │  │  ├─ skin-corporate-16.css
-│  │  │  ├─ skin-corporate-17.css
-│  │  │  ├─ skin-corporate-18.css
-│  │  │  ├─ skin-corporate-19.css
-│  │  │  ├─ skin-corporate-20.css
-│  │  │  ├─ skin-corporate-3.css
-│  │  │  ├─ skin-corporate-4.css
-│  │  │  ├─ skin-corporate-5.css
-│  │  │  ├─ skin-corporate-6.css
-│  │  │  ├─ skin-corporate-7.css
-│  │  │  ├─ skin-corporate-8.css
-│  │  │  ├─ skin-corporate-9.css
-│  │  │  ├─ skin-corporate-hosting.css
-│  │  │  ├─ skin-digital-agency.css
-│  │  │  ├─ skin-education.css
-│  │  │  ├─ skin-event.css
-│  │  │  ├─ skin-finance.css
-│  │  │  ├─ skin-gym.css
-│  │  │  ├─ skin-hotel.css
-│  │  │  ├─ skin-insurance.css
-│  │  │  ├─ skin-landing.css
-│  │  │  ├─ skin-law-firm.css
-│  │  │  ├─ skin-medical.css
-│  │  │  ├─ skin-one-page-agency.css
-│  │  │  ├─ skin-photography.css
-│  │  │  ├─ skin-product-landing.css
-│  │  │  ├─ skin-real-estate.css
-│  │  │  ├─ skin-restaurant.css
-│  │  │  ├─ skin-resume.css
-│  │  │  ├─ skin-sass.css
-│  │  │  ├─ skin-seo.css
-│  │  │  └─ skin-wedding.css
-│  │  ├─ theme-blog.css
-│  │  ├─ theme-elements.css
-│  │  ├─ theme-shop.css
-│  │  └─ theme.css
-│  ├─ dist
-│  │  ├─ img
-│  │  │  ├─ blank.gif
-│  │  │  ├─ cancha.PNG
-│  │  │  ├─ ESTADIO.webp
-│  │  │  ├─ icons
-│  │  │  │  └─ icon-cart-light.svg
-│  │  │  ├─ loguito_lacanchita.webp
-│  │  │  └─ maqueta
-│  │  │     └─ maqueta_imagen_principal.jpg
-│  │  ├─ js
-│  │  │  ├─ custom.js
-│  │  │  ├─ soporte
-│  │  │  │  └─ soporte.js
-│  │  │  ├─ theme.init.js
-│  │  │  └─ theme.js
-│  │  └─ script
-│  │     └─ php
-│  │        ├─ conn.php
-│  │        ├─ guardar_predio.php
-│  │        └─ routes.php
-│  └─ pluggins
-│     └─ vendor
-│        ├─ animate
-│        │  └─ animate.min.css
-│        ├─ bootstrap
-│        │  ├─ css
-│        │  │  ├─ bootstrap-grid.css
-│        │  │  ├─ bootstrap-grid.css.map
-│        │  │  ├─ bootstrap-grid.min.css
-│        │  │  ├─ bootstrap-grid.min.css.map
-│        │  │  ├─ bootstrap-reboot.css
-│        │  │  ├─ bootstrap-reboot.css.map
-│        │  │  ├─ bootstrap-reboot.min.css
-│        │  │  ├─ bootstrap-reboot.min.css.map
-│        │  │  ├─ bootstrap.css
-│        │  │  ├─ bootstrap.css.map
-│        │  │  ├─ bootstrap.min.css
-│        │  │  └─ bootstrap.min.css.map
-│        │  └─ js
-│        │     ├─ bootstrap.bundle.js
-│        │     ├─ bootstrap.bundle.js.map
-│        │     ├─ bootstrap.bundle.min.js
-│        │     ├─ bootstrap.bundle.min.js.map
-│        │     ├─ bootstrap.js
-│        │     ├─ bootstrap.js.map
-│        │     ├─ bootstrap.min.js
-│        │     └─ bootstrap.min.js.map
-│        ├─ bootstrap-datepicker
-│        │  ├─ css
-│        │  │  ├─ bootstrap-datepicker.css
-│        │  │  ├─ bootstrap-datepicker.css.map
-│        │  │  ├─ bootstrap-datepicker.min.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css
-│        │  │  ├─ bootstrap-datepicker.standalone.css.map
-│        │  │  ├─ bootstrap-datepicker.standalone.min.css
-│        │  │  ├─ bootstrap-datepicker3.css
-│        │  │  ├─ bootstrap-datepicker3.css.map
-│        │  │  ├─ bootstrap-datepicker3.min.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css
-│        │  │  ├─ bootstrap-datepicker3.standalone.css.map
-│        │  │  └─ bootstrap-datepicker3.standalone.min.css
-│        │  ├─ js
-│        │  │  ├─ bootstrap-datepicker.js
-│        │  │  └─ bootstrap-datepicker.min.js
-│        │  └─ locales
-│        │     ├─ bootstrap-datepicker-en-CA.min.js
-│        │     ├─ bootstrap-datepicker.ar-tn.min.js
-│        │     ├─ bootstrap-datepicker.ar.min.js
-│        │     ├─ bootstrap-datepicker.uz-cyrl.min.js
-│        │     ├─ bootstrap-datepicker.uz-latn.min.js
-│        │     ├─ bootstrap-datepicker.vi.min.js
-│        │     ├─ bootstrap-datepicker.zh-CN.min.js
-│        │     └─ bootstrap-datepicker.zh-TW.min.js
-│        ├─ common
-│        │  ├─ common.init.js
-│        │  ├─ common.js
-│        │  └─ common.min.js
-│        ├─ fontawesome-free
-│        │  ├─ css
-│        │  │  └─ all.min.css
-│        │  └─ webfonts
-│        │     ├─ fa-brands-400.eot
-│        │     ├─ fa-brands-400.svg
-│        │     ├─ fa-brands-400.ttf
-│        │     ├─ fa-brands-400.woff
-│        │     ├─ fa-brands-400.woff2
-│        │     ├─ fa-regular-400.eot
-│        │     ├─ fa-regular-400.svg
-│        │     ├─ fa-regular-400.ttf
-│        │     ├─ fa-regular-400.woff
-│        │     ├─ fa-regular-400.woff2
-│        │     ├─ fa-solid-900.eot
-│        │     ├─ fa-solid-900.svg
-│        │     ├─ fa-solid-900.ttf
-│        │     ├─ fa-solid-900.woff
-│        │     └─ fa-solid-900.woff2
-│        ├─ isotope
-│        │  └─ jquery.isotope.min.js
-│        ├─ jquery
-│        │  ├─ core.js
-│        │  ├─ jquery.js
-│        │  ├─ jquery.min.js
-│        │  ├─ jquery.min.map
-│        │  ├─ jquery.slim.js
-│        │  ├─ jquery.slim.min.js
-│        │  └─ jquery.slim.min.map
-│        ├─ jquery.appear
-│        │  ├─ jquery.appear.js
-│        │  └─ jquery.appear.min.js
-│        ├─ jquery.cookie
-│        │  ├─ jquery.cookie.js
-│        │  └─ jquery.cookie.min.js
-│        ├─ jquery.easing
-│        │  └─ jquery.easing.min.js
-│        ├─ jquery.easy-pie-chart
-│        │  ├─ angular.easypiechart.js
-│        │  ├─ angular.easypiechart.min.js
-│        │  ├─ easypiechart.js
-│        │  ├─ easypiechart.min.js
-│        │  ├─ jquery.easypiechart.js
-│        │  └─ jquery.easypiechart.min.js
-│        ├─ jquery.gmap
-│        │  ├─ jquery.gmap.js
-│        │  └─ jquery.gmap.min.js
-│        ├─ jquery.lazyload
-│        │  ├─ jquery.lazyload.js
-│        │  └─ jquery.lazyload.min.js
-│        ├─ jquery.validation
-│        │  ├─ additional-methods.js
-│        │  ├─ additional-methods.min.js
-│        │  ├─ jquery.validate.js
-│        │  ├─ jquery.validate.min.js
-│        │  └─ localization
-│        │     ├─ messages_ar.js
-│        │     ├─ messages_ar.min.js
-│        │     └─ product-grey-6.jpg
-│        ├─ magnific-popup
-│        │  ├─ jquery.magnific-popup.js
-│        │  ├─ jquery.magnific-popup.min.js
-│        │  ├─ magnific-popup.css
-│        │  └─ magnific-popup.min.css
-│        ├─ modernizr
-│        │  └─ modernizr.min.js
-│        ├─ owl.carousel
-│        │  ├─ assets
-│        │  │  ├─ ajax-loader.gif
-│        │  │  ├─ owl.carousel.css
-│        │  │  ├─ owl.carousel.min.css
-│        │  │  ├─ owl.theme.default.css
-│        │  │  ├─ owl.theme.default.min.css
-│        │  │  ├─ owl.theme.green.css
-│        │  │  ├─ owl.theme.green.min.css
-│        │  │  └─ owl.video.play.png
-│        │  ├─ LICENSE
-│        │  ├─ owl.carousel.js
-│        │  ├─ owl.carousel.min.js
-│        │  └─ README.md
-│        ├─ popper
-│        │  └─ umd
-│        │     ├─ popper-utils.js
-│        │     ├─ popper-utils.js.map
-│        │     ├─ popper-utils.min.js
-│        │     ├─ popper-utils.min.js.map
-│        │     ├─ popper.js
-│        │     ├─ popper.js.flow
-│        │     ├─ popper.js.map
-│        │     ├─ popper.min.js
-│        │     └─ popper.min.js.map
-│        ├─ rs-plugin
-│        │  ├─ css
-│        │  │  ├─ closedhand.cur
-│        │  │  ├─ index.php
-│        │  │  ├─ layers.css
-│        │  │  ├─ navigation-skins
-│        │  │  │  ├─ ares.css
-│        │  │  │  ├─ custom.css
-│        │  │  │  ├─ dione.css
-│        │  │  │  ├─ erinyen.css
-│        │  │  │  ├─ gyges.css
-│        │  │  │  ├─ hades.css
-│        │  │  │  ├─ hebe.css
-│        │  │  │  ├─ hephaistos.css
-│        │  │  │  ├─ hermes.css
-│        │  │  │  ├─ hesperiden.css
-│        │  │  │  ├─ metis.css
-│        │  │  │  ├─ persephone.css
-│        │  │  │  ├─ uranus.css
-│        │  │  │  └─ zeus.css
-│        │  │  ├─ navigation.css
-│        │  │  ├─ openhand.cur
-│        │  │  ├─ settings-source.css
-│        │  │  ├─ settings.css
-│        │  │  └─ tp-color-picker.css
-│        │  └─ js
-│        │     ├─ extensions
-│        │     │  ├─ index.php
-│        │     │  ├─ revolution.extension.actions.min.js
-│        │     │  ├─ revolution.extension.carousel.min.js
-│        │     │  ├─ revolution.extension.kenburn.min.js
-│        │     │  ├─ revolution.extension.layeranimation.min.js
-│        │     │  ├─ revolution.extension.migration.min.js
-│        │     │  ├─ revolution.extension.navigation.min.js
-│        │     │  ├─ revolution.extension.parallax.min.js
-│        │     │  ├─ revolution.extension.slideanims.min.js
-│        │     │  ├─ revolution.extension.video.min.js
-│        │     │  └─ source
-│        │     │     ├─ index.php
-│        │     │     ├─ revolution.extension.actions.js
-│        │     │     ├─ revolution.extension.carousel.js
-│        │     │     ├─ revolution.extension.kenburn.js
-│        │     │     ├─ revolution.extension.layeranimation.js
-│        │     │     ├─ revolution.extension.migration.js
-│        │     │     ├─ revolution.extension.navigation.js
-│        │     │     ├─ revolution.extension.parallax.js
-│        │     │     ├─ revolution.extension.slideanims.js
-│        │     │     └─ revolution.extension.video.js
-│        │     ├─ index.php
-│        │     ├─ jquery.themepunch.enablelog.js
-│        │     ├─ jquery.themepunch.revolution.min.js
-│        │     ├─ jquery.themepunch.tools.min.js
-│        │     ├─ source
-│        │     │  ├─ index.php
-│        │     │  ├─ jquery.themepunch.enablelog.js
-│        │     │  ├─ jquery.themepunch.revolution.js
-│        │     │  ├─ jquery.themepunch.tools.min.js
-│        │     │  └─ tp-color-picker.js
-│        │     └─ tp-color-picker.min.js
-│        ├─ simple-line-icons
-│        │  ├─ bower.json
-│        │  ├─ CODE_OF_CONDUCT.md
-│        │  ├─ CONTRIBUTING.md
-│        │  ├─ css
-│        │  │  ├─ simple-line-icons.css
-│        │  │  └─ simple-line-icons.min.css
-│        │  ├─ fonts
-│        │  │  ├─ Simple-Line-Icons.eot
-│        │  │  ├─ Simple-Line-Icons.svg
-│        │  │  ├─ Simple-Line-Icons.ttf
-│        │  │  ├─ Simple-Line-Icons.woff
-│        │  │  └─ Simple-Line-Icons.woff2
-│        │  ├─ History.md
-│        │  ├─ less
-│        │  │  └─ simple-line-icons.less
-│        │  ├─ LICENSE.md
-│        │  ├─ package.json
-│        │  ├─ README.md
-│        │  └─ scss
-│        │     └─ simple-line-icons.scss
-│        ├─ vide
-│        │  ├─ jquery.vide.js
-│        │  └─ jquery.vide.min.js
-│        └─ vivus
-│           ├─ vivus.js
-│           └─ vivus.min.js
-├─ index.php
-├─ login.php
-├─ README.md
-├─ register.php
-└─ view
-   ├─ estadio22
-   ├─ layoutsCliente
-   │  ├─ InicioHastaElContenido.php
-   │  └─ InicioSuperior.php
-   └─ maquetaCliente
-      ├─ HomeCliente.php
-      ├─ LaCanchitaCliente.php
-      └─ SoporteGenericoCliente.php
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `buscar_canchas.php` | GET | Busca predios/canchas por localidad y deporte |
+| `predio_publico.php` | GET | Datos del predio + disponibilidad de canchas |
+| `reservar_publico.php` | POST | Crea una reserva sin login (estado pendiente) |
+| `login_ajax.php` | POST | Login vía AJAX |
+| `register_ajax.php` | POST | Registro de nuevo cliente |
 
+### Admin (`/view/maquetaAdmin/api/`) — perfil ≤ 2
+
+| Endpoint | Acciones principales |
+|---|---|
+| `reservas.php` | listar, confirmar, cancelar, registrar_pago, agenda |
+| `canchas.php` | listar, alta, editar, baja |
+| `complejos.php` | listar, alta, editar |
+| `horarios.php` | listar, guardar |
+| `turnos_fijos.php` | listar, guardar, eliminar |
+| `cierres.php` | listar, guardar, eliminar |
+| `usuarios.php` | listar, alta, editar, baja |
+| `reportes.php` | estadísticas por período |
+| `catalogo.php` | deportes y servicios disponibles |
+
+### Encargado (`/view/maquetaEncargado/api/`) — perfil ≤ 4
+
+Proxy con whitelist hacia el admin; expone únicamente: `listar`, `confirmar`, `registrar_pago`.
+
+### SuperAdmin (`/view/maquetaSuperAdmin/api/`) — perfil = 1
+
+| Acción | Descripción |
+|---|---|
+| `stats` | Totales: clientes, MRR, cobros del mes, alertas |
+| `listar` | Lista clientes con filtros (todos / activos / vencidos / por_cobrar) |
+| `historial` | Historial de cobros de un cliente |
+| `mrr_historico` | MRR mensual — últimos 6 meses sin huecos |
+| `cobros_todos` | Todos los cobros filtrados por mes y cliente |
+| `upsert_plan` | Crear o actualizar suscripción de un cliente |
+| `registrar_cobro` | Registrar pago + avanzar PROXIMO_COBRO automáticamente |
+| `eliminar_cobro` | Eliminar registro de cobro |
+| `guardar_notas` | Autosave de notas internas del cliente (debounce 900ms) |
+| `toggle_cliente` | Bloquear / desbloquear cuenta |
+| `recordatorio` | Enviar email de recordatorio de pago |
+| `marcar_vencidos` | Actualiza a "vencido" los planes con PROXIMO_COBRO pasado |
+
+---
+
+## Modelo de datos — billing
+
+```sql
+-- Plan de suscripción por cliente (dueño de predio)
+suscripcion_plataforma (
+  SUSCRIPCION_ID, USUARIOS_ID, PLAN_NOMBRE, PLAN_PRECIO,
+  PLAN_CICLO ENUM('mensual','trimestral','anual'),
+  PROXIMO_COBRO DATE, ULTIMO_COBRO DATE,
+  ESTADO ENUM('prueba','activo','vencido','cancelado'),
+  MEDIO_COBRO, NOTAS
+)
+
+-- Historial de pagos recibidos
+cobro_plataforma (
+  COBRO_ID, USUARIOS_ID, COBRO_MONTO, COBRO_FECHA DATE,
+  COBRO_PERIODO VARCHAR(7),  -- formato YYYY-MM
+  COBRO_MEDIO, COBRO_NOTAS
+)
 ```
+
+---
+
+## Emails de notificación
+
+`enviarEmailReserva(string $tipo, array $datos)` — notifica al cliente cambios en su reserva:
+
+| `$tipo` | Asunto | Acento |
+|---|---|---|
+| `pendiente` | ✅ Reserva recibida | Naranja `#ff9500` |
+| `confirmada` | 🎉 Reserva confirmada | Verde `#4cd964` |
+| `cancelada` | Reserva cancelada | Rojo `#e74c3c` |
+
+`enviarRecordatorioCobro(array $datos)` — avisa al dueño del predio sobre un pago de suscripción pendiente.
+
+Ambas retornan `false` silenciosamente si `MAIL_ENABLED` es `false` o si ocurre un error SMTP (el error va a `error_log()`).
+
+---
+
+## Panel Desarrollador
+
+Accesible desde el Dashboard Admin cuando `perfil = 1` → enlace "Panel desarrollador" en el pie del sidebar.
+
+**Tres pestañas:**
+
+- **Resumen** — tarjetas de MRR, clientes activos/vencidos, cobros del mes. Lista de alertas (cobros próximos o vencidos). Gráfico de barras MRR últimos 6 meses (CSS puro, sin librerías).
+- **Clientes** — tabla filtrable y ordenable por nombre, precio o próximo cobro. Panel de detalle lateral con plan, historial de cobros, notas (autosave 900ms) y acciones rápidas (cobrar, recordatorio, bloquear).
+- **Cobros** — historial global filtrado por mes y cliente.
+
+Atajos de teclado: `ESC` cierra paneles y diálogos; `Ctrl+K` enfoca el buscador.
+
+---
+
+## Convenciones de código
+
+- Las APIs siempre comienzan con `session_start()` + `header('Content-Type: application/json')` y responden `{ ok: bool, ... }`.
+- Toda query con input de usuario usa `mysqli_prepare` + bind (sin interpolación de strings).
+- Las columnas de base de datos usan `MAYUSCULAS_CON_GUION_BAJO`.
+- Las APIs admin incluyen `tenancy.php` y llaman `require_perfil(N)` antes de cualquier lógica de negocio.
+- Las vistas HTML incluyen `auth_view.php` y llaman `require_view($min, $max)`.
+
+---
+
+## Variables de sesión
+
+| Variable | Contenido |
+|---|---|
+| `$_SESSION['usuario_id']` | ID numérico del usuario autenticado |
+| `$_SESSION['usuario_nombre']` | Nombre |
+| `$_SESSION['usuario_apellido']` | Apellido |
+| `$_SESSION['usuario_email']` | Email |
+| `$_SESSION['usuario_perfil']` | Perfil ID (1–5) |
+
+---
+
+## Seguridad — consideraciones
+
+- Las credenciales de base de datos están en `conn.php`. En producción, moverlas a variables de entorno del servidor web.
+- `config/mail.php` contiene credenciales SMTP — agregar al `.gitignore` antes de usar datos reales.
+- Todas las APIs validan rol antes de ejecutar cualquier lógica.
+- Los inputs de usuario en queries SQL siempre van por `mysqli_prepare`.
+
+---
+
+## Licencia
+
+Proyecto privado — todos los derechos reservados.
