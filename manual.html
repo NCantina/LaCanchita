@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Usuario — La Canchita</title>
+<style>
+  :root {
+    --green: #4cd964;
+    --blue: #3498db;
+    --orange: #ff9500;
+    --red: #e74c3c;
+    --bg: #0d0d0d;
+    --surface: #1a1a1a;
+    --border: rgba(255,255,255,.1);
+    --text: #f0f0f0;
+    --muted: #888;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ─── PORTADA ─────────────────────────────── */
+  .cover {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a2a1a 50%, #0d1a0d 100%);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 20px;
+    page-break-after: always;
+  }
+  .cover-logo {
+    font-size: 72px;
+    margin-bottom: 16px;
+  }
+  .cover h1 {
+    font-size: 48px;
+    font-weight: 800;
+    color: #4cd964;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+  .cover .subtitle {
+    font-size: 20px;
+    color: rgba(255,255,255,.6);
+    margin-bottom: 32px;
+  }
+  .cover .doc-title {
+    font-size: 28px;
+    font-weight: 600;
+    background: rgba(76,217,100,.15);
+    border: 1px solid rgba(76,217,100,.3);
+    padding: 16px 40px;
+    border-radius: 12px;
+    color: #fff;
+    margin-bottom: 40px;
+  }
+  .cover-meta {
+    display: flex;
+    gap: 40px;
+    color: rgba(255,255,255,.5);
+    font-size: 14px;
+  }
+  .cover-meta strong { color: rgba(255,255,255,.8); display: block; }
+
+  /* ─── LAYOUT ──────────────────────────────── */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* ─── TOC ─────────────────────────────────── */
+  .toc {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px 40px;
+    margin-bottom: 40px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    page-break-after: always;
+  }
+  .toc h2 { font-size: 22px; margin-bottom: 20px; color: #111; border-bottom: 2px solid #4cd964; padding-bottom: 10px; }
+  .toc ol { padding-left: 24px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a { color: #1a6e2e; text-decoration: none; font-weight: 500; }
+  .toc a:hover { text-decoration: underline; }
+  .toc .sub { padding-left: 20px; margin-top: 4px; }
+  .toc .sub li { font-size: 13px; color: #555; margin-bottom: 3px; }
+
+  /* ─── SECTIONS ────────────────────────────── */
+  .section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 36px 40px;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    page-break-inside: avoid;
+  }
+  .section h2 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section h2 .num {
+    background: #4cd964;
+    color: #000;
+    font-size: 14px;
+    font-weight: 800;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #222;
+    margin: 24px 0 10px;
+    padding-left: 12px;
+    border-left: 3px solid #4cd964;
+  }
+  .section h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin: 16px 0 6px;
+  }
+  .section p { color: #444; margin-bottom: 12px; }
+  .section ul, .section ol { color: #444; padding-left: 20px; margin-bottom: 12px; }
+  .section li { margin-bottom: 4px; }
+
+  /* ─── SCREENSHOT ──────────────────────────── */
+  .screenshot-wrap {
+    margin: 20px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 20px rgba(0,0,0,.12);
+  }
+  .screenshot-caption {
+    background: #1a1a1a;
+    color: rgba(255,255,255,.7);
+    font-size: 12px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .screenshot-caption::before {
+    content: '';
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #e74c3c;
+    box-shadow: 14px 0 0 #ff9500, 28px 0 0 #4cd964;
+    flex-shrink: 0;
+    margin-right: 16px;
+  }
+  .screenshot-wrap img {
+    width: 100%;
+    display: block;
+  }
+  .screenshot-desc {
+    background: #f9f9f9;
+    border-top: 1px solid #eee;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #555;
+  }
+
+  /* ─── PROFILE CARD ────────────────────────── */
+  .profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .profile-card {
+    border-radius: 12px;
+    padding: 20px 16px;
+    text-align: center;
+    border: 1px solid #eee;
+  }
+  .profile-card .icon { font-size: 36px; margin-bottom: 8px; }
+  .profile-card .label { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+  .profile-card .name { font-size: 15px; font-weight: 600; }
+  .profile-card .desc { font-size: 12px; color: #666; margin-top: 4px; }
+  .p1 { background: #fff3cd; border-color: #ffc107; }
+  .p2 { background: #cfe2ff; border-color: #0d6efd; }
+  .p3 { background: #d1e7dd; border-color: #198754; }
+  .p4 { background: #e2d9f3; border-color: #6f42c1; }
+  .p5 { background: #f8d7da; border-color: #dc3545; }
+
+  /* ─── BADGE ───────────────────────────────── */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+  .badge-admin { background: #fff3cd; color: #856404; }
+  .badge-dueno { background: #cfe2ff; color: #084298; }
+  .badge-encargado { background: #d1e7dd; color: #0a3622; }
+  .badge-staff { background: #e2d9f3; color: #432874; }
+  .badge-cliente { background: #f8d7da; color: #842029; }
+  .badge-green { background: #d1e7dd; color: #0a3622; }
+  .badge-orange { background: #fff3cd; color: #664d03; }
+  .badge-blue { background: #cfe2ff; color: #052c65; }
+
+  /* ─── CALLOUT ─────────────────────────────── */
+  .callout {
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 14px;
+  }
+  .callout-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .callout-tip { background: #d1e7dd; border-left: 4px solid #198754; color: #0a3622; }
+  .callout-warn { background: #fff3cd; border-left: 4px solid #ffc107; color: #664d03; }
+  .callout-info { background: #cfe2ff; border-left: 4px solid #0d6efd; color: #052c65; }
+
+  /* ─── STEP LIST ───────────────────────────── */
+  .step-list { counter-reset: step; list-style: none; padding: 0; margin: 16px 0; }
+  .step-list li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    color: #333;
+  }
+  .step-list li::before {
+    counter-increment: step;
+    content: counter(step);
+    background: #4cd964;
+    color: #000;
+    font-size: 13px;
+    font-weight: 800;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ─── FEATURE TABLE ───────────────────────── */
+  .feature-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  .feature-table th {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .feature-table td { padding: 10px 14px; border-bottom: 1px solid #eee; vertical-align: top; }
+  .feature-table tr:last-child td { border-bottom: none; }
+  .feature-table tr:nth-child(even) td { background: #f9f9f9; }
+  .chk { color: #198754; font-weight: 700; }
+  .cross { color: #dc3545; font-weight: 700; }
+
+  /* ─── MOCK SCREEN ─────────────────────────── */
+  .mock-screen {
+    background: #0d0d0d;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 20px 0;
+    border: 1px solid #333;
+  }
+  .mock-bar {
+    background: #1a1a1a;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #333;
+  }
+  .mock-dots { display: flex; gap: 6px; }
+  .mock-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .mock-url {
+    background: #2a2a2a;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #888;
+    flex: 1;
+  }
+  .mock-body { display: flex; }
+  .mock-sidebar {
+    width: 200px;
+    background: #111;
+    padding: 20px 0;
+    border-right: 1px solid #222;
+    min-height: 340px;
+    flex-shrink: 0;
+  }
+  .mock-sidebar .ms-logo { padding: 0 16px 16px; font-size: 15px; font-weight: 700; color: #4cd964; border-bottom: 1px solid #222; margin-bottom: 12px; }
+  .mock-sidebar .ms-user { padding: 12px 16px; font-size: 12px; color: #888; border-bottom: 1px solid #222; margin-bottom: 12px; }
+  .mock-sidebar .ms-item { padding: 9px 16px; font-size: 13px; color: #aaa; cursor: pointer; }
+  .mock-sidebar .ms-item.active { color: #4cd964; background: rgba(76,217,100,.08); border-right: 2px solid #4cd964; font-weight: 600; }
+  .mock-sidebar .ms-section { padding: 8px 16px 4px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: .5px; }
+  .mock-content { flex: 1; padding: 24px; }
+  .mock-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .mock-kpi { background: #1a1a1a; border-radius: 10px; padding: 14px; border: 1px solid #2a2a2a; }
+  .mock-kpi .val { font-size: 22px; font-weight: 700; color: #fff; }
+  .mock-kpi .lbl { font-size: 11px; color: #666; margin-top: 4px; }
+  .mock-title { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .mock-sub { color: #555; font-size: 12px; margin-bottom: 16px; }
+  .mock-grid-slot {
+    background: rgba(76,217,100,.08);
+    border: 1px dashed rgba(76,217,100,.3);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: rgba(76,217,100,.5);
+    min-height: 60px;
+    cursor: pointer;
+  }
+  .mock-grid-slot.ocp {
+    background: rgba(76,217,100,.12);
+    border: 1px solid rgba(76,217,100,.35);
+    font-size: 12px;
+    color: #4cd964;
+  }
+  .mock-grid-slot.pend {
+    background: rgba(255,149,0,.08);
+    border: 1px solid rgba(255,149,0,.3);
+    font-size: 12px;
+    color: #ff9500;
+  }
+  .agenda-grid-mock { display: grid; grid-template-columns: 60px repeat(3, 1fr); gap: 6px; font-size: 12px; color: #888; }
+  .agenda-grid-mock .gh { color: #666; font-size: 11px; text-align: center; padding: 6px; font-weight: 600; }
+  .agenda-grid-mock .gt { color: #555; font-size: 11px; padding: 6px 0; text-align: right; }
+
+  /* ─── DIVIDER ─────────────────────────────── */
+  .divider { border: none; border-top: 1px solid #e8e8e8; margin: 28px 0; }
+  .page-break { page-break-before: always; }
+
+  /* ─── PRINT ───────────────────────────────── */
+  @media print {
+    body { background: #fff; }
+    .section { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+    .toc { box-shadow: none; border: 1px solid #ddd; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     PORTADA
+══════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">⚽</div>
+  <h1>La Canchita</h1>
+  <div class="subtitle">Sistema de Gestión Deportiva · SaaS Multi-Tenant</div>
+  <div class="doc-title">📋 Manual de Usuario</div>
+  <div class="cover-meta">
+    <div><strong>Versión</strong>1.0</div>
+    <div><strong>Fecha</strong>Junio 2026</div>
+    <div><strong>Perfiles cubiertos</strong>5</div>
+    <div><strong>Módulos</strong>8</div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ═══════════════════════════════════════════
+     ÍNDICE
+══════════════════════════════════════════════ -->
+<div class="toc" id="top">
+  <h2>Índice de Contenidos</h2>
+  <ol>
+    <li><a href="#s1">Introducción al Sistema</a></li>
+    <li><a href="#s2">Perfiles de Usuario</a>
+      <ul class="sub">
+        <li>2.1 Superadministrador</li>
+        <li>2.2 Dueño de Predio</li>
+        <li>2.3 Encargado / Admin de Complejo</li>
+        <li>2.4 Staff</li>
+        <li>2.5 Cliente</li>
+      </ul>
+    </li>
+    <li><a href="#s3">Acceso al Sistema</a>
+      <ul class="sub">
+        <li>3.1 Pantalla pública</li>
+        <li>3.2 Inicio de sesión</li>
+        <li>3.3 Registro de clientes</li>
+      </ul>
+    </li>
+    <li><a href="#s4">Panel Superadmin</a></li>
+    <li><a href="#s5">Panel Dueño de Predio</a></li>
+    <li><a href="#s6">Panel Encargado / Staff — Agenda</a></li>
+    <li><a href="#s7">Panel Encargado / Staff — Reservas y Pagos</a></li>
+    <li><a href="#s8">Panel Encargado / Staff — Reportes</a></li>
+    <li><a href="#s9">Alta de Nuevo Cliente (Wizard)</a></li>
+    <li><a href="#s10">Panel del Cliente</a></li>
+    <li><a href="#s11">Tabla de Permisos por Perfil</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     1. INTRODUCCIÓN
+══════════════════════════════════════════════ -->
+<div class="section" id="s1">
+  <h2><span class="num">1</span> Introducción al Sistema</h2>
+  <p>
+    <strong>La Canchita</strong> es una plataforma SaaS multi-tenant para la gestión de predios deportivos.
+    Permite reservar canchas de fútbol, pádel, tenis y otros deportes de forma online, sin llamadas ni esperas.
+  </p>
+  <p>
+    Cada <strong>dueño de predio</strong> tiene su propio entorno aislado: sus canchas, clientes, reservas y pagos son completamente independientes de los demás predios en la plataforma.
+  </p>
+
+  <div class="screenshot-wrap">
+    <div class="screenshot-caption">localhost/LaCanchita/ — Pantalla pública de inicio</div>
+    <img src="view/maquetaAdmin/api/../../../ss_17723flvj.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" alt="Landing page">
+    <div style="display:none;background:#1a1a1a;padding:60px;text-align:center;color:#555;">
+      <div style="font-size:48px;margin-bottom:12px">🏟️</div>
+      <div>Pantalla de inicio pública — hero con buscador de canchas</div>
+    </div>
+    <div class="screenshot-desc">
+      Página de inicio pública. El visitante puede buscar canchas por deporte, provincia, partido, localidad, fecha y horario.
+      Los botones <strong>Iniciar sesión</strong> y <strong>Registrarse</strong> dan acceso a las cuentas.
+    </div>
+  </div>
+
+  <h3>Arquitectura de roles</h3>
+  <div class="profile-grid">
+    <div class="profile-card p1">
+      <div class="icon">👑</div>
+      <div class="label">Perfil 1</div>
+      <div class="name">Superadmin</div>
+      <div class="desc">Gestiona toda la plataforma</div>
+    </div>
+    <div class="profile-card p2">
+      <div class="icon">🏢</div>
+      <div class="label">Perfil 2</div>
+      <div class="name">Dueño</div>
+      <div class="desc">Propietario del predio</div>
+    </div>
+    <div class="profile-card p3">
+      <div class="icon">🔑</div>
+      <div class="label">Perfil 3</div>
+      <div class="name">Encargado</div>
+      <div class="desc">Admin del complejo</div>
+    </div>
+    <div class="profile-card p4">
+      <div class="icon">🧑‍💼</div>
+      <div class="label">Perfil 4</div>
+      <div class="name">Staff</div>
+      <div class="desc">Operador del día a día</div>
+    </div>
+    <div class="profile-card p5">
+      <div class="icon">👤</div>
+      <div class="label">Perfil 5</div>
+      <div class="name">Cliente</div>
+      <div class="desc">Hace sus reservas online</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     2. PERFILES
+══════════════════════════════════════════════ -->
+<div class="section" id="s2">
+  <h2><span class="num">2</span> Perfiles de Usuario</h2>
+
+  <h3>2.1 Superadministrador <span class="badge badge-admin">ADMIN</span></h3>
+  <p>Es el operador de la plataforma completa. Tiene acceso a todos los predios y puede impersonar (actuar en nombre de) cualquier dueño. No pertenece a ningún predio en particular.</p>
+  <ul>
+    <li>Gestiona los <strong>dueños</strong> registrados en la plataforma</li>
+    <li>Administra <strong>tipos de complejo y cancha</strong> disponibles</li>
+    <li>Puede usar el <strong>Wizard</strong> para dar de alta un nuevo cliente desde cero</li>
+    <li>Ve el estado global: cuántos predios activos, reservas totales, ingresos del mes</li>
+  </ul>
+
+  <h3>2.2 Dueño de Predio <span class="badge badge-dueno">DUEÑO</span></h3>
+  <p>Es el propietario de uno o varios predios. Tiene acceso a la configuración de su negocio.</p>
+  <ul>
+    <li>Crea y edita sus <strong>predios (complejos)</strong></li>
+    <li>Gestiona las <strong>canchas</strong> de cada predio</li>
+    <li>Ve métricas de alto nivel de su negocio</li>
+    <li>No opera el día a día (reservas/pagos): eso lo hace el encargado/staff</li>
+  </ul>
+
+  <h3>2.3 Encargado <span class="badge badge-encargado">ENCARGADO</span></h3>
+  <p>Administrador del complejo. Tiene la visión operativa completa: agenda, reportes y gestión de reservas.</p>
+  <ul>
+    <li>Accede a la <strong>Agenda</strong> en modo Lista y Grilla</li>
+    <li>Crea y gestiona <strong>reservas</strong></li>
+    <li>Registra <strong>pagos</strong> y señas</li>
+    <li>Genera <strong>reportes</strong> exportables en Excel y PDF</li>
+  </ul>
+
+  <h3>2.4 Staff <span class="badge badge-staff">STAFF</span></h3>
+  <p>Operador de mostrador. Mismas capacidades que el Encargado, pero sin acceso a la configuración del predio.</p>
+
+  <h3>2.5 Cliente <span class="badge badge-cliente">CLIENTE</span></h3>
+  <p>Usuario final que reserva canchas. Puede ser registrado online o dado de alta como <em>walk-in</em> por el staff.</p>
+  <ul>
+    <li>Ve y gestiona sus <strong>reservas</strong></li>
+    <li>Consulta el <strong>historial de pagos</strong></li>
+    <li>No tiene acceso al panel administrativo</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     3. ACCESO
+══════════════════════════════════════════════ -->
+<div class="section" id="s3">
+  <h2><span class="num">3</span> Acceso al Sistema</h2>
+
+  <h3>3.1 Pantalla pública</h3>
+  <p>Cualquier visitante puede buscar canchas disponibles sin necesidad de registrarse. La barra de búsqueda permite filtrar por deporte, provincia, partido, localidad, fecha y horario.</p>
+
+  <h3>3.2 Inicio de sesión</h3>
+  <div class="screenshot-wrap">
+    <div class="screenshot-caption">localhost/LaCanchita/login.php — Pantalla de login</div>
+    <img src="ss_2321q4xk0.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" alt="Login">
+    <div style="display:none;background:#1a1a1a;padding:60px;text-align:center;color:#555;">
+      <div style="font-size:48px;margin-bottom:12px">🔐</div>
+      <div>Pantalla de login con logo La Canchita, fondo estadio, campos email y contraseña</div>
+    </div>
+    <div class="screenshot-desc">
+      Pantalla de login con logo La Canchita. Ingresá tu email y contraseña. Hay opción
+      <em>¿Olvidaste tu contraseña?</em> y <em>Recordarme</em>.
+      Todos los perfiles (admin, dueño, staff, cliente) usan esta misma pantalla de acceso.
+    </div>
+  </div>
+
+  <ol class="step-list">
+    <li>Ingresá al navegador y abrí <strong>la URL del sistema</strong> (ej: lacanchita.com)</li>
+    <li>Hacé clic en <strong>Iniciar sesión</strong> en la barra de navegación</li>
+    <li>Escribí tu <strong>email</strong> y <strong>contraseña</strong></li>
+    <li>Opcionalmente marcá <strong>Recordarme</strong> para mantener la sesión activa</li>
+    <li>Hacé clic en <strong>Ingresar</strong> — el sistema te redirige al panel según tu perfil</li>
+  </ol>
+
+  <h3>3.3 Registro de clientes</h3>
+  <p>Los nuevos clientes pueden registrarse desde el botón <strong>Registrarse</strong> en la barra de navegación pública, completando nombre, apellido, email y contraseña. También pueden ser dados de alta por el staff directamente desde el panel administrativo (ver Sección 6.3).</p>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">💡</div>
+    <div>Los <strong>administradores y staff</strong> acceden al mismo panel. El sistema detecta automáticamente el perfil y muestra solo las secciones correspondientes.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     4. SUPERADMIN
+══════════════════════════════════════════════ -->
+<div class="section page-break" id="s4">
+  <h2><span class="num">4</span> Panel Superadministrador <span class="badge badge-admin">ADMIN</span></h2>
+
+  <div class="screenshot-wrap">
+    <div class="screenshot-caption">Dashboard · Superadministrador</div>
+    <img src="ss_5441cygkc.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" alt="Superadmin dashboard">
+    <div style="display:none;background:#0d0d0d;padding:40px;color:#555;text-align:center;font-size:14px;">
+      Dashboard Superadmin: sidebar con Clientes y Tipos/categorías · KPIs: Clientes activos, Predios en plataforma, Reservas hoy, Cobrado mes, Clientes registrados
+    </div>
+    <div class="screenshot-desc">
+      Dashboard del superadmin. La etiqueta <strong>ADMIN</strong> en verde aparece debajo del logo.
+      El sidebar solo muestra <em>Clientes</em> (dueños de predios) y <em>Tipos y categorías</em>.
+      Los KPIs muestran estadísticas globales de toda la plataforma.
+    </div>
+  </div>
+
+  <h3>Módulo: Clientes (Dueños)</h3>
+  <div class="screenshot-wrap">
+    <div class="screenshot-caption">Vista Clientes — Lista de dueños registrados</div>
+    <img src="ss_43743106c.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" alt="Clientes admin">
+    <div style="display:none;background:#0d0d0d;padding:40px;color:#555;text-align:center;font-size:14px;">
+      Vista Clientes: buscador por nombre/email/teléfono · botón Nuevo cliente (abre Wizard) · lista de dueños
+    </div>
+    <div class="screenshot-desc">
+      Lista de dueños de predios registrados. Podés buscar por nombre, email o teléfono.
+      El botón <strong>+ Nuevo cliente</strong> abre el <strong>Wizard de alta</strong> (ver Sección 9)
+      que guía paso a paso la creación de cuenta, predio, canchas y horarios.
+    </div>
+  </div>
+
+  <h3>Módulo: Tipos y Categorías</h3>
+  <p>Permite gestionar los catálogos que usan todos los predios de la plataforma:</p>
+  <ul>
+    <li><strong>Tipos de complejo:</strong> Polideportivo, Club, Centro deportivo, etc.</li>
+    <li><strong>Tipos de cancha:</strong> Fútbol 5, Fútbol 7, Pádel, Tenis, etc.</li>
+    <li><strong>Localidades y zonas geográficas</strong></li>
+  </ul>
+
+  <div class="callout callout-warn">
+    <div class="callout-icon">⚠️</div>
+    <div>El superadmin <strong>no ve reservas ni pagos de ningún predio</strong>. Para operar dentro de un predio específico, debe usar el botón <em>"Gestionar"</em> desde la vista de clientes, que lo impersona como dueño de ese predio.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     5. DUEÑO
+══════════════════════════════════════════════ -->
+<div class="section page-break" id="s5">
+  <h2><span class="num">5</span> Panel Dueño de Predio <span class="badge badge-dueno">DUEÑO</span></h2>
+
+  <div class="screenshot-wrap">
+    <div class="screenshot-caption">Dashboard · Dueño de Predio — Carlos</div>
+    <img src="ss_6560xsak6.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" alt="Dueño dashboard">
+    <div style="display:none;background:#0d0d0d;padding:40px;color:#555;text-align:center;font-size:14px;">
+      Dashboard Dueño: etiqueta DUEÑO azul · sidebar con Mis Predios y Canchas · 8 KPIs (reservas hoy, ingresos hoy, reservas mes, ingresos mes, complejos activos, canchas activas, usuarios activos, pendientes aprobación)
+    </div>
+    <div class="screenshot-desc">
+      Dashboard del dueño. La etiqueta <strong>DUEÑO</strong> en azul indica el perfil.
+      Muestra 8 KPIs con la actividad de su negocio.
+      El sidebar tiene acceso a <em>Mis Predios</em> y <em>Canchas</em>.
+    </div>
+  </div>
+
+  <h3>Módulo: Mis Predios</h3>
+  <p>El dueño puede crear y configurar sus complejos deportivos:</p>
+  <ul>
+    <li><strong>Nombre, dirección, teléfono</strong> del predio</li>
+    <li><strong>Tipo de complejo</strong> (polideportivo, club, etc.)</li>
+    <li><strong>Localidad y partido</strong></li>
+    <li>Imagen y descripción</li>
+    <li>Estado <span class="badge badge-green">ACTIVO</span> / <span class="badge badge-orange">INACTIVO</span></li>
+  </ul>
+
+  <h3>Módulo: Canchas</h3>
+  <p>Por cada predio el dueño gestiona sus canchas:</p>
+  <ul>
+    <li><strong>Nombre de la cancha</strong> (ej: Cancha 1, Cancha Norte)</li>
+    <li><strong>Tipo</strong> (Fútbol 5, Pádel, Tenis...)</li>
+    <li><strong>Precio base</strong> por franja y monto de seña</li>
+    <li><strong>Franjas horarias:</strong> días de la semana + hora de inicio y fin</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <div class="callout-icon">ℹ️</div>
+    <div>La operación diaria (crear reservas, cobrar, ver agenda) la realizan el <strong>Encargado y el Staff</strong>. El dueño tiene una vista estratégica de su negocio, no operativa.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     6. ENCARGADO — AGENDA
+══════════════════════════════════════════════ -->
+<div class="section page-break" id="s6">
+  <h2><span class="num">6</span> Panel Encargado / Staff — Agenda <span class="badge badge-encargado">ENCARGADO</span></h2>
+
+  <div class="screenshot-wrap">
+    <div class="screenshot-caption">Dashboard · Encargado — Nico</div>
+    <img src="ss_8547ydssp.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" alt="Encargado dashboard">
+    <div style="display:none;background:#0d0d0d;padding:40px;color:#555;text-align:center;font-size:14px;">
+      Dashboard Encargado: etiqueta ENCARGADO verde · sidebar con Reportes y Agenda · KPIs: reservas hoy, ingresos hoy, reservas mes, ingresos mes, complejos, canchas, usuarios, pendientes
+    </div>
+    <div class="screenshot-desc">
+      Dashboard del encargado. La etiqueta <strong>ENCARGADO</strong> en verde identifica el perfil.
+      El sidebar muestra los módulos disponibles: <em>Reportes</em> y <em>Agenda</em>.
+    </div>
+  </div>
+
+  <h3>6.1 Agenda — Modo Lista</h3>
+  <div class="screenshot-wrap">
+    <div class="screenshot-caption">Agenda · Modo Lista — vista de reservas del día</div>
+    <img src="ss_5903h1dgp.jpg" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" alt="Agenda lista">
+    <div style="display:none;background:#0d0d0d;padding:40px;color:#555;text-align:center;font-size:14px;">
+      Agenda lista: botones Lista/Grilla/Nueva/Hoy · selector de predio y estado · navegación de fecha
+    </div>
+    <div class="screenshot-desc">
+      Vista de Agenda en modo Lista. Los botones <strong>Lista</strong> / <strong>Grilla</strong> en la parte superior
+      permiten cambiar la visualización. El botón <strong>+ Nueva</strong> abre el modal de nueva reserva.
+      Podés filtrar por predio y estado (confirmada / pendiente / cancelada).
+    </div>
+  </div>
+
+  <p><strong>Controles de la Agenda:</strong></p>
+  <ul>
+    <li>⬅️ ➡️ Flechas de navegación para ir al día anterior / siguiente</li>
+    <li>📅 Campo de fecha: podés ingresar cualquier fecha directamente</li>
+    <li>🔄 Botón <strong>Hoy</strong> para volver a la fecha actual</li>
+    <li>🏟️ Filtro de <strong>predio</strong> (si el encargado tiene acceso a varios)</li>
+    <li>📋 Filtro de <strong>estado</strong> de la reserva</li>
+  </ul>
+
+  <h3>6.2 Agenda — Modo Grilla</h3>
+  <p>La vista Grilla muestra un <strong>calendario día × cancha</strong>: columnas = canchas, filas = franjas horarias.</p>
+
+  <!-- MOCK de la grilla -->
+  <div class="mock-screen">
+    <div class="mock-bar">
+      <div class="mock-dots">
+        <div class="mock-dot" style="background:#e74c3c"></div>
+        <div class="mock-dot" style="background:#ff9500"></div>
+        <div class="mock-dot" style="background:#4cd964"></div>
+      </div>
+      <div class="mock-url">localhost/LaCanchita/view/maquetaAdmin/Dashboard.php · Agenda → Grilla</div>
+    </div>
+    <div style="padding:20px;background:#0d0d0d;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:2px">Agenda <span style="background:rgba(76,217,100,.15);color:#4cd964;font-size:11px;padding:3px 10px;border-radius:20px;margin-left:8px;">Grilla</span></div>
+          <div style="color:#555;font-size:12px">Lunes 15 de junio de 2026</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button style="background:#4cd964;color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">⊞ Grilla</button>
+          <button style="background:#1a1a1a;color:#888;border:1px solid #333;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer">☰ Lista</button>
+          <button style="background:#4cd964;color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Nueva</button>
+        </div>
+      </div>
+      <div class="agenda-grid-mock">
+        <div class="gh"></div>
+        <div class="gh" style="color:#4cd964">⚽ Cancha 1</div>
+        <div class="gh" style="color:#4cd964">🏓 Cancha 2</div>
+        <div class="gh" style="color:#4cd964">🎾 Cancha 3</div>
+
+        <div class="gt">09:00</div>
+        <div class="mock-grid-slot ocp" style="border-radius:8px;padding:8px;font-size:11px;text-align:left">
+          <strong>Juan García</strong><br>
+          <span style="color:#888">📞 11-4455-6677</span><br>
+          <span style="background:#4cd964;color:#000;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700">✓ Confirmada</span>
+        </div>
+        <div class="mock-grid-slot">+<div style="font-size:10px;color:rgba(76,217,100,.5);margin-top:2px">$3.500</div></div>
+        <div class="mock-grid-slot pend" style="border-radius:8px;padding:8px;font-size:11px;text-align:left">
+          <strong>María López</strong><br>
+          <span style="color:#888">📞 11-9988-7766</span><br>
+          <span style="background:#ff9500;color:#000;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700">⏳ Seña</span>
+        </div>
+
+        <div class="gt">10:00</div>
+        <div class="mock-grid-slot">+<div style="font-size:10px;color:rgba(76,217,100,.5);margin-top:2px">$3.500</div></div>
+        <div class="mock-grid-slot ocp" style="border-radius:8px;padding:8px;font-size:11px;text-align:left">
+          <strong>Carlos Ruiz</strong><br>
+          <span style="color:#888">📞 11-3344-5566</span><br>
+          <span style="background:#4cd964;color:#000;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700">✓ Pago total</span>
+        </div>
+        <div class="mock-grid-slot">+<div style="font-size:10px;color:rgba(76,217,100,.5);margin-top:2px">$4.000</div></div>
+
+        <div class="gt">11:00</div>
+        <div class="mock-grid-slot">+<div style="font-size:10px;color:rgba(76,217,100,.5);margin-top:2px">$3.500</div></div>
+        <div class="mock-grid-slot">+<div style="font-size:10px;color:rgba(76,217,100,.5);margin-top:2px">$3.500</div></div>
+        <div class="mock-grid-slot">+<div style="font-size:10px;color:rgba(76,217,100,.5);margin-top:2px">$4.000</div></div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:16px;font-size:11px;color:#555">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:rgba(76,217,100,.2);border:1px solid rgba(76,217,100,.4);border-radius:3px;display:inline-block"></span> Disponible (clic para reservar)</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:rgba(76,217,100,.15);border:1px solid rgba(76,217,100,.35);border-radius:3px;display:inline-block"></span> Confirmada</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.3);border-radius:3px;display:inline-block"></span> Pendiente/Seña</span>
+      </div>
+    </div>
+  </div>
+
+  <p><strong>Cómo usar la Grilla:</strong></p>
+  <ul>
+    <li>Cada columna es una <strong>cancha</strong>; cada fila es una <strong>franja horaria</strong></li>
+    <li>Las celdas con <strong>+</strong> están libres — hacés clic y se abre el modal de nueva reserva con cancha y fecha pre-cargadas</li>
+    <li>Las celdas ocupadas muestran <strong>nombre del cliente, teléfono y estado del pago</strong></li>
+    <li>Clic en celda ocupada → abre el modal de <strong>registro de pago</strong></li>
+  </ul>
+
+  <h3>6.3 Nueva Reserva desde la Agenda</h3>
+  <p>Al hacer clic en <strong>+ Nueva</strong> o en una celda libre de la grilla, se abre el modal de nueva reserva en 3 pasos:</p>
+
+  <!-- MOCK modal nueva reserva -->
+  <div class="mock-screen">
+    <div class="mock-bar">
+      <div class="mock-dots">
+        <div class="mock-dot" style="background:#e74c3c"></div>
+        <div class="mock-dot" style="background:#ff9500"></div>
+        <div class="mock-dot" style="background:#4cd964"></div>
+      </div>
+      <div class="mock-url">Modal: Nueva Reserva</div>
+    </div>
+    <div style="padding:24px;background:#111;display:flex;gap:32px;">
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px">Nueva Reserva</div>
+        <div style="font-size:12px;color:#555;margin-bottom:20px">Creada por staff</div>
+
+        <!-- paso A -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;color:#4cd964;font-weight:700;margin-bottom:6px">PASO A — Cancha y Fecha</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;color:#aaa">⚽ Cancha 1 — Fútbol 5</div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;color:#aaa">📅 15/06/2026</div>
+          </div>
+          <button style="background:#4cd964;color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;margin-top:8px;width:100%">Ver disponibilidad</button>
+        </div>
+
+        <!-- paso B -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;color:#4cd964;font-weight:700;margin-bottom:6px">PASO B — Elegí franja</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="background:rgba(76,217,100,.15);border:2px solid #4cd964;border-radius:8px;padding:10px 14px;text-align:center;font-size:12px;color:#4cd964;cursor:pointer">
+              <div style="font-weight:700">10:00 – 11:00</div>
+              <div style="font-size:11px;color:rgba(76,217,100,.7)">$3.500 · Seña $1.000</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px 14px;text-align:center;font-size:12px;color:#555;cursor:pointer">
+              <div style="font-weight:700">11:00 – 12:00</div>
+              <div style="font-size:11px">$3.500</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px 14px;text-align:center;font-size:12px;color:#555;cursor:pointer">
+              <div style="font-weight:700">14:00 – 15:00</div>
+              <div style="font-size:11px">$3.500</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- paso C -->
+        <div>
+          <div style="font-size:11px;color:#4cd964;font-weight:700;margin-bottom:8px">PASO C — Cliente</div>
+          <div style="display:flex;gap:0;margin-bottom:10px;border:1px solid #333;border-radius:8px;overflow:hidden">
+            <button style="flex:1;background:#4cd964;color:#000;border:none;padding:8px;font-size:12px;font-weight:700">🔍 Buscar cliente</button>
+            <button style="flex:1;background:#1a1a1a;color:#888;border:none;padding:8px;font-size:12px;">+ Nuevo cliente</button>
+          </div>
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;color:#888">Buscar por nombre, email, teléfono o DNI...</div>
+          <div style="background:rgba(76,217,100,.08);border:1px solid rgba(76,217,100,.2);border-radius:10px;padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px">
+            <div style="width:38px;height:38px;background:#4cd964;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:16px">J</div>
+            <div>
+              <div style="color:#fff;font-size:13px;font-weight:600">Juan García</div>
+              <div style="color:#888;font-size:11px">📞 11-4455-6677 · DNI 33.456.789</div>
+              <span style="background:#198754;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700">✓ Existente</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <div style="font-size:11px;color:#888;margin-bottom:4px">Estado</div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px;font-size:12px;color:#4cd964">✓ Confirmada</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#888;margin-bottom:4px">Observaciones</div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px;font-size:12px;color:#555">Opcional...</div>
+            </div>
+          </div>
+          <button style="background:#4cd964;color:#000;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;margin-top:12px;width:100%">✓ Confirmar Reserva</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h4>Tab "Buscar cliente" — clientes registrados</h4>
+  <p>Escribí nombre, email, teléfono o DNI. Aparece un dropdown con los resultados. Clic para seleccionar.</p>
+
+  <h4>Tab "Nuevo cliente" — walk-in (cliente nuevo en el momento)</h4>
+  <p>Si el cliente no está en el sistema, completá solo <strong>nombre, apellido y teléfono</strong> (los únicos campos obligatorios). Email y DNI son opcionales. El sistema genera placeholders automáticamente para no romper las validaciones únicas.</p>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">💡</div>
+    <div>Una vez confirmada la reserva, aparece en la Agenda del día y en la Grilla. Desde ahí podés cobrar cuando llegue el cliente.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     7. RESERVAS Y PAGOS
+══════════════════════════════════════════════ -->
+<div class="section page-break" id="s7">
+  <h2><span class="num">7</span> Reservas y Pagos</h2>
+
+  <h3>7.1 Vista de Reservas</h3>
+  <p>La sección de Reservas lista todas las reservas del complejo con filtros por:</p>
+  <ul>
+    <li><strong>Fecha</strong> o rango de fechas</li>
+    <li><strong>Cancha</strong></li>
+    <li><strong>Estado:</strong> confirmada, pendiente, cancelada</li>
+    <li><strong>Cliente:</strong> búsqueda por nombre</li>
+  </ul>
+
+  <!-- MOCK reservas -->
+  <div class="mock-screen">
+    <div class="mock-bar">
+      <div class="mock-dots">
+        <div class="mock-dot" style="background:#e74c3c"></div>
+        <div class="mock-dot" style="background:#ff9500"></div>
+        <div class="mock-dot" style="background:#4cd964"></div>
+      </div>
+      <div class="mock-url">Vista Reservas</div>
+    </div>
+    <div style="padding:20px;background:#0d0d0d">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div style="color:#fff;font-size:18px;font-weight:700">Reservas</div>
+          <div style="color:#555;font-size:12px">Historial y gestión de reservas</div>
+        </div>
+        <button style="background:#4cd964;color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700">+ Nueva</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#1a1a1a">
+            <th style="color:#888;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase">#</th>
+            <th style="color:#888;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase">Cliente</th>
+            <th style="color:#888;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase">Cancha</th>
+            <th style="color:#888;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase">Fecha</th>
+            <th style="color:#888;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase">Horario</th>
+            <th style="color:#888;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase">Estado</th>
+            <th style="color:#888;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase">Pagado</th>
+            <th style="color:#888;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #222">
+            <td style="padding:10px 12px;color:#555">001</td>
+            <td style="padding:10px 12px;color:#fff;font-weight:600">Juan García</td>
+            <td style="padding:10px 12px;color:#aaa">Cancha 1</td>
+            <td style="padding:10px 12px;color:#aaa">15/06/2026</td>
+            <td style="padding:10px 12px;color:#aaa">10:00 – 11:00</td>
+            <td style="padding:10px 12px"><span style="background:rgba(76,217,100,.15);color:#4cd964;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700">✓ Confirmada</span></td>
+            <td style="padding:10px 12px;color:#4cd964;font-weight:700">$3.500</td>
+            <td style="padding:10px 12px"><button style="background:#3498db;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">💰 Cobrar</button></td>
+          </tr>
+          <tr style="border-bottom:1px solid #222">
+            <td style="padding:10px 12px;color:#555">002</td>
+            <td style="padding:10px 12px;color:#fff;font-weight:600">María López</td>
+            <td style="padding:10px 12px;color:#aaa">Cancha 3</td>
+            <td style="padding:10px 12px;color:#aaa">15/06/2026</td>
+            <td style="padding:10px 12px;color:#aaa">09:00 – 10:00</td>
+            <td style="padding:10px 12px"><span style="background:rgba(255,149,0,.15);color:#ff9500;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700">⏳ Seña</span></td>
+            <td style="padding:10px 12px;color:#ff9500;font-weight:700">$1.000 / $4.000</td>
+            <td style="padding:10px 12px"><button style="background:#3498db;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer">💰 Cobrar</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h3>7.2 Registrar un Pago</h3>
+  <p>Al hacer clic en <strong>💰 Cobrar</strong> (desde Reservas, Agenda Lista o Agenda Grilla), se abre el modal de pago:</p>
+
+  <ol class="step-list">
+    <li>Se muestra el <strong>nombre del cliente</strong> y el <strong>saldo pendiente</strong> pre-cargado</li>
+    <li>Ajustá el monto si el cliente paga parcialmente (seña)</li>
+    <li>Agregá una <strong>observación</strong> opcional (método de pago, número de operación, etc.)</li>
+    <li>Hacé clic en <strong>Registrar pago</strong></li>
+    <li>El historial de pagos de esa reserva queda guardado debajo del formulario</li>
+  </ol>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">💡</div>
+    <div>Podés registrar <strong>múltiples pagos parciales</strong> por reserva. El sistema suma automáticamente lo cobrado y muestra el saldo restante.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     8. REPORTES
+══════════════════════════════════════════════ -->
+<div class="section page-break" id="s8">
+  <h2><span class="num">8</span> Reportes <span class="badge badge-encargado">ENCARGADO</span></h2>
+
+  <p>El módulo de Reportes permite analizar el desempeño del predio y exportar la información para contabilidad o seguimiento.</p>
+
+  <!-- MOCK reportes -->
+  <div class="mock-screen">
+    <div class="mock-bar">
+      <div class="mock-dots">
+        <div class="mock-dot" style="background:#e74c3c"></div>
+        <div class="mock-dot" style="background:#ff9500"></div>
+        <div class="mock-dot" style="background:#4cd964"></div>
+      </div>
+      <div class="mock-url">Vista Reportes</div>
+    </div>
+    <div style="padding:24px;background:#0d0d0d">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div>
+          <div style="color:#fff;font-size:18px;font-weight:700">Reportes</div>
+          <div style="color:#555;font-size:12px">Análisis de ingresos y ocupación</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button style="background:#1a7a2e;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Exportar Excel</button>
+          <button style="background:#c0392b;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📄 Exportar PDF</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button style="background:#4cd964;color:#000;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700">Este mes</button>
+        <button style="background:#1a1a1a;color:#888;border:1px solid #333;border-radius:20px;padding:6px 14px;font-size:12px">Mes anterior</button>
+        <button style="background:#1a1a1a;color:#888;border:1px solid #333;border-radius:20px;padding:6px 14px;font-size:12px">Esta semana</button>
+        <button style="background:#1a1a1a;color:#888;border:1px solid #333;border-radius:20px;padding:6px 14px;font-size:12px">Personalizado</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:16px">
+          <div style="color:#4cd964;font-size:22px;font-weight:700">$45.800</div>
+          <div style="color:#555;font-size:11px;margin-top:4px">Ingresos totales</div>
+        </div>
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:16px">
+          <div style="color:#3498db;font-size:22px;font-weight:700">28</div>
+          <div style="color:#555;font-size:11px;margin-top:4px">Reservas del período</div>
+        </div>
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:16px">
+          <div style="color:#ff9500;font-size:22px;font-weight:700">74%</div>
+          <div style="color:#555;font-size:11px;margin-top:4px">Tasa de ocupación</div>
+        </div>
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:16px">
+          <div style="color:#9b59b6;font-size:22px;font-weight:700">$1.636</div>
+          <div style="color:#555;font-size:11px;margin-top:4px">Promedio por reserva</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Filtros disponibles</h3>
+  <ul>
+    <li><strong>Este mes</strong> — período actual completo</li>
+    <li><strong>Mes anterior</strong> — mes calendario anterior</li>
+    <li><strong>Esta semana</strong> — lunes a domingo de la semana actual</li>
+    <li><strong>Personalizado</strong> — seleccionás fecha desde / hasta</li>
+  </ul>
+
+  <h3>Exportar a Excel</h3>
+  <p>Genera un archivo <code>.xls</code> descargable con 3 hojas:</p>
+  <ol>
+    <li><strong>Resumen</strong>: KPIs del período (ingresos, reservas, ticket promedio, ocupación)</li>
+    <li><strong>Por día</strong>: tabla con cada día del período, cantidad de reservas e ingresos</li>
+    <li><strong>Canchas</strong>: desglose por cancha con reservas, ingresos y % de ocupación</li>
+  </ol>
+
+  <h3>Exportar a PDF</h3>
+  <p>Abre una nueva ventana con el reporte completo formateado para impresión. El sistema dispara automáticamente el diálogo de impresión del navegador. Incluye:</p>
+  <ul>
+    <li>Portada con logo y período analizado</li>
+    <li>KPIs en tarjetas visuales</li>
+    <li>Tabla diaria con subtotales</li>
+    <li>Análisis de ocupación por cancha con barras visuales</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     9. WIZARD NUEVO CLIENTE
+══════════════════════════════════════════════ -->
+<div class="section page-break" id="s9">
+  <h2><span class="num">9</span> Alta de Nuevo Cliente — Wizard</h2>
+  <p>El <strong>Wizard de Alta</strong> guía paso a paso la creación completa de un nuevo dueño de predio: cuenta de usuario, predio (complejo), canchas y franjas horarias. Se accede desde el botón <strong>+ Nuevo cliente</strong> en la vista de Clientes.</p>
+
+  <!-- MOCK wizard -->
+  <div class="mock-screen">
+    <div class="mock-bar">
+      <div class="mock-dots">
+        <div class="mock-dot" style="background:#e74c3c"></div>
+        <div class="mock-dot" style="background:#ff9500"></div>
+        <div class="mock-dot" style="background:#4cd964"></div>
+      </div>
+      <div class="mock-url">Modal — Wizard Alta Nuevo Cliente</div>
+    </div>
+    <div style="padding:24px;background:#111">
+      <!-- Stepper -->
+      <div style="display:flex;align-items:center;justify-content:center;margin-bottom:24px;gap:0">
+        <div style="text-align:center;position:relative">
+          <div style="width:32px;height:32px;border-radius:50%;background:#4cd964;color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto 4px">1</div>
+          <div style="font-size:10px;color:#4cd964;font-weight:700">Cuenta</div>
+        </div>
+        <div style="height:2px;width:50px;background:#4cd964"></div>
+        <div style="text-align:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:#4cd964;color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto 4px">2</div>
+          <div style="font-size:10px;color:#4cd964;font-weight:700">Predio</div>
+        </div>
+        <div style="height:2px;width:50px;background:#333"></div>
+        <div style="text-align:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:#333;color:#888;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto 4px">3</div>
+          <div style="font-size:10px;color:#555">Canchas</div>
+        </div>
+        <div style="height:2px;width:50px;background:#333"></div>
+        <div style="text-align:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:#333;color:#888;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto 4px">4</div>
+          <div style="font-size:10px;color:#555">Horarios</div>
+        </div>
+        <div style="height:2px;width:50px;background:#333"></div>
+        <div style="text-align:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:#333;color:#888;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto 4px">✓</div>
+          <div style="font-size:10px;color:#555">Listo</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px">Nombre *</div>
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;color:#aaa">Carlos</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px">Apellido *</div>
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;color:#aaa">Martínez</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px">Email *</div>
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;color:#aaa">carlos@predio.com</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px">Teléfono</div>
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;color:#aaa">11-5566-7788</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
+        <button style="background:#2a2a2a;color:#888;border:1px solid #333;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer">Cancelar</button>
+        <button style="background:#4cd964;color:#000;border:none;border-radius:8px;padding:8px 20px;font-size:12px;font-weight:700;cursor:pointer">Siguiente →</button>
+      </div>
+    </div>
+  </div>
+
+  <h3>Los 5 pasos del Wizard</h3>
+  <ol class="step-list">
+    <li>
+      <div>
+        <strong>Cuenta del Dueño</strong><br>
+        <span style="color:#666;font-size:13px">Nombre, apellido, email y teléfono del dueño del predio. Se crea el usuario con perfil Dueño.</span>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Predio / Complejo</strong><br>
+        <span style="color:#666;font-size:13px">Nombre del predio, dirección, localidad, partido, tipo de complejo y teléfono de contacto.</span>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Canchas</strong><br>
+        <span style="color:#666;font-size:13px">Agregar una o más canchas. Cada una con nombre, tipo, precio y seña. Se pueden agregar varias antes de continuar.</span>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Horarios / Franjas</strong><br>
+        <span style="color:#666;font-size:13px">Para cada cancha, definir los días de la semana y el rango horario en que está disponible.</span>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>¡Listo!</strong><br>
+        <span style="color:#666;font-size:13px">Resumen de lo creado con opción de ir directamente al perfil del nuevo cliente o cerrar el wizard.</span>
+      </div>
+    </li>
+  </ol>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">💡</div>
+    <div>El wizard es <strong>idempotente</strong>: si volvés un paso atrás y avanzás de nuevo, no se duplican los datos ya guardados.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     10. PANEL CLIENTE
+══════════════════════════════════════════════ -->
+<div class="section page-break" id="s10">
+  <h2><span class="num">10</span> Panel del Cliente <span class="badge badge-cliente">CLIENTE</span></h2>
+
+  <p>El cliente accede a su propio panel luego de iniciar sesión. Puede ver y gestionar sus reservas y pagos.</p>
+
+  <!-- MOCK panel cliente -->
+  <div class="mock-screen">
+    <div class="mock-bar">
+      <div class="mock-dots">
+        <div class="mock-dot" style="background:#e74c3c"></div>
+        <div class="mock-dot" style="background:#ff9500"></div>
+        <div class="mock-dot" style="background:#4cd964"></div>
+      </div>
+      <div class="mock-url">localhost/LaCanchita/view/maquetaCliente/ — Panel Cliente</div>
+    </div>
+    <div style="display:flex">
+      <div style="width:200px;background:#111;border-right:1px solid #222;padding:20px 0;min-height:340px">
+        <div style="padding:0 16px 16px;border-bottom:1px solid #222;margin-bottom:12px">
+          <div style="width:44px;height:44px;background:#4cd964;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:18px;margin-bottom:8px">J</div>
+          <div style="color:#fff;font-size:13px;font-weight:600">Juan García</div>
+          <div style="color:#555;font-size:11px">Cliente</div>
+        </div>
+        <div style="padding:9px 16px;font-size:13px;color:#4cd964;background:rgba(76,217,100,.08);border-right:2px solid #4cd964;font-weight:600">📅 Mis Reservas</div>
+        <div style="padding:9px 16px;font-size:13px;color:#aaa">💰 Mis Pagos</div>
+        <div style="padding:9px 16px;font-size:13px;color:#aaa">👤 Mi Perfil</div>
+        <div style="padding:9px 16px;font-size:13px;color:#aaa">🔍 Buscar canchas</div>
+      </div>
+      <div style="flex:1;padding:24px;background:#0d0d0d">
+        <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:4px">Mis Reservas</div>
+        <div style="color:#555;font-size:12px;margin-bottom:20px">Próximas y pasadas</div>
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="color:#fff;font-weight:600;margin-bottom:4px">⚽ Cancha 1 — Fútbol 5</div>
+              <div style="color:#888;font-size:12px">📅 Lunes 17 jun · ⏰ 10:00–11:00</div>
+              <div style="color:#888;font-size:12px">🏟️ Complejo Norte, La Plata</div>
+            </div>
+            <div style="text-align:right">
+              <span style="background:rgba(76,217,100,.15);color:#4cd964;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700">✓ Confirmada</span>
+              <div style="color:#4cd964;font-weight:700;font-size:14px;margin-top:6px">$3.500</div>
+              <div style="color:#555;font-size:11px">Pagado: $3.500</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="color:#fff;font-weight:600;margin-bottom:4px">🎾 Cancha 3 — Pádel</div>
+              <div style="color:#888;font-size:12px">📅 Miércoles 19 jun · ⏰ 19:00–20:00</div>
+              <div style="color:#888;font-size:12px">🏟️ Complejo Norte, La Plata</div>
+            </div>
+            <div style="text-align:right">
+              <span style="background:rgba(255,149,0,.15);color:#ff9500;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700">⏳ Seña</span>
+              <div style="color:#ff9500;font-weight:700;font-size:14px;margin-top:6px">$4.000</div>
+              <div style="color:#555;font-size:11px">Pagado: $1.000 · Saldo: $3.000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Secciones del Panel Cliente</h3>
+  <ul>
+    <li><strong>Mis Reservas:</strong> Próximas y pasadas, con estado y detalle de pago de cada una</li>
+    <li><strong>Mis Pagos:</strong> Historial de todos los pagos registrados</li>
+    <li><strong>Mi Perfil:</strong> Actualizar datos personales (nombre, teléfono, contraseña)</li>
+    <li><strong>Buscar canchas:</strong> Volver a la búsqueda pública para hacer una nueva reserva</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <div class="callout-icon">ℹ️</div>
+    <div>Si el staff te dio de alta como cliente <em>walk-in</em> (sin email real), recibiste una contraseña generada automáticamente. Podés cambiarla desde <strong>Mi Perfil</strong>.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     11. TABLA DE PERMISOS
+══════════════════════════════════════════════ -->
+<div class="section page-break" id="s11">
+  <h2><span class="num">11</span> Tabla de Permisos por Perfil</h2>
+  <p>Resumen de qué puede hacer cada perfil en el sistema:</p>
+
+  <table class="feature-table">
+    <thead>
+      <tr>
+        <th>Función</th>
+        <th>👑 Superadmin</th>
+        <th>🏢 Dueño</th>
+        <th>🔑 Encargado</th>
+        <th>🧑‍💼 Staff</th>
+        <th>👤 Cliente</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Dashboard con KPIs</strong></td>
+        <td class="chk">✓ (global)</td>
+        <td class="chk">✓ (propio)</td>
+        <td class="chk">✓ (propio)</td>
+        <td class="chk">✓ (propio)</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Gestionar dueños</strong></td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Tipos y categorías</strong></td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Mis Predios / Canchas</strong></td>
+        <td class="cross">✗</td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Agenda (Lista y Grilla)</strong></td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="chk">✓</td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Crear reserva (admin)</strong></td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="chk">✓</td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Registrar pagos</strong></td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="chk">✓</td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Reportes y exportes</strong></td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="chk">✓</td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Alta walk-in (cliente nuevo)</strong></td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="chk">✓</td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Wizard nuevo cliente</strong></td>
+        <td class="chk">✓</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td><strong>Ver mis reservas (cliente)</strong></td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="chk">✓</td>
+      </tr>
+      <tr>
+        <td><strong>Reservar online</strong></td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="cross">✗</td>
+        <td class="chk">✓</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">💡</div>
+    <div>Para imprimir este manual como PDF, usá <strong>Ctrl + P</strong> en el navegador y seleccioná <em>Guardar como PDF</em>. El documento está optimizado para impresión A4.</div>
+  </div>
+</div>
+
+<!-- PIE -->
+<div style="text-align:center;color:#aaa;font-size:12px;padding:32px 0;border-top:1px solid #e0e0e0;margin-top:16px">
+  <div style="font-size:18px;margin-bottom:6px">⚽</div>
+  <strong style="color:#333">La Canchita</strong> — Sistema de Gestión Deportiva<br>
+  Manual de Usuario v1.0 · Junio 2026<br>
+  <span style="color:#bbb">Desarrollado a medida · Todos los derechos reservados</span>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// Reemplazar rutas de imágenes con las capturas reales guardadas
+// Las imágenes se cargan desde la misma carpeta que el manual
+const imgMap = {
+  'ss_17723flvj.jpg': true,
+  'ss_2321q4xk0.jpg': true,
+  'ss_5441cygkc.jpg': true,
+  'ss_43743106c.jpg': true,
+  'ss_6560xsak6.jpg': true,
+  'ss_8547ydssp.jpg': true,
+  'ss_5903h1dgp.jpg': true,
+};
+</script>
+</body>
+</html>

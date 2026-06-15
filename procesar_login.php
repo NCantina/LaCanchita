@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input    = trim($_POST['username'] ?? '');
-$password = $_POST['password'] ?? '';
+$password = $_POST['password']      ?? '';
 
 if (!$input || !$password) {
     $_SESSION['login_error'] = 'Ingresá tu usuario/email y contraseña.';
@@ -16,25 +16,26 @@ if (!$input || !$password) {
     exit;
 }
 
-$input_e = mysqli_real_escape_string($link, $input);
+$stmt = mysqli_prepare($link,
+    "SELECT USUARIOS_ID, USUARIOS_NOMBRE, USUARIOS_APELLIDO, USUARIOS_EMAIL, USUARIOS_PASSWORD, PERFIL_ID, ACTIVO
+     FROM usuarios
+     WHERE USUARIOS_EMAIL = ? OR USUARIOS_DNI = ?
+     LIMIT 1"
+);
+mysqli_stmt_bind_param($stmt, 'ss', $input, $input);
+mysqli_stmt_execute($stmt);
+$rs   = mysqli_stmt_get_result($stmt);
+$user = mysqli_fetch_assoc($rs);
+mysqli_stmt_close($stmt);
 
-$sql = "SELECT USUARIOS_ID, USUARIOS_NOMBRE, USUARIOS_APELLIDO, USUARIOS_EMAIL, USUARIOS_PASSWORD
-        FROM usuarios
-        WHERE USUARIOS_EMAIL = '$input_e' OR USUARIOS_NOMBRE = '$input_e'
-        LIMIT 1";
-
-$rs = mysqli_query($link, $sql);
-
-if (!$rs || mysqli_num_rows($rs) === 0) {
+if (!$user || !password_verify($password, $user['USUARIOS_PASSWORD'])) {
     $_SESSION['login_error'] = 'Usuario o contraseña incorrectos.';
     header('Location: login.php');
     exit;
 }
 
-$user = mysqli_fetch_assoc($rs);
-
-if (!password_verify($password, $user['USUARIOS_PASSWORD'])) {
-    $_SESSION['login_error'] = 'Usuario o contraseña incorrectos.';
+if ((int)$user['ACTIVO'] === 0) {
+    $_SESSION['login_error'] = 'Tu cuenta está pendiente de aprobación. El administrador la activará en breve.';
     header('Location: login.php');
     exit;
 }
@@ -43,6 +44,12 @@ $_SESSION['usuario_id']       = $user['USUARIOS_ID'];
 $_SESSION['usuario_nombre']   = $user['USUARIOS_NOMBRE'];
 $_SESSION['usuario_apellido'] = $user['USUARIOS_APELLIDO'];
 $_SESSION['usuario_email']    = $user['USUARIOS_EMAIL'];
+$_SESSION['usuario_perfil']   = (int)$user['PERFIL_ID'];
 
-header('Location: view/maquetaCliente/LaCanchitaCliente.php');
+// Redirigir según perfil
+if ((int)$user['PERFIL_ID'] === 5) {
+    header('Location: view/maquetaCliente/LaCanchitaCliente.php');
+} else {
+    header('Location: view/maquetaAdmin/Dashboard.php');
+}
 exit;
