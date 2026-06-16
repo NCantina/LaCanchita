@@ -24,7 +24,7 @@ require_perfil(1);
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-function resp($ok, $msg, $data = null) { echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data]); exit; }
+function resp($ok, $msg, $data = null) { echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 function e($v) { global $link; return mysqli_real_escape_string($link, trim((string)($v??''))); }
 
 // ── AUTO MARCAR VENCIDOS ─────────────────────────────────────────────────────
