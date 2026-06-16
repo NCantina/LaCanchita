@@ -1244,6 +1244,18 @@ class CalendarioLC{
 // ── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ cerrarModal(); cerrarConfirm(); } });
 initPredios();
+
+// ── PWA: botón para abrir en navegador cuando se usa como app instalada ──
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+  const pwaBtn = document.createElement('a');
+  pwaBtn.href = location.href;
+  pwaBtn.target = '_blank';
+  pwaBtn.rel = 'noopener';
+  pwaBtn.title = 'Abrir en navegador';
+  pwaBtn.style.cssText = 'position:fixed;bottom:calc(var(--bn-h) + 12px);right:14px;z-index:500;background:rgba(22,22,31,.95);color:var(--muted);border:1px solid var(--bdr);border-radius:10px;padding:7px 12px;font-size:0.72rem;font-weight:600;display:flex;align-items:center;gap:6px;text-decoration:none;backdrop-filter:blur(8px);';
+  pwaBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Abrir en navegador';
+  document.body.appendChild(pwaBtn);
+}
 </script>
 </body>
 </html>

@@ -182,6 +182,12 @@ if (isset($link)) {
             .breadcrumb { padding: 12px 4%; }
             .canchas-area { padding: 16px 4%; }
         }
+
+        /* ── FILTROS TIPO DE CANCHA ── */
+        .filtros-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .filtro-pill { padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .filtro-pill:hover { border-color: rgba(76,217,100,0.4); color: var(--text); }
+        .filtro-pill.active { background: rgba(76,217,100,0.12); border-color: rgba(76,217,100,0.5); color: var(--green); }
     </style>
 </head>
 <body>
@@ -396,6 +402,7 @@ let _predioData     = null;
 // ── UTILIDADES ──
 function fmt(n) { return '$' + Number(n).toLocaleString('es-AR', {maximumFractionDigits:0}); }
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function titleCase(s) { if(!s) return s; if(s!==s.toUpperCase()) return s; return s.replace(/\S+/g, w=>w.charAt(0)+w.slice(1).toLowerCase()); }
 function openModal(el)  { el.style.display='flex'; document.body.style.overflow='hidden'; }
 function closeModal(el) { el.style.display='none'; document.body.style.overflow=''; }
 
@@ -475,15 +482,26 @@ function renderHero(p) {
 <div class="predio-hero-row">
   <div class="predio-hero-left">
     <div class="predio-tipo-badge"><i class="fas fa-shield-alt"></i>${escHtml(p.TIPO_COMPLEJO_NOMBRE||'Complejo deportivo')}</div>
-    <h1 class="predio-title">${escHtml(p.COMPLEJO_NOMBRE)}</h1>
+    <h1 class="predio-title">${escHtml(titleCase(p.COMPLEJO_NOMBRE))}</h1>
     <div class="predio-loc"><i class="fas fa-map-marker-alt" style="color:var(--green)"></i>${escHtml(loc)}</div>
     <div class="predio-badges">${acts}</div>
     ${desc}
   </div>
   <div class="predio-hero-right">${wspBtn}${telBtn}</div>
 </div>`;
-    document.getElementById('bc-nombre').textContent = p.COMPLEJO_NOMBRE;
-    document.title = p.COMPLEJO_NOMBRE + ' | La Canchita';
+    document.getElementById('bc-nombre').textContent = titleCase(p.COMPLEJO_NOMBRE);
+    document.title = titleCase(p.COMPLEJO_NOMBRE) + ' | La Canchita';
+}
+
+let _tipoFiltro = '';
+function filtrarCanchas(tipo) {
+    _tipoFiltro = tipo;
+    document.querySelectorAll('[data-tipo-cancha]').forEach(card => {
+        card.style.display = (!tipo || card.dataset.tipoCancha === tipo) ? '' : 'none';
+    });
+    document.querySelectorAll('.filtro-pill').forEach(pill => {
+        pill.classList.toggle('active', pill.dataset.tipo === tipo);
+    });
 }
 
 function renderCanchas(canchas, fecha) {
@@ -492,7 +510,12 @@ function renderCanchas(canchas, fecha) {
         grid.innerHTML = '<p class="no-slots">Este predio no tiene canchas disponibles.</p>';
         return;
     }
-    grid.innerHTML = canchas.map((c, i) => {
+    _tipoFiltro = '';
+    const tipos = [...new Set(canchas.map(c => c.TIPO_CANCHA_NOMBRE).filter(Boolean))];
+    const filtrosHtml = tipos.length > 1
+        ? `<div class="filtros-wrap"><button class="filtro-pill active" data-tipo="" onclick="filtrarCanchas('')">Todas</button>${tipos.map(t=>`<button class="filtro-pill" data-tipo="${escHtml(t)}" onclick="filtrarCanchas('${escHtml(t)}')">${escHtml(t)}</button>`).join('')}</div>`
+        : '';
+    const cardsHtml = canchas.map((c, i) => {
         const color = sportColor(c.TIPO_CANCHA_NOMBRE);
         const icon  = sportIcon(c.TIPO_CANCHA_NOMBRE);
         const hoy   = new Date().toISOString().split('T')[0];
@@ -527,7 +550,7 @@ function renderCanchas(canchas, fecha) {
 
         const desc = c.CANCHA_DESCRIPCION ? `<div class="cancha-desc">${escHtml(c.CANCHA_DESCRIPCION)}</div>` : '';
 
-        return `<div class="cancha-card anim-in" style="animation-delay:${i*0.06}s">
+        return `<div class="cancha-card anim-in" data-tipo-cancha="${escHtml(c.TIPO_CANCHA_NOMBRE||'')}" style="animation-delay:${i*0.06}s">
             <div class="cancha-card-head">
                 <div class="cancha-icon-wrap" style="background:${color}18;color:${color}">
                     <i class="fas ${icon}"></i>
@@ -544,6 +567,7 @@ function renderCanchas(canchas, fecha) {
             </div>
         </div>`;
     }).join('');
+    grid.innerHTML = filtrosHtml + cardsHtml;
 }
 
 // ── FLUJO RESERVA ──
@@ -578,6 +602,7 @@ function abrirModalReserva() {
     actualizarPrecio();
     selectMetodo('efectivo');
     document.getElementById('res-err').style.display = 'none';
+    document.getElementById('btn-wsp-reserva').style.display = c.complejoTel ? 'flex' : 'none';
     openModal(document.getElementById('modal-reserva'));
 }
 
@@ -646,7 +671,6 @@ function reservarPorWsp() {
     const fecha = new Date(_ctx.fecha+'T00:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
     const msg = `Hola! Quiero reservar ${_ctx.canchaNombre} en ${_ctx.complejoNombre} para el ${fecha} a las ${hora}hs. ¿Está disponible?`;
     if (tel) window.open(`https://wa.me/549${tel}?text=${encodeURIComponent(msg)}`, '_blank');
-    else alert('El predio no tiene número de WhatsApp registrado.');
 }
 
 function abrirModalExito(data) {
@@ -671,6 +695,17 @@ function exitoWsp() {
 function closeExitoModal() { closeModal(document.getElementById('modal-exito')); }
 
 // ── AUTH ──
+function updateNavAfterLogin(nombre) {
+    const ini = (nombre||'?').charAt(0).toUpperCase();
+    document.querySelector('.nav-actions').innerHTML =
+        `<a href="view/maquetaCliente/LaCanchitaCliente.php" class="btn-ghost" style="display:flex;align-items:center;gap:8px;">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#000;font-weight:700;font-size:0.82rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini}</span>
+            Mi panel
+        </a>`;
+    const mobActions = document.querySelector('#navMobile .mob-actions');
+    if (mobActions) mobActions.outerHTML = `<a href="view/maquetaCliente/LaCanchitaCliente.php">Mi panel</a>`;
+}
+
 function authTab(t) {
     const isL = t==='login';
     document.getElementById('pane-login').style.display = isL?'block':'none';
@@ -696,7 +731,7 @@ async function doLogin() {
         const r=await fetch('api/login_ajax.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pass})});
         const d=await r.json();
         if (!d.ok) { errEl.textContent=d.msg; errEl.style.display='block'; return; }
-        _loggedIn=true; closeAuthModal(); abrirModalReserva();
+        _loggedIn=true; updateNavAfterLogin(d.nombre); closeAuthModal(); abrirModalReserva();
     } catch(e) { errEl.textContent='Error de conexión.'; errEl.style.display='block'; }
     finally { setLoading('btn-login',false,'Ingresar'); }
 }
@@ -709,7 +744,7 @@ async function doRegister() {
         const r=await fetch('api/register_ajax.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
         const d=await r.json();
         if (!d.ok) { errEl.textContent=d.msg; errEl.style.display='block'; return; }
-        _loggedIn=true; closeAuthModal(); abrirModalReserva();
+        _loggedIn=true; updateNavAfterLogin(d.nombre); closeAuthModal(); abrirModalReserva();
     } catch(e) { errEl.textContent='Error de conexión.'; errEl.style.display='block'; }
     finally { setLoading('btn-reg',false,'Crear cuenta y reservar'); }
 }
@@ -724,6 +759,18 @@ window._lcCal = new CalendarioLC('calPredioContainer', function(fecha) {
     cargarPredio(fecha);
 });
 cargarPredio(_currentFecha);
+
+// ── PWA: botón para abrir en navegador cuando se usa como app instalada ──
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+    const pwaBtn = document.createElement('a');
+    pwaBtn.href = location.href;
+    pwaBtn.target = '_blank';
+    pwaBtn.rel = 'noopener';
+    pwaBtn.title = 'Abrir en navegador';
+    pwaBtn.style.cssText = 'position:fixed;bottom:20px;right:16px;z-index:9999;background:rgba(20,20,20,0.9);color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:8px 14px;font-size:0.75rem;font-weight:600;display:flex;align-items:center;gap:7px;text-decoration:none;backdrop-filter:blur(8px);';
+    pwaBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Abrir en navegador';
+    document.body.appendChild(pwaBtn);
+}
 </script>
 </body>
 </html>

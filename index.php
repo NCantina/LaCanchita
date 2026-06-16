@@ -1353,81 +1353,16 @@ function colorTipo($tipo) {
 </div>
 
 <!-- ============ STATS BAR ============ -->
+<?php if ($totalPredios || $totalCanchas || $reservasMes || $totalCiudades): ?>
 <div class="stats-bar">
     <div class="stats-inner">
-        <div class="stat-item anim">
-            <div class="stat-number"><?= $totalPredios ?></div>
-            <div class="stat-label">Predios activos</div>
-        </div>
-        <div class="stat-item anim" style="transition-delay:.08s">
-            <div class="stat-number"><?= $totalCanchas ?></div>
-            <div class="stat-label">Canchas disponibles</div>
-        </div>
-        <div class="stat-item anim" style="transition-delay:.16s">
-            <div class="stat-number"><?= $reservasMes ?></div>
-            <div class="stat-label">Reservas este mes</div>
-        </div>
-        <div class="stat-item anim" style="transition-delay:.24s">
-            <div class="stat-number"><?= $totalCiudades ?></div>
-            <div class="stat-label">Ciudades</div>
-        </div>
+        <?php if ($totalPredios): ?><div class="stat-item anim"><div class="stat-number"><?= $totalPredios ?></div><div class="stat-label">Predios activos</div></div><?php endif; ?>
+        <?php if ($totalCanchas): ?><div class="stat-item anim" style="transition-delay:.08s"><div class="stat-number"><?= $totalCanchas ?></div><div class="stat-label">Canchas disponibles</div></div><?php endif; ?>
+        <?php if ($reservasMes): ?><div class="stat-item anim" style="transition-delay:.16s"><div class="stat-number"><?= $reservasMes ?></div><div class="stat-label">Reservas este mes</div></div><?php endif; ?>
+        <?php if ($totalCiudades): ?><div class="stat-item anim" style="transition-delay:.24s"><div class="stat-number"><?= $totalCiudades ?></div><div class="stat-label">Ciudades</div></div><?php endif; ?>
     </div>
 </div>
-
-<!-- ============ COMUNIDAD LA CANCHITA ============ -->
-<section id="comunidad">
-    <div class="container">
-        <div class="section-header anim">
-            <span class="section-eyebrow"><i class="fas fa-shield-alt"></i> &nbsp;Miembros verificados</span>
-            <h2 class="section-title">La comunidad <span style="color:var(--green)">La Canchita</span></h2>
-            <p class="section-sub">Estos son los predios que confían en nuestra plataforma. Reservá online al instante.</p>
-        </div>
-        <?php if (empty($prediosMiembros)): ?>
-        <div class="empty-state anim">
-            <i class="fas fa-building"></i>
-            <p>Próximamente los primeros predios miembros</p>
-        </div>
-        <?php else: ?>
-        <div class="predios-grid">
-            <?php foreach ($prediosMiembros as $i => $pr):
-                $inicial = strtoupper(mb_substr($pr['COMPLEJO_NOMBRE'], 0, 1));
-                $deportes = array_filter(array_map('trim', explode(',', $pr['DEPORTES'] ?? '')));
-            ?>
-            <div class="predio-card anim" style="transition-delay:<?= $i * 0.07 ?>s">
-                <div class="predio-card-top">
-                    <div class="predio-avatar"><?= htmlspecialchars($inicial) ?></div>
-                    <div>
-                        <div class="predio-info-name"><?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?></div>
-                        <div class="predio-info-loc">
-                            <i class="fas fa-map-marker-alt" style="color:var(--green);font-size:10px"></i>
-                            <?= htmlspecialchars($pr['PARTIDO_NOMBRE'] ?: ($pr['LOCALIDAD_NOMBRE'] ?: '')) ?>
-                        </div>
-                    </div>
-                </div>
-                <?php if (!empty($deportes)): ?>
-                <div class="predio-deportes">
-                    <?php foreach (array_slice($deportes, 0, 4) as $dep): ?>
-                    <span class="predio-deporte-tag"><?= htmlspecialchars($dep) ?></span>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-                <div class="predio-footer">
-                    <div class="predio-canchas">
-                        <strong><?= (int)$pr['TOTAL_CANCHAS'] ?></strong> <?= $pr['TOTAL_CANCHAS'] == 1 ? 'cancha' : 'canchas' ?>
-                    </div>
-                    <?php if (!empty($pr['PRECIO_DESDE'])): ?>
-                    <div class="predio-precio">desde $<?= number_format($pr['PRECIO_DESDE'], 0, ',', '.') ?>/h</div>
-                    <?php else: ?>
-                    <span class="predio-miembro-badge"><i class="fas fa-check-circle"></i> Miembro</span>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
-    </div>
-</section>
-
+<?php endif; ?>
 
 <!-- ============ PUBLICIDAD ============ -->
 <section id="publicidad">
@@ -1481,6 +1416,60 @@ function colorTipo($tipo) {
                 </a>
             </div>
         </div>
+    </div>
+</section>
+
+<!-- ============ COMUNIDAD LA CANCHITA ============ -->
+<section id="comunidad">
+    <div class="container">
+        <div class="section-header anim">
+            <span class="section-eyebrow"><i class="fas fa-shield-alt"></i> &nbsp;Miembros verificados</span>
+            <h2 class="section-title">La comunidad <span style="color:var(--green)">La Canchita</span></h2>
+            <p class="section-sub">Estos son los predios que confían en nuestra plataforma. Reservá online al instante.</p>
+        </div>
+        <?php if (empty($prediosMiembros)): ?>
+        <div class="empty-state anim">
+            <i class="fas fa-building"></i>
+            <p>Próximamente los primeros predios miembros</p>
+        </div>
+        <?php else: ?>
+        <div class="predios-grid">
+            <?php foreach ($prediosMiembros as $i => $pr):
+                $inicial = strtoupper(mb_substr($pr['COMPLEJO_NOMBRE'], 0, 1));
+                $deportes = array_filter(array_map('trim', explode(',', $pr['DEPORTES'] ?? '')));
+            ?>
+            <div class="predio-card anim" style="transition-delay:<?= $i * 0.07 ?>s">
+                <div class="predio-card-top">
+                    <div class="predio-avatar"><?= htmlspecialchars($inicial) ?></div>
+                    <div>
+                        <div class="predio-info-name"><?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?></div>
+                        <div class="predio-info-loc">
+                            <i class="fas fa-map-marker-alt" style="color:var(--green);font-size:10px"></i>
+                            <?= htmlspecialchars($pr['PARTIDO_NOMBRE'] ?: ($pr['LOCALIDAD_NOMBRE'] ?: '')) ?>
+                        </div>
+                    </div>
+                </div>
+                <?php if (!empty($deportes)): ?>
+                <div class="predio-deportes">
+                    <?php foreach (array_slice($deportes, 0, 4) as $dep): ?>
+                    <span class="predio-deporte-tag"><?= htmlspecialchars($dep) ?></span>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+                <div class="predio-footer">
+                    <div class="predio-canchas">
+                        <strong><?= (int)$pr['TOTAL_CANCHAS'] ?></strong> <?= $pr['TOTAL_CANCHAS'] == 1 ? 'cancha' : 'canchas' ?>
+                    </div>
+                    <?php if (!empty($pr['PRECIO_DESDE'])): ?>
+                    <div class="predio-precio">desde $<?= number_format($pr['PRECIO_DESDE'], 0, ',', '.') ?>/h</div>
+                    <?php else: ?>
+                    <span class="predio-miembro-badge"><i class="fas fa-check-circle"></i> Miembro</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </section>
 
