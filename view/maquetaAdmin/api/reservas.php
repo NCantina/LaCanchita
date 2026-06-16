@@ -6,7 +6,7 @@ require_once '../../../config/dist/script/php/tenancy.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-function resp($ok, $msg, $data = null) { echo json_encode(['ok' => $ok, 'msg' => $msg, 'data' => $data]); exit; }
+function resp($ok, $msg, $data = null) { echo json_encode(['ok' => $ok, 'msg' => $msg, 'data' => $data], JSON_UNESCAPED_UNICODE); exit; }
 function e($link, $v) { return mysqli_real_escape_string($link, trim($v ?? '')); }
 
 // Verificar sesión mínima (sin requerir perfil)

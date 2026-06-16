@@ -7,7 +7,7 @@ require_once '../../../config/dist/script/php/tenancy.php';
 require_perfil(1); // solo SuperAdmin
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
-function resp($ok, $msg, $data = null) { echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data]); exit; }
+function resp($ok, $msg, $data = null) { echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 
 switch ($action) {
 

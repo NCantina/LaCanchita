@@ -3,7 +3,7 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 
-function resp($ok,$msg,$data=null){echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data]);exit;}
+function resp($ok,$msg,$data=null){echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE);exit;}
 function e($l,$v){return mysqli_real_escape_string($l,$v);}
 
 if (!isset($_SESSION['usuario_id'])) resp(false,'Sesión no iniciada.');

@@ -9,7 +9,7 @@ if (!isset($_SESSION['usuario_perfil'])) {
 session_write_close(); // liberar lock de sesión antes de queries
 
 $action = $_GET['action'] ?? '';
-function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data]); exit; }
+function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 
 switch($action) {
 

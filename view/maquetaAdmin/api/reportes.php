@@ -8,7 +8,7 @@ require_perfil(2);
 $action = $_GET['action'] ?? '';
 
 function resp($ok, $msg, $data = null) {
-    echo json_encode(['ok' => $ok, 'msg' => $msg, 'data' => $data]);
+    echo json_encode(['ok' => $ok, 'msg' => $msg, 'data' => $data], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
