@@ -14,6 +14,15 @@ if ((int)$_SESSION['usuario_perfil'] >= 5) {
 $nombre = $_SESSION['usuario_nombre'] ?? 'Admin';
 $perfil = (int)($_SESSION['usuario_perfil'] ?? 1);
 $uid    = (int)($_SESSION['usuario_id']    ?? 0);
+
+// Onboarding: dueño nuevo sin complejos → wizard de configuración inicial
+if ($perfil === 2 && empty($_SESSION['onboarding_skip']) && !isset($_GET['skip_onboarding'])) {
+    $nComp = (int)(mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT COUNT(*) AS n FROM complejo WHERE USUARIOS_ID=$uid AND ACTIVO=1"
+    ))['n'] ?? 0);
+    if ($nComp === 0) { header('Location: Onboarding.php'); exit; }
+}
+if (isset($_GET['skip_onboarding'])) $_SESSION['onboarding_skip'] = true;
 $hora   = (int)date('H');
 $saludo = $hora < 12 ? 'Buenos días' : ($hora < 19 ? 'Buenas tardes' : 'Buenas noches');
 
