@@ -20,8 +20,11 @@ case 'set':
          FROM usuarios WHERE USUARIOS_ID=$id AND PERFIL_ID=2"));
     if (!$r) resp(false, 'Dueño no encontrado.');
 
+    // tenancy.php llama session_write_close(); hay que reabrir para escribir
+    session_start();
     $_SESSION['admin_as_dueno']        = $id;
     $_SESSION['admin_as_dueno_nombre'] = $r['USUARIOS_NOMBRE'] . ' ' . $r['USUARIOS_APELLIDO'];
+    session_write_close();
 
     resp(true, 'Contexto establecido.', [
         'dueno_id'     => $id,
@@ -29,7 +32,9 @@ case 'set':
     ]);
 
 case 'clear':
+    session_start();
     unset($_SESSION['admin_as_dueno'], $_SESSION['admin_as_dueno_nombre']);
+    session_write_close();
     resp(true, 'Contexto limpiado.');
 
 case 'current':
