@@ -1393,16 +1393,21 @@ function colorTipo($tipo) {
                     </a>
                 </div>
             </div>
-            <!-- Slot 2 disponible -->
-            <div class="ad-card anim" style="transition-delay:.1s">
-                <div class="ad-icon">
-                    <i class="fas fa-star"></i>
+            <!-- Slot 2 — Ejemplo ficticio -->
+            <div class="ad-card anim" style="transition-delay:.1s;border-color:rgba(52,152,219,0.25);background:rgba(52,152,219,0.04)">
+                <div style="width:90px;height:90px;border-radius:16px;overflow:hidden;background:rgba(52,152,219,0.1);border:1px solid rgba(52,152,219,0.2);display:flex;align-items:center;justify-content:center;font-size:2.2rem;">
+                    🥤
                 </div>
-                <h3>Tu publicidad aquí</h3>
-                <p>Slot #2 disponible — llegá a toda la comunidad deportiva de La Canchita</p>
-                <a href="mailto:efegene@domain.com?subject=Publicidad%20La%20Canchita" class="btn-ad">
-                    <i class="fas fa-envelope"></i> &nbsp;Contactanos
-                </a>
+                <h3 style="color:#fff;font-size:1.3rem;letter-spacing:-.01em">HidraMax</h3>
+                <p style="opacity:.85">Bebidas isotónicas para deportistas. Recuperá energía antes, durante y después del partido.</p>
+                <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+                    <a href="#" class="btn-ad" style="border-color:#3498db;color:#3498db;display:flex;align-items:center;justify-content:center;gap:7px">
+                        <i class="fab fa-instagram"></i> @hidramax.ar
+                    </a>
+                    <a href="#" class="btn-ad" style="border-color:#25d366;color:#25d366;display:flex;align-items:center;justify-content:center;gap:7px">
+                        <i class="fab fa-whatsapp"></i> Pedí tu muestra
+                    </a>
+                </div>
             </div>
             <!-- Slot 3 disponible -->
             <div class="ad-card anim" style="transition-delay:.2s">
