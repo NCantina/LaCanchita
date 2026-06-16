@@ -65,10 +65,10 @@ case 'canchas':
         $caid = (int)$can['CANCHA_ID'];
         $qf = mysqli_query($link,
             "SELECT f.FRANJA_ID, f.FRANJA_HORA_INICIO, f.FRANJA_HORA_FIN,
-                    f.FRANJA_PRECIO, f.FRANJA_DURACION,
+                    f.FRANJA_PRECIO, f.FRANJA_SENA,
                     GROUP_CONCAT(fd.DIA_ID ORDER BY fd.DIA_ID) AS DIAS
              FROM franja_horaria f
-             LEFT JOIN franja_dia fd ON fd.FRANJA_ID = f.FRANJA_ID AND fd.ACTIVO = 1
+             LEFT JOIN franja_dia fd ON fd.FRANJA_ID = f.FRANJA_ID
              WHERE f.CANCHA_ID = $caid AND f.ACTIVO = 1
              GROUP BY f.FRANJA_ID
              ORDER BY f.FRANJA_HORA_INICIO"
