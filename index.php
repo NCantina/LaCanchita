@@ -2306,6 +2306,22 @@ function rStrength(val) {
     text.style.color=val.length===0?'rgba(255,255,255,.35)':(colors[s-1]||'rgba(255,255,255,.35)');
 }
 
+function updateNavAfterLogin(nombre) {
+    const ini = (nombre || '?').charAt(0).toUpperCase();
+    const panelUrl = 'view/maquetaCliente/LaCanchitaCliente.php';
+    const desktopEl = document.querySelector('.nav-actions');
+    if (desktopEl) {
+        desktopEl.innerHTML = `<a href="${panelUrl}" class="btn-ghost" style="display:flex;align-items:center;gap:8px;">
+            <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#4cd964,#34c759);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:#000;flex-shrink:0">${ini}</span>
+            Mi panel
+        </a>`;
+    }
+    const mobEl = document.querySelector('#navMobile .mob-actions');
+    if (mobEl) {
+        mobEl.innerHTML = `<a href="${panelUrl}" class="btn-ghost" style="flex:1;text-align:center;padding:10px 0;border-radius:10px;font-weight:600;font-size:.9rem;color:rgba(255,255,255,.85)">Mi panel</a>`;
+    }
+}
+
 async function doLogin() {
     const user = document.getElementById('l-user').value.trim();
     const pass = document.getElementById('l-pass').value;
@@ -2318,6 +2334,7 @@ async function doLogin() {
         const d = await r.json();
         if (!d.ok) { errEl.textContent=d.msg; errEl.style.display='block'; return; }
         _loggedIn = true;
+        updateNavAfterLogin(d.nombre || user);
         closeAuthModal();
         abrirModalReserva();
     } catch(e) {
@@ -2346,6 +2363,7 @@ async function doRegister() {
         const d = await r.json();
         if (!d.ok) { errEl.textContent=d.msg; errEl.style.display='block'; return; }
         _loggedIn = true;
+        updateNavAfterLogin(d.nombre);
         closeAuthModal();
         abrirModalReserva();
     } catch(e) {
