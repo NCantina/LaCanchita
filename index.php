@@ -1197,6 +1197,37 @@ function colorTipo($tipo) {
             .predio-card { padding: 16px; }
             .step-card { padding: 22px 14px; }
         }
+
+        /* ── MODAL AUTH: FLOATING LABELS + WIZARD ── */
+        .r-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .r-field { position: relative; margin-bottom: 13px; }
+        .r-field input { width: 100%; padding: 18px 40px 5px 14px; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.12); border-radius: 12px; color: #fff; font-size: .92rem; transition: border-color .25s, background .25s, box-shadow .25s; outline: none; -webkit-appearance: none; }
+        .r-field input:focus { border-color: #4cd964; background: rgba(76,217,100,.05); box-shadow: 0 0 0 3px rgba(76,217,100,.1); }
+        .r-field input.r-err { border-color: rgba(231,76,60,.7) !important; }
+        .r-field input:focus + label, .r-field input:not(:placeholder-shown) + label { transform: translateY(-9px) scale(.76); color: #4cd964; }
+        .r-field label { position: absolute; left: 14px; top: 13px; color: rgba(255,255,255,.4); font-size: .9rem; pointer-events: none; transition: transform .2s, color .2s; transform-origin: left top; }
+        .r-field .r-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.3); font-size: .82rem; background: none; border: none; cursor: pointer; padding: 4px; transition: color .2s; }
+        .r-field .r-icon:hover { color: #4cd964; }
+        .r-strength-bar { height: 3px; border-radius: 3px; background: rgba(255,255,255,.1); margin: -8px 0 6px; overflow: hidden; }
+        .r-strength-fill { height: 100%; width: 0; border-radius: 3px; transition: width .3s, background .3s; }
+        .r-strength-text { font-size: 11px; color: rgba(255,255,255,.35); display: block; margin-bottom: 12px; }
+        .r-hint { font-size: 11px; color: rgba(255,255,255,.3); margin: -8px 0 10px 4px; }
+        .rm-steps { display: flex; align-items: center; margin-bottom: 20px; }
+        .rm-step { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+        .rm-step-circle { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.35); transition: all .3s; }
+        .rm-step.rm-active .rm-step-circle { border-color: #4cd964; color: #4cd964; background: rgba(76,217,100,.1); }
+        .rm-step.rm-done .rm-step-circle { border-color: #4cd964; background: #4cd964; color: #000; }
+        .rm-step-label { font-size: 10px; color: rgba(255,255,255,.3); white-space: nowrap; }
+        .rm-step.rm-active .rm-step-label, .rm-step.rm-done .rm-step-label { color: rgba(255,255,255,.55); }
+        .rm-step-line { flex: 1; height: 1px; background: rgba(255,255,255,.12); margin-bottom: 14px; transition: background .3s; }
+        .rm-step-line.rm-done { background: #4cd964; }
+        .rm-panel { display: none; }
+        .rm-panel.rm-active { display: block; animation: fadeUp .22s ease; }
+        .rm-btn-row { display: flex; gap: 8px; margin-top: 8px; }
+        .rm-btn-next { flex: 1; padding: 13px; background: linear-gradient(135deg,#4cd964,#34c759); border: none; border-radius: 11px; color: #000; font-weight: 800; font-size: .92rem; cursor: pointer; transition: opacity .15s; display: flex; align-items: center; justify-content: center; gap: 7px; }
+        .rm-btn-next:hover { opacity: .88; }
+        .rm-btn-back { padding: 13px 16px; background: rgba(255,255,255,.07); border: 1.5px solid rgba(255,255,255,.12); border-radius: 11px; color: rgba(255,255,255,.6); cursor: pointer; font-size: .88rem; transition: all .2s; }
+        .rm-btn-back:hover { background: rgba(255,255,255,.12); color: #fff; }
     </style>
 </head>
 <body>
@@ -2000,36 +2031,55 @@ document.addEventListener('click', function(e) {
                 <a href="login.php" style="text-align:center;font-size:.8rem;color:rgba(255,255,255,.35);text-decoration:none">¿Olvidaste tu contraseña?</a>
             </div>
         </div>
-        <!-- Register form -->
-        <div id="pane-reg" style="display:none;padding:28px;max-height:80vh;overflow-y:auto">
-            <p style="font-size:.85rem;color:rgba(255,255,255,.45);margin-bottom:20px">Creá tu cuenta gratis en segundos</p>
-            <div id="reg-err" style="display:none;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px 14px;font-size:.83rem;color:#e74c3c;margin-bottom:16px"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <?php
-                $rFields = [
-                    ['r-nombre','text','Nombre','Juan','col:span 1'],
-                    ['r-apellido','text','Apellido','García','col:span 1'],
-                    ['r-dni','text','DNI','12345678','col:span 1'],
-                    ['r-tel','tel','Teléfono','221-000-0000','col:span 1'],
-                    ['r-email','email','Email','juan@email.com','col:span 2'],
-                    ['r-pass','password','Contraseña','••••••••','col:span 2'],
-                    ['r-pass2','password','Repetir contraseña','••••••••','col:span 2'],
-                ];
-                foreach ($rFields as $f):
-                    $span = $f[4] === 'col:span 2' ? 'grid-column:1/-1;' : '';
-                ?>
-                <div style="<?= $span ?>display:flex;flex-direction:column;gap:5px">
-                    <label style="font-size:.72rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em"><?= $f[2] ?></label>
-                    <input id="<?= $f[0] ?>" type="<?= $f[1] ?>" placeholder="<?= $f[3] ?>"
-                        style="padding:11px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:.88rem;outline:none;transition:border-color .2s"
-                        onfocus="this.style.borderColor='rgba(76,217,100,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'">
-                </div>
-                <?php endforeach; ?>
+        <!-- Register form — wizard 3 pasos -->
+        <div id="pane-reg" style="display:none;padding:22px 28px 28px;max-height:82vh;overflow-y:auto">
+            <div id="reg-err" style="display:none;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px 14px;font-size:.83rem;color:#e74c3c;margin-bottom:14px"></div>
+            <div class="rm-steps">
+                <div class="rm-step rm-active" id="rm-s1"><div class="rm-step-circle" id="rm-sc1">1</div><div class="rm-step-label">Personal</div></div>
+                <div class="rm-step-line" id="rm-line1"></div>
+                <div class="rm-step" id="rm-s2"><div class="rm-step-circle" id="rm-sc2">2</div><div class="rm-step-label">Contacto</div></div>
+                <div class="rm-step-line" id="rm-line2"></div>
+                <div class="rm-step" id="rm-s3"><div class="rm-step-circle" id="rm-sc3">3</div><div class="rm-step-label">Acceso</div></div>
             </div>
-            <button onclick="doRegister()" id="btn-reg"
-                style="margin-top:16px;width:100%;padding:13px;background:var(--green);color:#000;border:none;border-radius:10px;font-weight:800;font-size:.95rem;cursor:pointer;transition:background .2s">
-                Crear cuenta y reservar
-            </button>
+            <!-- Paso 1 -->
+            <div class="rm-panel rm-active" id="rm-panel1">
+                <div class="r-row-2">
+                    <div class="r-field"><input type="text" id="r-nombre" placeholder=" " autocomplete="given-name"><label>Nombre</label><i class="fas fa-user r-icon"></i></div>
+                    <div class="r-field"><input type="text" id="r-apellido" placeholder=" " autocomplete="family-name"><label>Apellido</label><i class="fas fa-user r-icon"></i></div>
+                </div>
+                <div class="r-field"><input type="text" id="r-dni" placeholder=" " inputmode="numeric" maxlength="8"><label>DNI</label><i class="fas fa-id-card r-icon"></i></div>
+                <p class="r-hint">Solo números, sin puntos.</p>
+                <div class="rm-btn-row"><button type="button" class="rm-btn-next" onclick="rmGoStep(2)">Continuar <i class="fas fa-arrow-right"></i></button></div>
+            </div>
+            <!-- Paso 2 -->
+            <div class="rm-panel" id="rm-panel2">
+                <div class="r-field"><input type="email" id="r-email" placeholder=" " autocomplete="email"><label>Email</label><i class="fas fa-envelope r-icon"></i></div>
+                <div class="r-field"><input type="tel" id="r-tel" placeholder=" " inputmode="numeric" autocomplete="tel"><label>Teléfono</label><i class="fas fa-phone r-icon"></i></div>
+                <p class="r-hint">Con código de área, sin 0 ni 15.</p>
+                <div class="rm-btn-row">
+                    <button type="button" class="rm-btn-back" onclick="rmGoStep(1)"><i class="fas fa-arrow-left"></i></button>
+                    <button type="button" class="rm-btn-next" onclick="rmGoStep(3)">Continuar <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            <!-- Paso 3 -->
+            <div class="rm-panel" id="rm-panel3">
+                <div class="r-field">
+                    <input type="password" id="r-pass" placeholder=" " autocomplete="new-password" oninput="rStrength(this.value)">
+                    <label>Contraseña</label>
+                    <button type="button" class="r-icon" onclick="rTogglePass('r-pass','r-eye1')"><i id="r-eye1" class="fas fa-eye"></i></button>
+                </div>
+                <div class="r-strength-bar"><div class="r-strength-fill" id="r-sf"></div></div>
+                <span class="r-strength-text" id="r-st">Mínimo 6 caracteres</span>
+                <div class="r-field">
+                    <input type="password" id="r-pass2" placeholder=" " autocomplete="new-password">
+                    <label>Repetir contraseña</label>
+                    <button type="button" class="r-icon" onclick="rTogglePass('r-pass2','r-eye2')"><i id="r-eye2" class="fas fa-eye"></i></button>
+                </div>
+                <div class="rm-btn-row">
+                    <button type="button" class="rm-btn-back" onclick="rmGoStep(2)"><i class="fas fa-arrow-left"></i></button>
+                    <button onclick="doRegister()" id="btn-reg" class="rm-btn-next"><i class="fas fa-user-plus"></i> Crear cuenta y reservar</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -2171,6 +2221,7 @@ function authTab(t) {
     const isLogin = t === 'login';
     document.getElementById('pane-login').style.display = isLogin ? 'block' : 'none';
     document.getElementById('pane-reg').style.display   = isLogin ? 'none' : 'block';
+    if (!isLogin) rmReset();
     document.getElementById('tab-login').style.borderBottomColor = isLogin ? 'var(--green)' : 'transparent';
     document.getElementById('tab-login').style.color = isLogin ? '#fff' : 'rgba(255,255,255,.45)';
     document.getElementById('tab-reg').style.borderBottomColor  = isLogin ? 'transparent' : 'var(--green)';
@@ -2179,12 +2230,80 @@ function authTab(t) {
     document.getElementById('reg-err').style.display  = 'none';
 }
 
-function closeAuthModal() { closeModal(document.getElementById('modal-auth')); }
+function closeAuthModal() { closeModal(document.getElementById('modal-auth')); rmReset(); }
 
 function setLoading(btnId, loading, txt) {
     const b = document.getElementById(btnId);
     b.disabled = loading;
     b.textContent = loading ? '...' : txt;
+}
+
+// ── WIZARD REGISTRO ──────────────────────────────────────────────────────────
+let _rmStep = 1;
+function rmReset() {
+    _rmStep = 1;
+    [1,2,3].forEach(i => {
+        document.getElementById('rm-panel'+i).classList.toggle('rm-active', i===1);
+        const s = document.getElementById('rm-s'+i);
+        s.classList.toggle('rm-active', i===1);
+        s.classList.remove('rm-done');
+        document.getElementById('rm-sc'+i).textContent = i;
+    });
+    document.getElementById('rm-line1').classList.remove('rm-done');
+    document.getElementById('rm-line2').classList.remove('rm-done');
+    document.getElementById('reg-err').style.display = 'none';
+}
+function rmGoStep(n) {
+    if (n > _rmStep && !rmValidate(_rmStep)) return;
+    document.getElementById('rm-panel'+_rmStep).classList.remove('rm-active');
+    document.getElementById('rm-s'+_rmStep).classList.remove('rm-active');
+    if (n > _rmStep) document.getElementById('rm-s'+_rmStep).classList.add('rm-done');
+    _rmStep = n;
+    document.getElementById('rm-panel'+n).classList.add('rm-active');
+    document.getElementById('rm-s'+n).classList.add('rm-active');
+    document.getElementById('rm-s'+n).classList.remove('rm-done');
+    document.getElementById('rm-line1').classList.toggle('rm-done', _rmStep >= 2);
+    document.getElementById('rm-line2').classList.toggle('rm-done', _rmStep >= 3);
+    for (let i = 1; i < n; i++) {
+        document.getElementById('rm-s'+i).classList.add('rm-done');
+        document.getElementById('rm-s'+i).classList.remove('rm-active');
+        document.getElementById('rm-sc'+i).innerHTML = '<i class="fas fa-check"></i>';
+    }
+    document.getElementById('rm-sc'+n).textContent = n;
+}
+function rmValidate(step) {
+    if (step === 1) {
+        if (!document.getElementById('r-nombre').value.trim())   { rmShake('r-nombre');   return false; }
+        if (!document.getElementById('r-apellido').value.trim()) { rmShake('r-apellido'); return false; }
+        const dni = document.getElementById('r-dni').value.trim();
+        if (!dni || !/^\d{7,8}$/.test(dni)) { rmShake('r-dni'); return false; }
+    }
+    if (step === 2) {
+        const email = document.getElementById('r-email').value.trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { rmShake('r-email'); return false; }
+        if (!document.getElementById('r-tel').value.trim()) { rmShake('r-tel'); return false; }
+    }
+    return true;
+}
+function rmShake(id) {
+    const el = document.getElementById(id);
+    el.classList.add('r-err');
+    el.animate([{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:280});
+    el.addEventListener('input', () => el.classList.remove('r-err'), {once:true});
+}
+function rTogglePass(inputId, iconId) {
+    const inp=document.getElementById(inputId), ico=document.getElementById(iconId);
+    const v=inp.type==='text'; inp.type=v?'password':'text'; ico.className=v?'fas fa-eye':'fas fa-eye-slash';
+}
+function rStrength(val) {
+    let s=0;
+    if(val.length>=6) s++; if(val.length>=10) s++;
+    if(/[A-Z]/.test(val)) s++; if(/[0-9]/.test(val)) s++; if(/[^A-Za-z0-9]/.test(val)) s++;
+    const fill=document.getElementById('r-sf'), text=document.getElementById('r-st');
+    const pcts=['0%','25%','50%','75%','100%'], colors=['#ff4455','#ff9500','#ffcc00','#4cd964','#34c759'];
+    fill.style.width=pcts[s]||'0%'; fill.style.background=colors[s-1]||'#ff4455';
+    text.textContent=val.length===0?'Mínimo 6 caracteres':(['','Muy débil','Débil','Buena','Fuerte','Muy fuerte'][s]||'');
+    text.style.color=val.length===0?'rgba(255,255,255,.35)':(colors[s-1]||'rgba(255,255,255,.35)');
 }
 
 async function doLogin() {
@@ -2209,18 +2328,19 @@ async function doLogin() {
 }
 
 async function doRegister() {
-    const errEl = document.getElementById('reg-err');
-    errEl.style.display = 'none';
+    const errEl = document.getElementById('reg-err'); errEl.style.display = 'none';
+    const pass = document.getElementById('r-pass').value, pass2 = document.getElementById('r-pass2').value;
+    if (!pass || pass.length < 6) { errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; errEl.style.display='block'; return; }
+    if (pass !== pass2) { errEl.textContent='Las contraseñas no coinciden.'; errEl.style.display='block'; return; }
     const body = {
         nombre:   document.getElementById('r-nombre').value.trim(),
         apellido: document.getElementById('r-apellido').value.trim(),
         dni:      document.getElementById('r-dni').value.trim(),
         telefono: document.getElementById('r-tel').value.trim(),
         email:    document.getElementById('r-email').value.trim(),
-        password: document.getElementById('r-pass').value,
-        password2:document.getElementById('r-pass2').value,
+        password: pass, password2: pass2,
     };
-    setLoading('btn-reg', true, 'Registrando...');
+    const btn = document.getElementById('btn-reg'); btn.disabled=true; btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Registrando...';
     try {
         const r = await fetch('api/register_ajax.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
         const d = await r.json();
@@ -2231,7 +2351,7 @@ async function doRegister() {
     } catch(e) {
         errEl.textContent='Error de conexión.'; errEl.style.display='block';
     } finally {
-        setLoading('btn-reg', false, 'Crear cuenta y reservar');
+        btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Crear cuenta y reservar';
     }
 }
 
