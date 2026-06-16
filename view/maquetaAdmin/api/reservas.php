@@ -505,7 +505,8 @@ case 'cancelar':
 
     if ($cancelData) {
         require_once __DIR__ . '/../../../config/dist/script/php/mailer.php';
-        enviarEmailReserva('cancelada', [
+        require_once __DIR__ . '/../../../config/dist/script/php/push_notify.php';
+        $cancelNotif = [
             'nombre'     => $cancelData['USUARIOS_NOMBRE'],
             'apellido'   => $cancelData['USUARIOS_APELLIDO'],
             'email'      => $cancelData['USUARIOS_EMAIL'],
@@ -516,7 +517,9 @@ case 'cancelar':
             'hora_fin'   => $cancelData['RESERVA_HORA_FIN'],
             'precio'     => $cancelData['RESERVA_PRECIO'],
             'reserva_id' => $reserva_id,
-        ]);
+        ];
+        enviarEmailReserva('cancelada', $cancelNotif);
+        enviarPushReserva($uid, 'cancelada', $cancelNotif);
     }
 
     resp(true, 'Reserva cancelada.', null);
@@ -630,7 +633,8 @@ case 'confirmar':
 
     if ($notif) {
         require_once __DIR__ . '/../../../config/dist/script/php/mailer.php';
-        enviarEmailReserva('confirmada', [
+        require_once __DIR__ . '/../../../config/dist/script/php/push_notify.php';
+        $notifData = [
             'nombre'     => $notif['USUARIOS_NOMBRE'],
             'apellido'   => $notif['USUARIOS_APELLIDO'],
             'email'      => $notif['USUARIOS_EMAIL'],
@@ -641,7 +645,9 @@ case 'confirmar':
             'hora_fin'   => $notif['RESERVA_HORA_FIN'],
             'precio'     => $notif['RESERVA_PRECIO'],
             'reserva_id' => $reserva_id,
-        ]);
+        ];
+        enviarEmailReserva('confirmada', $notifData);
+        enviarPushReserva((int)$res['USUARIOS_ID'], 'confirmada', $notifData);
     }
 
     resp(true, 'Reserva confirmada.', $notif ? [
@@ -686,7 +692,8 @@ case 'rechazar':
 
     if ($rechazarData) {
         require_once __DIR__ . '/../../../config/dist/script/php/mailer.php';
-        enviarEmailReserva('cancelada', [
+        require_once __DIR__ . '/../../../config/dist/script/php/push_notify.php';
+        $rechazarNotif = [
             'nombre'     => $rechazarData['USUARIOS_NOMBRE'],
             'apellido'   => $rechazarData['USUARIOS_APELLIDO'],
             'email'      => $rechazarData['USUARIOS_EMAIL'],
@@ -697,7 +704,9 @@ case 'rechazar':
             'hora_fin'   => $rechazarData['RESERVA_HORA_FIN'],
             'precio'     => $rechazarData['RESERVA_PRECIO'],
             'reserva_id' => $reserva_id,
-        ]);
+        ];
+        enviarEmailReserva('cancelada', $rechazarNotif);
+        enviarPushReserva((int)$res['USUARIOS_ID'], 'cancelada', $rechazarNotif);
     }
 
     resp(true, 'Reserva rechazada y cancelada.', null);

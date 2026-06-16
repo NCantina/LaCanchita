@@ -88,3 +88,36 @@ self.addEventListener('fetch', (event) => {
   // 4) Resto: intentar red, fallback a cache si existe.
   event.respondWith(fetch(req).catch(() => caches.match(req)));
 });
+
+// ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  let payload = {};
+  try { payload = event.data.json(); } catch { payload = { title: 'La Canchita', body: event.data.text() }; }
+
+  const title   = payload.title ?? 'La Canchita';
+  const options = {
+    body:    payload.body  ?? '',
+    icon:    payload.icon  ?? '/config/dist/img/pwa/icon-192.png',
+    badge:   payload.badge ?? '/config/dist/img/pwa/icon-192.png',
+    data:    payload.data  ?? {},
+    vibrate: [200, 100, 200],
+    tag:     payload.data?.tipo ?? 'lacanchita',  // agrupa notifs del mismo tipo
+    renotify: true,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (client.url.includes(url) && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
+});
