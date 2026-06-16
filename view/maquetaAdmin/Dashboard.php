@@ -791,6 +791,13 @@ if ($perfil >= 2) {
     .wiz-franja-row .fr-price { color: var(--green); font-weight: 700; }
     .wiz-franja-row .fr-dias  { color: var(--muted); flex: 1; }
 
+    .gen-preset-btn {
+        padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+        background: var(--s1); color: var(--muted); font-size: 10px; font-weight: 700;
+        cursor: pointer; transition: all .15s;
+    }
+    .gen-preset-btn:hover { color: var(--text); border-color: rgba(255,255,255,.25); }
+
     .wiz-done-icon {
         width: 80px; height: 80px; border-radius: 50%;
         background: rgba(76,217,100,.15); color: var(--green);
@@ -2758,6 +2765,108 @@ if ($perfil >= 2) {
     </div>
 </div>
 
+<!-- ═══════════ MODAL GENERAR HORARIOS ═══════════ -->
+<div class="modal-overlay" id="modalGenerar">
+    <div class="modal" style="max-width:500px">
+        <div class="modal-head">
+            <div class="modal-head-icon" style="background:rgba(76,217,100,.12);color:var(--green)">
+                <i class="fas fa-magic"></i>
+            </div>
+            <div>
+                <h3>Generador de horarios</h3>
+                <p id="mGenSub">Creá todos los turnos de la semana de una vez</p>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalGenerar')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <!-- Días -->
+            <div class="form-row">
+                <label class="form-label">Días <span>*</span></label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px" id="mGenDias"></div>
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                    <button type="button" onclick="genSetDias([1,2,3,4,5])" class="gen-preset-btn">Lun-Vie</button>
+                    <button type="button" onclick="genSetDias([6,7])" class="gen-preset-btn">Sáb-Dom</button>
+                    <button type="button" onclick="genSetDias([1,2,3,4,5,6,7])" class="gen-preset-btn">Todos</button>
+                    <button type="button" onclick="genSetDias([])" class="gen-preset-btn">Limpiar</button>
+                </div>
+                <div class="form-error" id="mGenDiasErr"></div>
+            </div>
+
+            <!-- Apertura / Cierre -->
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-bottom:16px">
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Apertura <span>*</span></label>
+                    <input type="time" class="form-input" id="mGenApertura" style="color-scheme:dark"
+                        onchange="genActualizarPreview()">
+                    <div class="form-error" id="mGenAperturaErr"></div>
+                </div>
+                <div style="text-align:center;color:var(--muted);font-size:18px;font-weight:300;
+                    padding-bottom:10px;align-self:center">→</div>
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Cierre <span>*</span></label>
+                    <input type="time" class="form-input" id="mGenCierre" style="color-scheme:dark"
+                        onchange="genActualizarPreview()">
+                    <div class="form-error" id="mGenCierreErr"></div>
+                </div>
+            </div>
+
+            <!-- Duración y precio -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Duración del turno <span>*</span></label>
+                    <select class="form-input" id="mGenDuracion" onchange="genActualizarPreview()">
+                        <option value="30">30 minutos</option>
+                        <option value="60" selected>1 hora</option>
+                        <option value="90">1 hora 30 min</option>
+                        <option value="120">2 horas</option>
+                    </select>
+                </div>
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Precio por turno <span>*</span></label>
+                    <div style="position:relative">
+                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+                            color:var(--muted);font-weight:700;font-size:13px">$</span>
+                        <input type="number" class="form-input" id="mGenPrecio"
+                            placeholder="0" min="0" step="100"
+                            style="padding-left:26px" oninput="genActualizarPreview()">
+                    </div>
+                    <div class="form-error" id="mGenPrecioErr"></div>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom:16px">
+                <label class="form-label">Seña mínima (opcional)</label>
+                <div style="position:relative">
+                    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+                        color:var(--muted);font-weight:700;font-size:13px">$</span>
+                    <input type="number" class="form-input" id="mGenSena"
+                        placeholder="0" min="0" step="100" style="padding-left:26px">
+                </div>
+                <div class="form-hint">0 = sin seña</div>
+            </div>
+
+            <!-- Preview -->
+            <div id="mGenPreview" style="display:none">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+                    letter-spacing:.5px;margin-bottom:8px">
+                    Vista previa — <span id="mGenCount">0</span> franjas a crear
+                </div>
+                <div id="mGenSlots" style="display:flex;flex-wrap:wrap;gap:5px;max-height:130px;
+                    overflow-y:auto;padding:10px;border-radius:10px;
+                    background:var(--s1);border:1px solid var(--border)">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalGenerar')">Cancelar</button>
+            <button class="btn btn-primary" id="mGenSubmit" onclick="submitGenerar()"
+                style="background:linear-gradient(135deg,var(--green),#34c759);color:#000">
+                <i class="fas fa-magic"></i> <span id="mGenSubmitTxt">Generar horarios</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════ MODAL CANCHAS ═══════════ -->
 <div class="modal-overlay" id="modalCancha">
     <div class="modal modal-lg" style="max-width:580px">
@@ -3609,19 +3718,29 @@ function renderFranjas(cid, nombre, franjas) {
                 </div>
                 <div><h3>${escHtml(nombre)}</h3><p>Sin franjas configuradas aún</p></div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="horAbrirCrear()"
-                style="background:linear-gradient(135deg,var(--blue),#2980b9)">
-                <i class="fas fa-plus"></i> Nueva franja
-            </button>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost btn-sm" onclick="horAbrirGenerar()">
+                    <i class="fas fa-magic"></i> Generar semana
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="horAbrirCrear()"
+                    style="background:linear-gradient(135deg,var(--blue),#2980b9)">
+                    <i class="fas fa-plus"></i> Nueva franja
+                </button>
+            </div>
         </div>
         <div class="empty-state" style="padding:52px 20px">
             <div class="es-icon" style="font-size:22px;width:52px;height:52px"><i class="fas fa-clock"></i></div>
             <h4>Sin franjas horarias</h4>
             <p>Esta cancha no tiene horarios configurados.</p>
-            <button class="btn btn-primary btn-sm" style="margin-top:14px;background:linear-gradient(135deg,var(--blue),#2980b9)"
-                onclick="horAbrirCrear()">
-                <i class="fas fa-plus"></i> Crear primera franja
-            </button>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-sm" onclick="horAbrirGenerar()">
+                    <i class="fas fa-magic"></i> Generar semana
+                </button>
+                <button class="btn btn-primary btn-sm" style="background:linear-gradient(135deg,var(--blue),#2980b9)"
+                    onclick="horAbrirCrear()">
+                    <i class="fas fa-plus"></i> Crear primera franja
+                </button>
+            </div>
         </div>
     </div>`;
 
@@ -3640,7 +3759,10 @@ function renderFranjas(cid, nombre, franjas) {
                         <p>${activas.length} franja${activas.length!=1?'s':''} activa${activas.length!=1?'s':''}</p>
                     </div>
                 </div>
-                <div class="card-actions">
+                <div class="card-actions" style="display:flex;gap:8px">
+                    <button class="btn btn-ghost btn-sm" onclick="horAbrirGenerar()">
+                        <i class="fas fa-magic"></i> Generar semana
+                    </button>
                     <button class="btn btn-primary btn-sm"
                         onclick="horAbrirCrear()"
                         style="background:linear-gradient(135deg,var(--blue),#2980b9)">
@@ -3833,6 +3955,130 @@ async function horToggle(fid, btn) {
         else toast(json.msg,'err');
     }catch(e){toast('Error de red.','err');}
     finally{btn.disabled=false;}
+}
+
+// ─── Generador de horarios ──────────────────────
+let genDiasActivos = new Set([1,2,3,4,5]);
+
+function horAbrirGenerar() {
+    if (!horCanchaId) { toast('Seleccioná una cancha primero.','err'); return; }
+    document.getElementById('mGenSub').textContent = escHtml(horCanchaNom);
+    document.getElementById('mGenApertura').value = '';
+    document.getElementById('mGenCierre').value   = '';
+    document.getElementById('mGenPrecio').value   = '';
+    document.getElementById('mGenSena').value     = '';
+    document.getElementById('mGenDuracion').value = '60';
+    document.getElementById('mGenPreview').style.display = 'none';
+    ['mGenDiasErr','mGenAperturaErr','mGenCierreErr','mGenPrecioErr'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.style.display='none';
+    });
+    genDiasActivos = new Set([1,2,3,4,5]);
+    genRenderDias();
+    document.getElementById('modalGenerar').classList.add('show');
+    setTimeout(()=>document.getElementById('mGenApertura').focus(),150);
+}
+
+function genRenderDias() {
+    const wrap = document.getElementById('mGenDias');
+    wrap.innerHTML = [1,2,3,4,5,6,7].map(d => {
+        const sel   = genDiasActivos.has(d);
+        const color = DIAS_COLOR[d];
+        return `<div onclick="genToggleDia(${d})"
+            style="width:38px;height:38px;border-radius:9px;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+            border:1px solid ${sel?color:'var(--border)'};
+            background:${sel?`rgba(${hexToRgb(color)},.15)`:'var(--s1)'};
+            transition:all .15s;user-select:none">
+            <span style="font-size:10px;font-weight:800;color:${sel?color:'var(--muted)'}">${DIAS_CORTO[d]}</span>
+        </div>`;
+    }).join('');
+    genActualizarPreview();
+}
+
+function genToggleDia(d) {
+    genDiasActivos.has(d) ? genDiasActivos.delete(d) : genDiasActivos.add(d);
+    genRenderDias();
+}
+
+function genSetDias(arr) {
+    genDiasActivos = new Set(arr);
+    genRenderDias();
+}
+
+function genCalcularSlots() {
+    const apertura = document.getElementById('mGenApertura').value;
+    const cierre   = document.getElementById('mGenCierre').value;
+    const dur      = parseInt(document.getElementById('mGenDuracion').value) || 60;
+    if (!apertura || !cierre) return [];
+    const [h1,m1] = apertura.split(':').map(Number);
+    const [h2,m2] = cierre.split(':').map(Number);
+    const start = h1*60+m1, end = h2*60+m2;
+    if (end <= start) return [];
+    const slots = [], pad = n => String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+    for (let t = start; t+dur <= end; t += dur) slots.push({ ini: pad(t), fin: pad(t+dur) });
+    return slots;
+}
+
+function genActualizarPreview() {
+    const slots   = genCalcularSlots();
+    const precio  = parseFloat(document.getElementById('mGenPrecio').value)||0;
+    const prevEl  = document.getElementById('mGenPreview');
+    if (!slots.length || !genDiasActivos.size) { prevEl.style.display='none'; return; }
+    prevEl.style.display = 'block';
+    document.getElementById('mGenCount').textContent = slots.length;
+    document.getElementById('mGenSlots').innerHTML = slots.map(s =>
+        `<span style="padding:4px 10px;border-radius:7px;font-size:12px;font-weight:700;
+            background:rgba(76,217,100,.08);border:1px solid rgba(76,217,100,.2);color:var(--green)">
+            ${s.ini}–${s.fin}${precio?` <span style="color:var(--muted);font-weight:400;font-size:10px">$${precio.toLocaleString('es-AR')}</span>`:''}
+        </span>`
+    ).join('');
+}
+
+async function submitGenerar() {
+    let ok = true;
+    if (!genDiasActivos.size) {
+        const e=document.getElementById('mGenDiasErr'); e.textContent='Seleccioná al menos un día.'; e.style.display='block'; ok=false;
+    } else { document.getElementById('mGenDiasErr').style.display='none'; }
+    const apertura = document.getElementById('mGenApertura').value;
+    const cierre   = document.getElementById('mGenCierre').value;
+    const precio   = parseFloat(document.getElementById('mGenPrecio').value)||0;
+    if (!apertura) { const e=document.getElementById('mGenAperturaErr'); e.textContent='Requerida.'; e.style.display='block'; ok=false; } else document.getElementById('mGenAperturaErr').style.display='none';
+    if (!cierre)   { const e=document.getElementById('mGenCierreErr');   e.textContent='Requerida.'; e.style.display='block'; ok=false; } else document.getElementById('mGenCierreErr').style.display='none';
+    if (precio<=0) { const e=document.getElementById('mGenPrecioErr');  e.textContent='Ingresá un precio mayor a 0.'; e.style.display='block'; ok=false; } else document.getElementById('mGenPrecioErr').style.display='none';
+    const slots = genCalcularSlots();
+    if (!slots.length) { toast('El rango no genera franjas. Revisá apertura y cierre.','err'); return; }
+    if (!ok) return;
+
+    const btn = document.getElementById('mGenSubmit');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creando…';
+
+    const sena = parseFloat(document.getElementById('mGenSena').value)||0;
+    const dias = JSON.stringify([...genDiasActivos]);
+    let creadas=0, errores=[];
+
+    for (const slot of slots) {
+        const fd = new FormData();
+        fd.append('action','crear'); fd.append('cancha_id',horCanchaId);
+        fd.append('hora_inicio',slot.ini); fd.append('hora_fin',slot.fin);
+        fd.append('precio',precio); fd.append('sena',sena); fd.append('dias',dias);
+        try {
+            const res  = await fetch(HOR_API,{method:'POST',body:fd});
+            const json = await res.json();
+            json.ok ? creadas++ : errores.push(`${slot.ini}-${slot.fin}: ${json.msg}`);
+        } catch(e) { errores.push(`${slot.ini}-${slot.fin}: error de red`); }
+    }
+
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-magic"></i> <span id="mGenSubmitTxt">Generar horarios</span>';
+
+    if (creadas > 0) {
+        closeModal('modalGenerar');
+        horLoadFranjas(horCanchaId, horCanchaNom);
+        horLoadCanchas();
+        if (errores.length) toast(`${creadas} franja${creadas!=1?'s':''} creada${creadas!=1?'s':''}, ${errores.length} omitida${errores.length!=1?'s':''}  (superposición).`,'err');
+        else toast(`✓ ${creadas} franja${creadas!=1?'s':''} creada${creadas!=1?'s':''} correctamente.`,'ok');
+    } else {
+        toast(errores[0] || 'No se pudieron crear las franjas.','err');
+    }
 }
 
 // ═══════════════════════════════════════════════
