@@ -9,6 +9,7 @@ $admin_nombre = $_SESSION['usuario_nombre'] ?? 'Admin';
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Panel Desarrollador · La Canchita</title>
+<?php $PWA_BASE = '../../'; require_once '../../config/dist/script/php/pwa_head.php'; ?>
 <link rel="shortcut icon" href="../../config/dist/img/loguito_lacanchita.WEBP" type="image/webp">
 <link rel="stylesheet" href="../../config/pluggins/vendor/fontawesome-free/css/all.min.css">
 <style>

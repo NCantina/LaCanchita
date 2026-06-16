@@ -118,6 +118,7 @@ function colorTipo($tipo) {
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
     <title>La Canchita — Reservá tu cancha online</title>
+    <?php $PWA_BASE = './'; require_once 'config/dist/script/php/pwa_head.php'; ?>
     <meta name="description" content="Reservá canchas de fútbol, pádel, tenis y más en segundos. La plataforma líder en Argentina.">
     <meta name="author" content="EFEGENE DesarrollosWeb">
     <link rel="shortcut icon" href="config/dist/img/loguito_lacanchita.WEBP" type="image/webp">

@@ -1,0 +1,48 @@
+{
+  "name": "La Canchita — Reservá tu cancha",
+  "short_name": "La Canchita",
+  "description": "Reservá canchas deportivas y gestioná tu predio desde el celular.",
+  "lang": "es-AR",
+  "dir": "ltr",
+  "start_url": "./index.php",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "categories": ["sports", "business", "productivity"],
+  "icons": [
+    {
+      "src": "config/dist/img/pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "config/dist/img/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "config/dist/img/pwa/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Iniciar sesión",
+      "short_name": "Ingresar",
+      "url": "./login.php",
+      "icons": [{ "src": "config/dist/img/pwa/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Buscar canchas",
+      "short_name": "Buscar",
+      "url": "./index.php",
+      "icons": [{ "src": "config/dist/img/pwa/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
