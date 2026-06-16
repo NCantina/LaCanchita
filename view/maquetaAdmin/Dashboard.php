@@ -791,6 +791,19 @@ if ($perfil >= 2) {
     .wiz-franja-row .fr-price { color: var(--green); font-weight: 700; }
     .wiz-franja-row .fr-dias  { color: var(--muted); flex: 1; }
 
+    .fr-slot-row {
+        display: grid; grid-template-columns: 1fr 18px 1fr 28px;
+        gap: 6px; align-items: center; margin-bottom: 7px;
+    }
+    .fr-slot-arrow { color: var(--muted); font-size: 14px; text-align: center; }
+    .fr-rm-btn {
+        width: 28px; height: 36px; border-radius: 7px; border: 1px solid var(--border);
+        background: var(--s1); color: var(--muted); cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; transition: all .15s; flex-shrink: 0;
+    }
+    .fr-rm-btn:hover { border-color: rgba(255,69,58,.4); color: #ff453a; background: rgba(255,69,58,.06); }
+
     .gen-preset-btn {
         padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
         background: var(--s1); color: var(--muted); font-size: 10px; font-weight: 700;
@@ -2695,22 +2708,18 @@ if ($perfil >= 2) {
                 <div class="form-error" id="mFrDiasErr"></div>
             </div>
 
-            <!-- Horario -->
-            <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-bottom:16px">
-                <div class="form-row" style="margin:0">
-                    <label class="form-label">Hora inicio <span>*</span></label>
-                    <input type="time" class="form-input" id="mFrInicio" style="color-scheme:dark"
-                        onchange="frActualizarResumen()">
-                    <div class="form-error" id="mFrInicioErr"></div>
+            <!-- Horarios dinámicos -->
+            <div class="form-row">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                    <label class="form-label" style="margin:0">Horarios <span>*</span></label>
+                    <button type="button" id="mFrAddBtn" onclick="frAddSlot()"
+                        style="font-size:11px;font-weight:700;color:var(--blue);background:none;
+                        border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px">
+                        <i class="fas fa-plus-circle"></i> Agregar horario
+                    </button>
                 </div>
-                <div style="text-align:center;color:var(--muted);font-size:18px;font-weight:300;
-                    padding-bottom:10px;align-self:center">→</div>
-                <div class="form-row" style="margin:0">
-                    <label class="form-label">Hora fin <span>*</span></label>
-                    <input type="time" class="form-input" id="mFrFin" style="color-scheme:dark"
-                        onchange="frActualizarResumen()">
-                    <div class="form-error" id="mFrFinErr"></div>
-                </div>
+                <div id="mFrSlotsList"></div>
+                <div class="form-error" id="mFrSlotsErr"></div>
             </div>
 
             <!-- Precios -->
@@ -3794,29 +3803,66 @@ function hexToRgb(hex) {
 }
 
 // ─── Modal franja ──────────────────────────────
+let frSlots = []; // [{ini:'', fin:''}]
+
+function frRenderSlots() {
+    const wrap  = document.getElementById('mFrSlotsList');
+    const isEdt = !!document.getElementById('mFrId').value;
+    wrap.innerHTML = frSlots.map((s, i) => `
+        <div class="fr-slot-row">
+            <input type="time" class="form-input" value="${escHtml(s.ini)}" style="color-scheme:dark"
+                oninput="frSlots[${i}].ini=this.value;frActualizarResumen()">
+            <span class="fr-slot-arrow">→</span>
+            <input type="time" class="form-input" value="${escHtml(s.fin)}" style="color-scheme:dark"
+                oninput="frSlots[${i}].fin=this.value;frActualizarResumen()">
+            ${(!isEdt && frSlots.length > 1)
+                ? `<button type="button" class="fr-rm-btn" onclick="frRemoveSlot(${i})"><i class="fas fa-times"></i></button>`
+                : `<div></div>`}
+        </div>`
+    ).join('');
+    const addBtn = document.getElementById('mFrAddBtn');
+    if (addBtn) addBtn.style.display = isEdt ? 'none' : '';
+    const txt = document.getElementById('mFrSubmitTxt');
+    if (txt && !isEdt) txt.textContent = frSlots.length > 1 ? `Crear ${frSlots.length} franjas` : 'Crear franja';
+    frActualizarResumen();
+}
+
+function frAddSlot() {
+    const last = frSlots[frSlots.length - 1];
+    frSlots.push({ ini: last?.fin || '', fin: '' });
+    frRenderSlots();
+    const inputs = document.querySelectorAll('#mFrSlotsList input[type="time"]');
+    const newIdx = (frSlots.length - 1) * 2;
+    if (inputs[newIdx]) setTimeout(()=>inputs[newIdx].focus(), 40);
+}
+
+function frRemoveSlot(i) {
+    if (frSlots.length <= 1) return;
+    frSlots.splice(i, 1);
+    frRenderSlots();
+}
+
 function horAbrirCrear() {
     if (!horCanchaId) { toast('Seleccioná una cancha primero.','err'); return; }
-    document.getElementById('mFrId').value = '';
-    document.getElementById('mFrCanchaId').value = horCanchaId;
+    document.getElementById('mFrId').value        = '';
+    document.getElementById('mFrCanchaId').value  = horCanchaId;
     document.getElementById('mFrTitle').textContent = 'Nueva franja horaria';
     document.getElementById('mFrSub').textContent   = escHtml(horCanchaNom);
-    document.getElementById('mFrInicio').value = '';
-    document.getElementById('mFrFin').value    = '';
     document.getElementById('mFrPrecio').value = '';
     document.getElementById('mFrSena').value   = '';
-    document.getElementById('mFrSubmitTxt').textContent = 'Crear franja';
     document.getElementById('mFrResumen').style.display = 'none';
-    ['mFrDiasErr','mFrInicioErr','mFrFinErr','mFrPrecioErr'].forEach(id=>{
+    ['mFrDiasErr','mFrSlotsErr','mFrPrecioErr'].forEach(id=>{
         const el=document.getElementById(id); if(el) el.style.display='none';
     });
     frDiasActivos = new Set();
     frRenderDias();
+    frSlots = [{ ini:'', fin:'' }];
+    frRenderSlots();
     document.getElementById('modalFranja').classList.add('show');
-    setTimeout(()=>document.getElementById('mFrInicio').focus(),150);
+    setTimeout(()=>{ const f=document.querySelector('#mFrSlotsList input[type="time"]'); if(f) f.focus(); },150);
 }
 
 async function horAbrirEditar(fid) {
-    // Buscar la franja en los datos ya cargados
     const res  = await fetch(`${HOR_API}?action=franjas&cancha_id=${horCanchaId}`);
     const json = await res.json();
     if (!json.ok) { toast(json.msg,'err'); return; }
@@ -3827,17 +3873,16 @@ async function horAbrirEditar(fid) {
     document.getElementById('mFrCanchaId').value  = horCanchaId;
     document.getElementById('mFrTitle').textContent = 'Editar franja horaria';
     document.getElementById('mFrSub').textContent   = escHtml(horCanchaNom);
-    document.getElementById('mFrInicio').value = f.FRANJA_HORA_INICIO.slice(0,5);
-    document.getElementById('mFrFin').value    = f.FRANJA_HORA_FIN.slice(0,5);
     document.getElementById('mFrPrecio').value = f.FRANJA_PRECIO;
     document.getElementById('mFrSena').value   = f.FRANJA_SENA||'';
     document.getElementById('mFrSubmitTxt').textContent = 'Guardar cambios';
-    ['mFrDiasErr','mFrInicioErr','mFrFinErr','mFrPrecioErr'].forEach(id=>{
+    ['mFrDiasErr','mFrSlotsErr','mFrPrecioErr'].forEach(id=>{
         const el=document.getElementById(id); if(el) el.style.display='none';
     });
     frDiasActivos = new Set((f.DIAS||[]).map(Number));
     frRenderDias();
-    frActualizarResumen();
+    frSlots = [{ ini: f.FRANJA_HORA_INICIO.slice(0,5), fin: f.FRANJA_HORA_FIN.slice(0,5) }];
+    frRenderSlots();
     document.getElementById('modalFranja').classList.add('show');
 }
 
@@ -3870,16 +3915,19 @@ function frSetDias(arr) {
 }
 
 function frActualizarResumen() {
-    const ini    = document.getElementById('mFrInicio').value;
-    const fin    = document.getElementById('mFrFin').value;
+    const valid  = (frSlots||[]).filter(s=>s.ini && s.fin && s.fin > s.ini);
     const precio = parseFloat(document.getElementById('mFrPrecio').value)||0;
     const sena   = parseFloat(document.getElementById('mFrSena').value)||0;
     const res    = document.getElementById('mFrResumen');
 
-    if (!ini || !fin || !precio || !frDiasActivos.size) { res.style.display='none'; return; }
+    if (!valid.length || !precio || !frDiasActivos.size) { res.style.display='none'; return; }
     res.style.display='block';
 
-    document.getElementById('mFrResHoras').textContent  = `${ini} → ${fin}`;
+    document.getElementById('mFrResHoras').innerHTML = valid.length === 1
+        ? `<span style="font-size:18px;font-weight:800;color:var(--blue)">${valid[0].ini} → ${valid[0].fin}</span>`
+        : valid.map(s=>`<span style="padding:2px 8px;border-radius:6px;font-size:13px;font-weight:700;
+            background:rgba(52,152,219,.12);color:var(--blue);margin-right:4px;margin-bottom:4px;display:inline-block">
+            ${s.ini}–${s.fin}</span>`).join('');
     document.getElementById('mFrResPrecio').textContent = `$${precio.toLocaleString('es-AR')}`;
     document.getElementById('mFrResSena').textContent   = sena>0 ? `Seña: $${sena.toLocaleString('es-AR')}` : 'Sin seña';
 
@@ -3893,49 +3941,73 @@ function frActualizarResumen() {
 }
 
 async function submitFranja() {
-    // Validaciones
     let ok = true;
-    const checks = [
-        [()=>!document.getElementById('mFrInicio').value,  'mFrInicioErr','Hora de inicio requerida.'],
-        [()=>!document.getElementById('mFrFin').value,     'mFrFinErr',   'Hora de fin requerida.'],
-        [()=>!document.getElementById('mFrPrecio').value||parseFloat(document.getElementById('mFrPrecio').value)<=0,
-            'mFrPrecioErr','El precio debe ser mayor a 0.'],
-    ];
-    checks.forEach(([cond,eId,msg])=>{
-        const err=document.getElementById(eId);
-        if(cond()){ err.textContent=msg; err.style.display='block'; ok=false; }
-        else { err.style.display='none'; }
-    });
+
+    // Validar días
     if (!frDiasActivos.size) {
-        const err=document.getElementById('mFrDiasErr');
-        err.textContent='Seleccioná al menos un día.'; err.style.display='block'; ok=false;
+        const e=document.getElementById('mFrDiasErr'); e.textContent='Seleccioná al menos un día.'; e.style.display='block'; ok=false;
     } else { document.getElementById('mFrDiasErr').style.display='none'; }
+
+    // Validar slots
+    const validSlots = (frSlots||[]).filter(s=>s.ini && s.fin);
+    const slotsErr = document.getElementById('mFrSlotsErr');
+    if (!validSlots.length) {
+        slotsErr.textContent='Completá al menos un horario.'; slotsErr.style.display='block'; ok=false;
+    } else {
+        const badSlot = validSlots.find(s=>s.fin<=s.ini);
+        if (badSlot) { slotsErr.textContent=`El horario ${badSlot.ini} → ${badSlot.fin} es inválido (fin debe ser posterior al inicio).`; slotsErr.style.display='block'; ok=false; }
+        else slotsErr.style.display='none';
+    }
+
+    // Validar precio
+    const precio = parseFloat(document.getElementById('mFrPrecio').value)||0;
+    const precioErr = document.getElementById('mFrPrecioErr');
+    if (precio<=0) { precioErr.textContent='El precio debe ser mayor a 0.'; precioErr.style.display='block'; ok=false; }
+    else precioErr.style.display='none';
+
     if (!ok) return;
 
-    const btn = document.getElementById('mFrSubmit');
+    const btn  = document.getElementById('mFrSubmit');
+    const fid  = document.getElementById('mFrId').value;
+    const sena = document.getElementById('mFrSena').value||0;
+    const dias = JSON.stringify([...frDiasActivos]);
+    const cid  = document.getElementById('mFrCanchaId').value;
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Guardando…';
 
-    const fid = document.getElementById('mFrId').value;
-    const fd  = new FormData();
-    fd.append('action',     fid?'editar':'crear');
-    fd.append('cancha_id',  document.getElementById('mFrCanchaId').value);
-    fd.append('hora_inicio',document.getElementById('mFrInicio').value);
-    fd.append('hora_fin',   document.getElementById('mFrFin').value);
-    fd.append('precio',     document.getElementById('mFrPrecio').value);
-    fd.append('sena',       document.getElementById('mFrSena').value||0);
-    fd.append('dias',       JSON.stringify([...frDiasActivos]));
-    if (fid) { fd.append('franja_id', fid); }
-
     try {
-        const res  = await fetch(HOR_API,{method:'POST',body:fd});
-        const json = await res.json();
-        if(json.ok){
-            toast(json.msg,'ok');
-            closeModal('modalFranja');
-            horLoadFranjas(horCanchaId, horCanchaNom);
-            horLoadCanchas(); // actualiza el contador de franjas
+        if (fid) {
+            // Editar franja existente (siempre un solo slot)
+            const fd = new FormData();
+            fd.append('action','editar'); fd.append('franja_id',fid); fd.append('cancha_id',cid);
+            fd.append('hora_inicio',frSlots[0].ini); fd.append('hora_fin',frSlots[0].fin);
+            fd.append('precio',precio); fd.append('sena',sena); fd.append('dias',dias);
+            const res = await fetch(HOR_API,{method:'POST',body:fd});
+            const json = await res.json();
+            if (json.ok) { toast(json.msg,'ok'); closeModal('modalFranja'); horLoadFranjas(horCanchaId,horCanchaNom); horLoadCanchas(); }
+            else toast(json.msg,'err');
         } else {
-            toast(json.msg,'err');
+            // Crear: una franja por slot
+            let creadas=0, errores=[];
+            for (const slot of validSlots) {
+                const fd = new FormData();
+                fd.append('action','crear'); fd.append('cancha_id',cid);
+                fd.append('hora_inicio',slot.ini); fd.append('hora_fin',slot.fin);
+                fd.append('precio',precio); fd.append('sena',sena); fd.append('dias',dias);
+                try {
+                    const r = await fetch(HOR_API,{method:'POST',body:fd});
+                    const j = await r.json();
+                    j.ok ? creadas++ : errores.push(`${slot.ini}–${slot.fin}: ${j.msg}`);
+                } catch(e) { errores.push(`${slot.ini}–${slot.fin}: error de red`); }
+            }
+            if (creadas > 0) {
+                closeModal('modalFranja');
+                horLoadFranjas(horCanchaId,horCanchaNom);
+                horLoadCanchas();
+                if (errores.length) toast(`${creadas} creada${creadas!=1?'s':''}, ${errores.length} con error (superposición).`,'err');
+                else toast(`✓ ${creadas} franja${creadas!=1?'s':''} creada${creadas!=1?'s':''}  correctamente.`,'ok');
+            } else {
+                toast(errores[0]||'No se pudieron crear las franjas.','err');
+            }
         }
     } catch(e){ toast('Error de red.','err'); }
     finally {
