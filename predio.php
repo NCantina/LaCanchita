@@ -188,6 +188,19 @@ if (isset($link)) {
         .filtro-pill { padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
         .filtro-pill:hover { border-color: rgba(76,217,100,0.4); color: var(--text); }
         .filtro-pill.active { background: rgba(76,217,100,0.12); border-color: rgba(76,217,100,0.5); color: var(--green); }
+
+        /* ── MODAL REGISTER FLOATING LABELS ── */
+        .r-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .r-field { position: relative; margin-bottom: 13px; }
+        .r-field input { width: 100%; padding: 16px 38px 4px 13px; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.12); border-radius: 10px; color: #fff; font-size: .88rem; transition: border-color .25s, background .25s, box-shadow .25s; outline: none; }
+        .r-field input:focus { border-color: var(--green); background: rgba(76,217,100,.05); box-shadow: 0 0 0 3px rgba(76,217,100,.1); }
+        .r-field input:focus + label, .r-field input:not(:placeholder-shown) + label { transform: translateY(-8px) scale(.75); color: var(--green); }
+        .r-field label { position: absolute; left: 13px; top: 12px; color: rgba(255,255,255,.4); font-size: .88rem; pointer-events: none; transition: transform .2s, color .2s; transform-origin: left top; }
+        .r-field .r-icon { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.3); font-size: .82rem; background: none; border: none; cursor: pointer; padding: 4px; transition: color .2s; }
+        .r-field .r-icon:hover { color: var(--green); }
+        .r-strength-bar { height: 3px; border-radius: 3px; background: rgba(255,255,255,.1); margin: -8px 0 8px; overflow: hidden; }
+        .r-strength-fill { height: 100%; width: 0; border-radius: 3px; transition: width .3s, background .3s; }
+        .r-strength-text { font-size: 11px; color: rgba(255,255,255,.35); display: block; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -285,30 +298,53 @@ if (isset($link)) {
                 <a href="login.php" style="text-align:center;font-size:.8rem;color:rgba(255,255,255,.35);text-decoration:none">¿Olvidaste tu contraseña?</a>
             </div>
         </div>
-        <div id="pane-reg" style="display:none;padding:28px;max-height:80vh;overflow-y:auto">
-            <p style="font-size:.85rem;color:rgba(255,255,255,.45);margin-bottom:20px">Creá tu cuenta gratis en segundos</p>
-            <div id="reg-err" style="display:none;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px 14px;font-size:.83rem;color:#e74c3c;margin-bottom:16px"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <?php
-                $rFields = [
-                    ['r-nombre','text','Nombre','Juan','1'],
-                    ['r-apellido','text','Apellido','García','1'],
-                    ['r-dni','text','DNI','12345678','1'],
-                    ['r-tel','tel','Teléfono','221-000-0000','1'],
-                    ['r-email','email','Email','juan@email.com','2'],
-                    ['r-pass','password','Contraseña','••••••••','2'],
-                    ['r-pass2','password','Repetir contraseña','••••••••','2'],
-                ];
-                foreach ($rFields as $f):
-                    $span = $f[4]==='2' ? 'grid-column:1/-1;' : '';
-                ?>
-                <div style="<?= $span ?>display:flex;flex-direction:column;gap:5px">
-                    <label style="font-size:.72rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em"><?= $f[2] ?></label>
-                    <input id="<?= $f[0] ?>" type="<?= $f[1] ?>" placeholder="<?= $f[3] ?>" style="padding:11px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:.88rem;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='rgba(76,217,100,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'">
+        <div id="pane-reg" style="display:none;padding:24px 28px 28px;max-height:82vh;overflow-y:auto">
+            <p style="font-size:.84rem;color:rgba(255,255,255,.45);margin-bottom:16px">Creá tu cuenta gratis en segundos</p>
+            <div id="reg-err" style="display:none;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px 14px;font-size:.83rem;color:#e74c3c;margin-bottom:14px"></div>
+            <div class="r-row-2">
+                <div class="r-field">
+                    <input type="text" id="r-nombre" placeholder=" " autocomplete="given-name">
+                    <label>Nombre</label>
+                    <i class="fas fa-user r-icon"></i>
                 </div>
-                <?php endforeach; ?>
+                <div class="r-field">
+                    <input type="text" id="r-apellido" placeholder=" " autocomplete="family-name">
+                    <label>Apellido</label>
+                    <i class="fas fa-user r-icon"></i>
+                </div>
             </div>
-            <button onclick="doRegister()" id="btn-reg" style="margin-top:16px;width:100%;padding:13px;background:var(--green);color:#000;border:none;border-radius:10px;font-weight:800;font-size:.95rem;cursor:pointer;transition:background .2s">Crear cuenta y reservar</button>
+            <div class="r-row-2">
+                <div class="r-field">
+                    <input type="text" id="r-dni" placeholder=" " inputmode="numeric" maxlength="8">
+                    <label>DNI</label>
+                    <i class="fas fa-id-card r-icon"></i>
+                </div>
+                <div class="r-field">
+                    <input type="tel" id="r-tel" placeholder=" " inputmode="numeric" autocomplete="tel">
+                    <label>Teléfono</label>
+                    <i class="fas fa-phone r-icon"></i>
+                </div>
+            </div>
+            <div class="r-field">
+                <input type="email" id="r-email" placeholder=" " autocomplete="email">
+                <label>Email</label>
+                <i class="fas fa-envelope r-icon"></i>
+            </div>
+            <div class="r-field">
+                <input type="password" id="r-pass" placeholder=" " autocomplete="new-password" oninput="rStrength(this.value)">
+                <label>Contraseña</label>
+                <button type="button" class="r-icon" onclick="rTogglePass('r-pass','r-eye1')"><i id="r-eye1" class="fas fa-eye"></i></button>
+            </div>
+            <div class="r-strength-bar"><div class="r-strength-fill" id="r-sf"></div></div>
+            <span class="r-strength-text" id="r-st">Mínimo 6 caracteres</span>
+            <div class="r-field">
+                <input type="password" id="r-pass2" placeholder=" " autocomplete="new-password">
+                <label>Repetir contraseña</label>
+                <button type="button" class="r-icon" onclick="rTogglePass('r-pass2','r-eye2')"><i id="r-eye2" class="fas fa-eye"></i></button>
+            </div>
+            <button onclick="doRegister()" id="btn-reg" style="margin-top:6px;width:100%;padding:13px;background:var(--green);color:#000;border:none;border-radius:10px;font-weight:800;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .2s">
+                <i class="fas fa-user-plus"></i> Crear cuenta y reservar
+            </button>
         </div>
     </div>
 </div>
@@ -722,6 +758,22 @@ function closeAuthModal() { closeModal(document.getElementById('modal-auth')); }
 
 function setLoading(btnId, loading, txt) { const b=document.getElementById(btnId); b.disabled=loading; b.textContent=loading?'...':txt; }
 
+function rTogglePass(inputId, iconId) {
+    const inp=document.getElementById(inputId), ico=document.getElementById(iconId);
+    const v=inp.type==='text'; inp.type=v?'password':'text'; ico.className=v?'fas fa-eye':'fas fa-eye-slash';
+}
+function rStrength(val) {
+    let s=0;
+    if(val.length>=6) s++; if(val.length>=10) s++;
+    if(/[A-Z]/.test(val)) s++; if(/[0-9]/.test(val)) s++; if(/[^A-Za-z0-9]/.test(val)) s++;
+    const fill=document.getElementById('r-sf'), text=document.getElementById('r-st');
+    const pcts=['0%','25%','50%','75%','100%'], colors=['#ff4455','#ff9500','#ffcc00','#4cd964','#34c759'];
+    const labels=['','Muy débil','Débil','Buena','Fuerte','Muy fuerte'];
+    fill.style.width=pcts[s]||'0%'; fill.style.background=colors[s-1]||'#ff4455';
+    text.textContent=val.length===0?'Mínimo 6 caracteres':(labels[s]||'');
+    text.style.color=val.length===0?'rgba(255,255,255,.35)':(colors[s-1]||'rgba(255,255,255,.35)');
+}
+
 async function doLogin() {
     const user=document.getElementById('l-user').value.trim(), pass=document.getElementById('l-pass').value;
     const errEl=document.getElementById('auth-err'); errEl.style.display='none';
@@ -738,15 +790,18 @@ async function doLogin() {
 
 async function doRegister() {
     const errEl=document.getElementById('reg-err'); errEl.style.display='none';
-    const body={ nombre:document.getElementById('r-nombre').value.trim(), apellido:document.getElementById('r-apellido').value.trim(), dni:document.getElementById('r-dni').value.trim(), telefono:document.getElementById('r-tel').value.trim(), email:document.getElementById('r-email').value.trim(), password:document.getElementById('r-pass').value, password2:document.getElementById('r-pass2').value };
-    setLoading('btn-reg',true,'Registrando...');
+    const pass=document.getElementById('r-pass').value, pass2=document.getElementById('r-pass2').value;
+    if(!pass||pass.length<6) { errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; errEl.style.display='block'; return; }
+    if(pass!==pass2) { errEl.textContent='Las contraseñas no coinciden.'; errEl.style.display='block'; return; }
+    const body={ nombre:document.getElementById('r-nombre').value.trim(), apellido:document.getElementById('r-apellido').value.trim(), dni:document.getElementById('r-dni').value.trim(), telefono:document.getElementById('r-tel').value.trim(), email:document.getElementById('r-email').value.trim(), password:pass, password2:pass2 };
+    const btn=document.getElementById('btn-reg'); btn.disabled=true; btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Registrando...';
     try {
         const r=await fetch('api/register_ajax.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
         const d=await r.json();
         if (!d.ok) { errEl.textContent=d.msg; errEl.style.display='block'; return; }
         _loggedIn=true; updateNavAfterLogin(d.nombre); closeAuthModal(); abrirModalReserva();
     } catch(e) { errEl.textContent='Error de conexión.'; errEl.style.display='block'; }
-    finally { setLoading('btn-reg',false,'Crear cuenta y reservar'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Crear cuenta y reservar'; }
 }
 
 // ── ESCAPE para cerrar modales ──
