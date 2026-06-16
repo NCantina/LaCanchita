@@ -15,8 +15,10 @@ unset($_SESSION['registro_error'], $_SESSION['registro_data']);
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        html { overflow-x: hidden; }
         body {
             min-height: 100vh;
+            overflow-x: hidden;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: #0a0a0a;
             display: flex;
@@ -27,6 +29,7 @@ unset($_SESSION['registro_error'], $_SESSION['registro_data']);
         .bg {
             position: fixed;
             inset: 0;
+            overflow: hidden;
             background: url('config/dist/img/ESTADIO.webp') center/cover no-repeat;
             transform: scale(1.05);
             animation: bgZoom 20s ease-in-out infinite alternate;
