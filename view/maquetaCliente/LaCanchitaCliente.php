@@ -1185,22 +1185,44 @@ class CalendarioLC{
   constructor(containerId,onSelect){
     this.el=document.getElementById(containerId);
     this.onSelect=onSelect;
-    this._today=new Date(); this._today.setHours(0,0,0,0);
-    this.selected=new Date(this._today);
-    this.current=new Date(this._today.getFullYear(),this._today.getMonth(),1);
+    const t=new Date(); t.setHours(0,0,0,0);
+    this._today=t;
+    this.selected=new Date(t);
+    // año y mes como enteros — sin mutación de Date
+    this.year=t.getFullYear();
+    this.month=t.getMonth();
     this._render();
   }
-  setDate(dateStr){ const d=new Date(dateStr+'T00:00:00'); this.selected=d; this.current=new Date(d.getFullYear(),d.getMonth(),1); this._render(); }
-  prevMonth(){ const floor=new Date(this._today.getFullYear(),this._today.getMonth(),1); if(this.current<=floor) return; this.current.setMonth(this.current.getMonth()-1); this._render(); }
-  nextMonth(){ this.current.setMonth(this.current.getMonth()+1); this._render(); }
-  pick(y,m,d){ const date=new Date(y,m,d); if(date<this._today) return; this.selected=date; const yy=date.getFullYear(),mm=String(date.getMonth()+1).padStart(2,'0'),dd=String(date.getDate()).padStart(2,'0'); this._render(); this.onSelect(`${yy}-${mm}-${dd}`); }
+  setDate(dateStr){
+    const d=new Date(dateStr+'T00:00:00');
+    this.selected=d; this.year=d.getFullYear(); this.month=d.getMonth();
+    this._render();
+  }
+  prevMonth(){
+    const ty=this._today.getFullYear(),tm=this._today.getMonth();
+    if(this.year===ty&&this.month===tm) return;
+    if(this.month===0){ this.year--; this.month=11; } else { this.month--; }
+    this._render();
+  }
+  nextMonth(){
+    if(this.month===11){ this.year++; this.month=0; } else { this.month++; }
+    this._render();
+  }
+  pick(y,m,d){
+    const date=new Date(y,m,d);
+    if(date<this._today) return;
+    this.selected=date;
+    const yy=date.getFullYear(),mm=String(date.getMonth()+1).padStart(2,'0'),dd=String(date.getDate()).padStart(2,'0');
+    this._render(); this.onSelect(`${yy}-${mm}-${dd}`);
+  }
   _render(){
     const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const y=this.current.getFullYear(),m=this.current.getMonth();
+    const y=this.year,m=this.month;
     const offset=(new Date(y,m,1).getDay()+6)%7;
     const daysInM=new Date(y,m+1,0).getDate();
     const todayMs=this._today.getTime(),selMs=this.selected?this.selected.getTime():-1;
-    const canPrev=this.current>new Date(this._today.getFullYear(),this._today.getMonth(),1);
+    const ty=this._today.getFullYear(),tm=this._today.getMonth();
+    const canPrev=y>ty||(y===ty&&m>tm);
     let cells='<span></span>'.repeat(offset);
     for(let d=1;d<=daysInM;d++){
       const ms=new Date(y,m,d).getTime(),past=ms<todayMs;
