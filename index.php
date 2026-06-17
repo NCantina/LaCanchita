@@ -66,7 +66,7 @@ if (isset($link)) {
 
     // Predios miembros de la comunidad
     $prediosQuery = mysqli_query($link, "
-        SELECT co.COMPLEJO_ID, co.COMPLEJO_NOMBRE, co.COMPLEJO_DIRECCION,
+        SELECT co.COMPLEJO_ID, co.COMPLEJO_NOMBRE, co.COMPLEJO_DIRECCION, co.COMPLEJO_TELEFONO,
                l.LOCALIDAD_NOMBRE, p.PARTIDO_NOMBRE,
                COUNT(DISTINCT c.CANCHA_ID) AS TOTAL_CANCHAS,
                GROUP_CONCAT(DISTINCT tc.TIPO_CANCHA_NOMBRE ORDER BY tc.TIPO_CANCHA_NOMBRE SEPARATOR ',') AS DEPORTES,
@@ -1498,12 +1498,18 @@ function colorTipo($tipo) {
             <div class="predio-card anim" style="transition-delay:<?= $i * 0.07 ?>s">
                 <div class="predio-card-top">
                     <div class="predio-avatar"><?= htmlspecialchars($inicial) ?></div>
-                    <div>
+                    <div style="min-width:0;flex:1">
                         <div class="predio-info-name"><?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?></div>
-                        <div class="predio-info-loc">
+                        <div class="predio-info-loc" style="margin-bottom:2px">
                             <i class="fas fa-map-marker-alt" style="color:var(--green);font-size:10px"></i>
-                            <?= htmlspecialchars($pr['PARTIDO_NOMBRE'] ?: ($pr['LOCALIDAD_NOMBRE'] ?: '')) ?>
+                            <?= htmlspecialchars($pr['COMPLEJO_DIRECCION'] ?: ($pr['PARTIDO_NOMBRE'] ?: $pr['LOCALIDAD_NOMBRE'])) ?>
                         </div>
+                        <?php if (!empty($pr['COMPLEJO_TELEFONO'])): ?>
+                        <div class="predio-info-loc">
+                            <i class="fas fa-phone" style="color:var(--green);font-size:10px"></i>
+                            <?= htmlspecialchars($pr['COMPLEJO_TELEFONO']) ?>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php if (!empty($deportes)): ?>
