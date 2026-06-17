@@ -730,80 +730,95 @@ function colorTipo($tipo) {
         }
         .predios-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 20px;
         }
         .predio-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 22px 20px;
-            display: flex; flex-direction: column; gap: 12px;
+            background: var(--s2);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 18px;
+            overflow: hidden;
+            display: flex; flex-direction: column;
             transition: border-color .25s, transform .25s, box-shadow .25s;
             animation: fadeUp .5s ease both;
         }
         .predio-card:hover {
-            border-color: rgba(76,217,100,0.35);
-            transform: translateY(-4px);
-            box-shadow: 0 10px 30px rgba(76,217,100,0.08);
+            border-color: rgba(76,217,100,0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 14px 40px rgba(76,217,100,0.1);
         }
-        .predio-card-top {
+        .predio-card-header {
+            padding: 20px 20px 16px;
             display: flex; align-items: flex-start; gap: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
         .predio-avatar {
-            width: 50px; height: 50px; border-radius: 12px; flex-shrink: 0;
-            background: rgba(76,217,100,0.12); border: 1.5px solid rgba(76,217,100,0.25);
+            width: 48px; height: 48px; border-radius: 13px; flex-shrink: 0;
+            background: linear-gradient(135deg, rgba(76,217,100,0.18), rgba(76,217,100,0.06));
+            border: 1.5px solid rgba(76,217,100,0.28);
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; font-weight: 800; color: var(--green);
+            font-size: 1.4rem; font-weight: 900; color: var(--green);
         }
-        .predio-info-name { font-size: 0.97rem; font-weight: 800; margin-bottom: 3px; }
-        .predio-info-loc {
-            font-size: 0.78rem; color: var(--text-muted);
-            display: flex; align-items: center; gap: 5px;
+        .predio-header-info { min-width: 0; flex: 1; }
+        .predio-info-name {
+            font-size: 0.95rem; font-weight: 800; color: #fff;
+            margin-bottom: 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .predio-deportes {
-            display: flex; flex-wrap: wrap; gap: 5px;
+        .predio-info-row {
+            font-size: 0.73rem; color: rgba(255,255,255,0.45);
+            display: flex; align-items: flex-start; gap: 5px; line-height: 1.35;
+            margin-bottom: 3px;
         }
+        .predio-info-row:last-child { margin-bottom: 0; }
+        .predio-info-row i { margin-top: 1px; flex-shrink: 0; }
+        .predio-info-row span {
+            overflow: hidden; text-overflow: ellipsis;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        }
+        .predio-card-body {
+            padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; flex: 1;
+        }
+        .predio-deportes { display: flex; flex-wrap: wrap; gap: 5px; }
         .predio-deporte-tag {
-            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-            padding: 2px 8px; border-radius: 10px;
-            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-            color: rgba(255,255,255,0.55);
+            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+            padding: 3px 9px; border-radius: 8px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+            color: rgba(255,255,255,0.5);
+        }
+        .predio-schedule { display: flex; flex-direction: column; gap: 8px; }
+        .predio-horario {
+            font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.75);
+            display: flex; align-items: center; gap: 7px;
+        }
+        .predio-dias-row { display: flex; flex-wrap: wrap; gap: 4px; }
+        .predio-dia-chip {
+            font-size: 0.6rem; font-weight: 800; text-transform: uppercase;
+            width: 28px; height: 22px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+            color: rgba(255,255,255,0.2); letter-spacing: 0;
+        }
+        .predio-dia-chip.activo {
+            background: rgba(76,217,100,0.12); border-color: rgba(76,217,100,0.35);
+            color: rgba(76,217,100,0.95);
         }
         .predio-footer {
             display: flex; align-items: center; justify-content: space-between;
-            padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 13px 20px;
+            background: rgba(0,0,0,0.15);
+            border-top: 1px solid rgba(255,255,255,0.05);
         }
-        .predio-canchas {
-            font-size: 0.78rem; color: var(--text-muted);
-        }
-        .predio-canchas strong { color: var(--green); }
-        .predio-precio {
-            font-size: 0.8rem; color: var(--green); font-weight: 700;
-        }
+        .predio-canchas { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+        .predio-canchas strong { color: var(--green); font-size: 0.88rem; }
+        .predio-precio { font-size: 0.82rem; color: var(--green); font-weight: 800; }
         .predio-miembro-badge {
             display: inline-flex; align-items: center; gap: 5px;
-            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-            letter-spacing: .05em; padding: 2px 8px; border-radius: 10px;
-            background: rgba(76,217,100,0.1); border: 1px solid rgba(76,217,100,0.25);
-            color: rgba(76,217,100,0.8);
-        }
-        .predio-horario {
-            font-size: 0.76rem; color: var(--text-muted);
-            display: flex; align-items: center; gap: 5px;
-        }
-        .predio-dias-row {
-            display: flex; gap: 4px;
-        }
-        .predio-dia-chip {
-            font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
-            padding: 2px 6px; border-radius: 6px;
-            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
-            color: rgba(255,255,255,0.22);
-        }
-        .predio-dia-chip.activo {
-            background: rgba(76,217,100,0.1); border-color: rgba(76,217,100,0.3);
-            color: rgba(76,217,100,0.9);
+            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .05em; padding: 3px 9px; border-radius: 8px;
+            background: rgba(76,217,100,0.08); border: 1px solid rgba(76,217,100,0.2);
+            color: rgba(76,217,100,0.75);
         }
         @media (max-width: 600px) {
             .resultados-grid { grid-template-columns: 1fr; }
@@ -1495,49 +1510,51 @@ function colorTipo($tipo) {
                 $inicial = strtoupper(mb_substr($pr['COMPLEJO_NOMBRE'], 0, 1));
                 $deportes = array_filter(array_map('trim', explode(',', $pr['DEPORTES'] ?? '')));
             ?>
+            <?php
+            $horaAp = $pr['HORA_APERTURA'] ? substr($pr['HORA_APERTURA'],0,5) : null;
+            $horaCi = $pr['HORA_CIERRE']   ? substr($pr['HORA_CIERRE'],0,5)   : null;
+            $diasActivos = $pr['DIAS_ACTIVOS'] ? array_flip(explode(',', $pr['DIAS_ACTIVOS'])) : [];
+            $diasNombres = ['','L','M','X','J','V','S','D'];
+            ?>
             <div class="predio-card anim" style="transition-delay:<?= $i * 0.07 ?>s">
-                <div class="predio-card-top">
+                <div class="predio-card-header">
                     <div class="predio-avatar"><?= htmlspecialchars($inicial) ?></div>
-                    <div style="min-width:0;flex:1">
-                        <div class="predio-info-name"><?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?></div>
-                        <div class="predio-info-loc" style="margin-bottom:2px">
-                            <i class="fas fa-map-marker-alt" style="color:var(--green);font-size:10px"></i>
-                            <?= htmlspecialchars($pr['COMPLEJO_DIRECCION'] ?: ($pr['PARTIDO_NOMBRE'] ?: $pr['LOCALIDAD_NOMBRE'])) ?>
+                    <div class="predio-header-info">
+                        <div class="predio-info-name" title="<?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?>"><?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?></div>
+                        <div class="predio-info-row">
+                            <i class="fas fa-map-marker-alt" style="color:var(--green);font-size:9px;margin-top:2px"></i>
+                            <span><?= htmlspecialchars($pr['COMPLEJO_DIRECCION'] ?: ($pr['PARTIDO_NOMBRE'] ?: ($pr['LOCALIDAD_NOMBRE'] ?: '—'))) ?></span>
                         </div>
                         <?php if (!empty($pr['COMPLEJO_TELEFONO'])): ?>
-                        <div class="predio-info-loc">
-                            <i class="fas fa-phone" style="color:var(--green);font-size:10px"></i>
-                            <?= htmlspecialchars($pr['COMPLEJO_TELEFONO']) ?>
+                        <div class="predio-info-row">
+                            <i class="fas fa-phone" style="color:var(--green);font-size:9px;margin-top:2px"></i>
+                            <span><?= htmlspecialchars($pr['COMPLEJO_TELEFONO']) ?></span>
                         </div>
                         <?php endif; ?>
                     </div>
                 </div>
-                <?php if (!empty($deportes)): ?>
-                <div class="predio-deportes">
-                    <?php foreach (array_slice($deportes, 0, 4) as $dep): ?>
-                    <span class="predio-deporte-tag"><?= htmlspecialchars($dep) ?></span>
-                    <?php endforeach; ?>
+                <div class="predio-card-body">
+                    <?php if (!empty($deportes)): ?>
+                    <div class="predio-deportes">
+                        <?php foreach (array_slice($deportes, 0, 4) as $dep): ?>
+                        <span class="predio-deporte-tag"><?= htmlspecialchars($dep) ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($horaAp && $horaCi): ?>
+                    <div class="predio-schedule">
+                        <div class="predio-horario">
+                            <i class="fas fa-clock" style="color:var(--green);font-size:11px"></i>
+                            <?= htmlspecialchars($horaAp) ?> – <?= htmlspecialchars($horaCi) ?>
+                        </div>
+                        <div class="predio-dias-row">
+                            <?php for ($d = 1; $d <= 7; $d++): ?>
+                            <span class="predio-dia-chip<?= isset($diasActivos[(string)$d]) ? ' activo' : '' ?>"><?= $diasNombres[$d] ?></span>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
-                <?php
-                $horaAp = $pr['HORA_APERTURA'] ? substr($pr['HORA_APERTURA'],0,5) : null;
-                $horaCi = $pr['HORA_CIERRE']   ? substr($pr['HORA_CIERRE'],0,5)   : null;
-                $diasActivos = $pr['DIAS_ACTIVOS'] ? array_flip(explode(',', $pr['DIAS_ACTIVOS'])) : [];
-                $diasNombres = ['','Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-                ?>
-                <?php if ($horaAp && $horaCi): ?>
-                <div class="predio-horario">
-                    <i class="fas fa-clock" style="color:var(--green);font-size:10px"></i>
-                    <?= htmlspecialchars($horaAp) ?> – <?= htmlspecialchars($horaCi) ?>
-                </div>
-                <?php endif; ?>
-                <?php if (!empty($diasActivos)): ?>
-                <div class="predio-dias-row">
-                    <?php for ($d = 1; $d <= 7; $d++): ?>
-                    <span class="predio-dia-chip<?= isset($diasActivos[(string)$d]) ? ' activo' : '' ?>"><?= $diasNombres[$d] ?></span>
-                    <?php endfor; ?>
-                </div>
-                <?php endif; ?>
                 <div class="predio-footer">
                     <div class="predio-canchas">
                         <strong><?= (int)$pr['TOTAL_CANCHAS'] ?></strong> <?= $pr['TOTAL_CANCHAS'] == 1 ? 'cancha' : 'canchas' ?>
