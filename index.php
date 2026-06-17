@@ -70,13 +70,17 @@ if (isset($link)) {
                l.LOCALIDAD_NOMBRE, p.PARTIDO_NOMBRE,
                COUNT(DISTINCT c.CANCHA_ID) AS TOTAL_CANCHAS,
                GROUP_CONCAT(DISTINCT tc.TIPO_CANCHA_NOMBRE ORDER BY tc.TIPO_CANCHA_NOMBRE SEPARATOR ',') AS DEPORTES,
-               MIN(fh.FRANJA_PRECIO) AS PRECIO_DESDE
+               MIN(fh.FRANJA_PRECIO) AS PRECIO_DESDE,
+               MIN(fh.FRANJA_HORA_INICIO) AS HORA_APERTURA,
+               MAX(fh.FRANJA_HORA_FIN) AS HORA_CIERRE,
+               GROUP_CONCAT(DISTINCT fd.DIA_ID ORDER BY fd.DIA_ID SEPARATOR ',') AS DIAS_ACTIVOS
         FROM complejo co
         LEFT JOIN localidad l ON l.LOCALIDAD_ID = co.LOCALIDAD_ID
         LEFT JOIN partido p ON p.PARTIDO_ID = l.PARTIDO_ID
         LEFT JOIN cancha c ON c.COMPLEJO_ID = co.COMPLEJO_ID AND c.ACTIVO = 1
         LEFT JOIN tipo_cancha tc ON tc.TIPO_CANCHA_ID = c.TIPO_CANCHA_ID
         LEFT JOIN franja_horaria fh ON fh.CANCHA_ID = c.CANCHA_ID AND fh.ACTIVO = 1
+        LEFT JOIN franja_dia fd ON fd.FRANJA_ID = fh.FRANJA_ID
         WHERE co.ACTIVO = 1
         GROUP BY co.COMPLEJO_ID
         ORDER BY TOTAL_CANCHAS DESC, co.COMPLEJO_NOMBRE ASC
@@ -784,6 +788,23 @@ function colorTipo($tipo) {
             background: rgba(76,217,100,0.1); border: 1px solid rgba(76,217,100,0.25);
             color: rgba(76,217,100,0.8);
         }
+        .predio-horario {
+            font-size: 0.76rem; color: var(--text-muted);
+            display: flex; align-items: center; gap: 5px;
+        }
+        .predio-dias-row {
+            display: flex; gap: 4px;
+        }
+        .predio-dia-chip {
+            font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+            padding: 2px 6px; border-radius: 6px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+            color: rgba(255,255,255,0.22);
+        }
+        .predio-dia-chip.activo {
+            background: rgba(76,217,100,0.1); border-color: rgba(76,217,100,0.3);
+            color: rgba(76,217,100,0.9);
+        }
         @media (max-width: 600px) {
             .resultados-grid { grid-template-columns: 1fr; }
             .predios-grid { grid-template-columns: 1fr; }
@@ -1490,6 +1511,25 @@ function colorTipo($tipo) {
                     <?php foreach (array_slice($deportes, 0, 4) as $dep): ?>
                     <span class="predio-deporte-tag"><?= htmlspecialchars($dep) ?></span>
                     <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+                <?php
+                $horaAp = $pr['HORA_APERTURA'] ? substr($pr['HORA_APERTURA'],0,5) : null;
+                $horaCi = $pr['HORA_CIERRE']   ? substr($pr['HORA_CIERRE'],0,5)   : null;
+                $diasActivos = $pr['DIAS_ACTIVOS'] ? array_flip(explode(',', $pr['DIAS_ACTIVOS'])) : [];
+                $diasNombres = ['','Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+                ?>
+                <?php if ($horaAp && $horaCi): ?>
+                <div class="predio-horario">
+                    <i class="fas fa-clock" style="color:var(--green);font-size:10px"></i>
+                    <?= htmlspecialchars($horaAp) ?> – <?= htmlspecialchars($horaCi) ?>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($diasActivos)): ?>
+                <div class="predio-dias-row">
+                    <?php for ($d = 1; $d <= 7; $d++): ?>
+                    <span class="predio-dia-chip<?= isset($diasActivos[(string)$d]) ? ' activo' : '' ?>"><?= $diasNombres[$d] ?></span>
+                    <?php endfor; ?>
                 </div>
                 <?php endif; ?>
                 <div class="predio-footer">
