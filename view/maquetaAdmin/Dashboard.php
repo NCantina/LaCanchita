@@ -5948,22 +5948,34 @@ async function loadStaff() {
     }
 }
 
+const PERFIL_BADGE = {
+    1: '<span class="badge" style="background:rgba(191,90,242,.15);color:#bf5af2">SuperAdmin</span>',
+    2: '<span class="badge" style="background:rgba(255,149,0,.15);color:var(--orange)">Dueño</span>',
+    3: '<span class="badge" style="background:rgba(52,152,219,.15);color:var(--blue)">Encargado</span>',
+    4: '<span class="badge" style="background:rgba(255,149,0,.15);color:var(--orange)">Empleado</span>',
+    5: '<span class="badge" style="background:rgba(76,217,100,.12);color:var(--green)">Cliente</span>',
+};
+
 function renderStaff(data) {
     const body = document.getElementById('staff-body');
     if (!data || !data.length) {
-        body.innerHTML = '<div class="empty-state"><div class="es-icon"><i class="fas fa-id-badge"></i></div><h4>Sin staff</h4><p>No hay encargados ni empleados registrados.</p></div>';
+        body.innerHTML = '<div class="empty-state"><div class="es-icon"><i class="fas fa-id-badge"></i></div><h4>Sin usuarios</h4><p>No hay usuarios registrados.</p></div>';
         return;
     }
     const rows = data.map(u => {
-        const perfilLabel = u.PERFIL_ID == 3
-            ? '<span class="badge" style="background:rgba(52,152,219,.18);color:var(--blue)">Encargado</span>'
-            : '<span class="badge" style="background:rgba(255,149,0,.18);color:var(--orange)">Empleado</span>';
-        const estado = u.ACTIVO == 1
+        const pid     = parseInt(u.PERFIL_ID);
+        const badge   = PERFIL_BADGE[pid] || `<span class="badge">${esc(u.PERFIL_NOMBRE)}</span>`;
+        const estado  = u.ACTIVO == 1
             ? '<span class="badge active">Activo</span>'
             : '<span class="badge pending">Inactivo</span>';
-        const canchas = u.CANCHAS_ASIGNADAS
-            ? `<span style="color:var(--muted);font-size:11px">${u.CANCHAS_ASIGNADAS}</span>`
-            : '<span style="color:var(--muted);font-size:11px">Sin asignar</span>';
+        const canchas = [3,4].includes(pid)
+            ? (u.CANCHAS_ASIGNADAS
+                ? `<span style="color:var(--muted);font-size:11px">${u.CANCHAS_ASIGNADAS} cancha${u.CANCHAS_ASIGNADAS>1?'s':''}</span>`
+                : '<span style="color:var(--muted);font-size:11px">Sin asignar</span>')
+            : '—';
+        const duenoInfo = (u.DUENO_NOMBRE)
+            ? `<div style="font-size:11px;color:var(--muted)">Dueño: ${esc(u.DUENO_NOMBRE+' '+u.DUENO_APELLIDO)}</div>`
+            : '';
         return `<tr id="staff-row-${u.USUARIOS_ID}">
             <td>
                 <div class="user-cell">
@@ -5971,16 +5983,17 @@ function renderStaff(data) {
                     <div>
                         <div class="user-name">${esc(u.USUARIOS_NOMBRE+' '+u.USUARIOS_APELLIDO)}</div>
                         <div class="user-email">${esc(u.USUARIOS_EMAIL)}</div>
+                        ${duenoInfo}
                     </div>
                 </div>
             </td>
-            <td>${perfilLabel}</td>
+            <td>${badge}</td>
             <td>${canchas}</td>
             <td>${estado}</td>
             <td>
                 <div class="row-actions">
                     <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="staffAbrirEditar(${u.USUARIOS_ID})" title="Editar"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="abrirAsignarCanchas(${u.USUARIOS_ID})" title="Asignar canchas"><i class="fas fa-futbol"></i></button>
+                    ${[3,4].includes(pid) ? `<button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="abrirAsignarCanchas(${u.USUARIOS_ID})" title="Asignar canchas"><i class="fas fa-futbol"></i></button>` : ''}
                     <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" id="stoggle-${u.USUARIOS_ID}" onclick="staffToggle(${u.USUARIOS_ID}, this)" title="${u.ACTIVO==1?'Desactivar':'Activar'}">
                         <i class="fas ${u.ACTIVO==1?'fa-toggle-on':'fa-toggle-off'}"></i>
                     </button>
@@ -5990,7 +6003,7 @@ function renderStaff(data) {
     }).join('');
     body.innerHTML = `<table>
         <thead><tr>
-            <th>Nombre</th><th>Perfil</th><th>Canchas asignadas</th><th>Estado</th><th>Acciones</th>
+            <th>Nombre</th><th>Perfil</th><th>Canchas</th><th>Estado</th><th>Acciones</th>
         </tr></thead>
         <tbody>${rows}</tbody>
     </table>`;
@@ -6013,6 +6026,14 @@ async function staffToggle(id, btn) {
 
 let _staffData = [];
 
+function staffPerfilChange() {
+    const pid = parseInt(document.getElementById('mStaffPerfil').value);
+    const duenoRow = document.getElementById('mStaffDuenoRow');
+    if (PERFIL === 1) {
+        duenoRow.style.display = [3,4].includes(pid) ? '' : 'none';
+    }
+}
+
 function staffAbrirCrear() {
     document.getElementById('mStaffId').value      = '';
     document.getElementById('mStaffNombre').value  = '';
@@ -6021,6 +6042,21 @@ function staffAbrirCrear() {
     document.getElementById('mStaffTel').value     = '';
     document.getElementById('mStaffEmail').value   = '';
     document.getElementById('mStaffPass').value    = '';
+
+    // SA ve todos los perfiles, dueño solo encargado/empleado
+    const perfilSel = document.getElementById('mStaffPerfil');
+    if (PERFIL === 1) {
+        perfilSel.innerHTML = `
+            <option value="5">Cliente</option>
+            <option value="4">Empleado</option>
+            <option value="3" selected>Encargado</option>
+            <option value="2">Dueño</option>
+            <option value="1">SuperAdmin</option>`;
+    } else {
+        perfilSel.innerHTML = `
+            <option value="3" selected>Encargado</option>
+            <option value="4">Empleado</option>`;
+    }
     document.getElementById('mStaffPerfil').value  = '3';
     document.getElementById('mStaffTitle').textContent = 'Nuevo integrante';
     document.getElementById('mStaffPassLabel').textContent = '*';
@@ -6028,14 +6064,9 @@ function staffAbrirCrear() {
     ['mStaffNombreErr','mStaffApellidoErr','mStaffEmailErr','mStaffPassErr','mStaffDuenoErr'].forEach(id => {
         const el = document.getElementById(id); if(el) el.textContent = '';
     });
-    // Superadmin: mostrar selector de dueño y poblar
-    const duenoRow = document.getElementById('mStaffDuenoRow');
-    if (PERFIL === 1) {
-        duenoRow.style.display = '';
-        poblarSelectDuenos('mStaffDueno');
-    } else {
-        duenoRow.style.display = 'none';
-    }
+    // SA: mostrar/ocultar dueño según perfil seleccionado
+    if (PERFIL === 1) poblarSelectDuenos('mStaffDueno');
+    staffPerfilChange();
     openModal('modalStaff');
 }
 
@@ -6670,7 +6701,7 @@ async function turnoEliminar(id) {
                 </div>
                 <div class="form-row" style="margin:0">
                     <label class="form-label">Perfil <span>*</span></label>
-                    <select class="form-select" id="mStaffPerfil">
+                    <select class="form-select" id="mStaffPerfil" onchange="staffPerfilChange()">
                         <option value="3">Encargado</option>
                         <option value="4">Empleado</option>
                     </select>

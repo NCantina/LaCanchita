@@ -12,10 +12,10 @@ function e($link,$v){ return mysqli_real_escape_string($link,trim($v??'')); }
 
 switch($action) {
 
-// ── LISTAR STAFF (dueño: su staff; superadmin: todo) ────────────────────
+// ── LISTAR STAFF (dueño: su staff; superadmin: todos los usuarios) ──────
 case 'listar_staff':
     if (is_superadmin()) {
-        $where = "u.PERFIL_ID IN (3,4)";
+        $where = "1=1";
     } else {
         $duenoId = current_uid();
         $where   = "u.PERFIL_ID IN (3,4) AND u.DUENO_ID=$duenoId";
@@ -79,21 +79,28 @@ case 'crear_staff':
     if (!$apellido) resp(false,'Apellido obligatorio.');
     if (!$dni)      resp(false,'DNI obligatorio.');
     if (!$email || !filter_var($_POST['email']??'',FILTER_VALIDATE_EMAIL)) resp(false,'Email inválido.');
-    if (!in_array($perfilId,[3,4])) resp(false,'Perfil inválido.');
+    $perfilesPermitidos = is_superadmin() ? [1,2,3,4,5] : [3,4];
+    if (!in_array($perfilId,$perfilesPermitidos)) resp(false,'Perfil inválido.');
     if (strlen($pass)<6) resp(false,'La contraseña debe tener al menos 6 caracteres.');
 
-    $duenoId = is_dueno() ? current_uid() : ((int)($_POST['dueno_id']??0) ?: null);
-    if (!$duenoId) resp(false,'Debe asignarse un dueño.');
+    // DUENO_ID: requerido solo para staff (3,4)
+    if (in_array($perfilId,[3,4])) {
+        $duenoId = is_dueno() ? current_uid() : ((int)($_POST['dueno_id']??0) ?: null);
+        if (!$duenoId) resp(false,'Debe asignarse un dueño.');
+    } else {
+        $duenoId = null;
+    }
 
     if (mysqli_fetch_assoc(mysqli_query($link,
         "SELECT USUARIOS_ID FROM usuarios WHERE USUARIOS_EMAIL='$email' OR USUARIOS_DNI='$dni'")))
         resp(false,'Ya existe un usuario con ese email o DNI.');
 
-    $hash = e($link,password_hash($pass,PASSWORD_DEFAULT));
+    $hash    = e($link,password_hash($pass,PASSWORD_DEFAULT));
+    $duenoSQ = $duenoId ? (int)$duenoId : 'NULL';
     mysqli_query($link,
         "INSERT INTO usuarios (USUARIOS_NOMBRE,USUARIOS_APELLIDO,USUARIOS_DNI,USUARIOS_EMAIL,
          USUARIOS_TELEFONO,USUARIOS_PASSWORD,PERFIL_ID,DUENO_ID,ACTIVO)
-         VALUES ('$nombre','$apellido','$dni','$email','$tel','$hash',$perfilId,$duenoId,1)"
+         VALUES ('$nombre','$apellido','$dni','$email','$tel','$hash',$perfilId,$duenoSQ,1)"
     );
     resp(true,'Staff creado correctamente.',['id'=>mysqli_insert_id($link)]);
 
