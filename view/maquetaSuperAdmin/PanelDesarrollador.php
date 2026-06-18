@@ -426,6 +426,91 @@ tbody td { padding: 12px 14px; vertical-align: middle; }
 .toast.ok    i { color: var(--green); }
 .toast.err   i { color: var(--red); border-color: rgba(255,69,58,.3); }
 .toast.info  i { color: var(--blue); }
+
+/* ─── USUARIOS TAB ─────────────────────────────────────────────────────── */
+.usr-toolbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+.usr-toolbar .search-wrap { flex: 1; min-width: 200px; max-width: 340px; }
+.usr-sel {
+    padding: 7px 12px; background: var(--s3); border: 1px solid var(--border2);
+    border-radius: 8px; color: var(--text); font-size: .82rem; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    padding-right: 28px;
+}
+.usr-table-wrap {
+    overflow-x: auto; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--s1);
+}
+.usr-table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+.usr-table thead th {
+    padding: 11px 14px; text-align: left; font-size: .72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+    background: var(--s2);
+}
+.usr-table tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+.usr-table tbody tr:last-child { border-bottom: none; }
+.usr-table tbody tr:hover { background: rgba(255,255,255,.025); }
+.usr-table td { padding: 11px 14px; vertical-align: middle; }
+.usr-name-cell { display: flex; align-items: center; gap: 10px; }
+.usr-mini-av {
+    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem; font-weight: 800;
+}
+.usr-fullname { font-weight: 700; font-size: .85rem; }
+.usr-sub { font-size: .72rem; color: var(--muted); margin-top: 1px; }
+.pbadge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+    padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+}
+.pbadge.p1 { background: rgba(191,90,242,.12); border: 1px solid rgba(191,90,242,.3); color: var(--purple); }
+.pbadge.p2 { background: rgba(255,159,10,.1);  border: 1px solid rgba(255,159,10,.3);  color: var(--orange); }
+.pbadge.p3 { background: rgba(10,132,255,.1);  border: 1px solid rgba(10,132,255,.3);  color: var(--blue); }
+.pbadge.p4 { background: rgba(94,92,230,.12);  border: 1px solid rgba(94,92,230,.3);   color: var(--indigo); }
+.pbadge.p5 { background: rgba(76,217,100,.1);  border: 1px solid rgba(76,217,100,.3);  color: var(--green); }
+.sbadge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: .7rem; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+}
+.sbadge.on  { background: rgba(76,217,100,.1);  border: 1px solid rgba(76,217,100,.25);  color: var(--green); }
+.sbadge.off { background: rgba(255,69,58,.08);   border: 1px solid rgba(255,69,58,.2);    color: var(--red); }
+.usr-act { display: flex; gap: 4px; }
+.usr-btn {
+    width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--s3); color: var(--muted); cursor: pointer; font-size: .78rem;
+    display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.usr-btn:hover       { border-color: var(--border2); color: var(--text); }
+.usr-btn.red:hover   { border-color: rgba(255,69,58,.4); color: var(--red); }
+.usr-btn.green:hover { border-color: rgba(76,217,100,.4); color: var(--green); }
+.usr-btn.key:hover   { border-color: rgba(255,159,10,.4); color: var(--orange); }
+.usr-btn.role:hover  { border-color: rgba(94,92,230,.4); color: var(--indigo); }
+.usr-pag {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 16px; padding: 0 2px;
+}
+.usr-pag-info { font-size: .8rem; color: var(--muted); }
+.usr-pag-btns { display: flex; gap: 6px; }
+.usr-pag-btn {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--s2); color: var(--text); font-size: .8rem; cursor: pointer;
+    transition: all .15s;
+}
+.usr-pag-btn:hover:not(:disabled) { border-color: var(--border2); }
+.usr-pag-btn:disabled { opacity: .35; cursor: default; }
+.usr-pag-btn.active { background: var(--green); color: #000; border-color: var(--green); font-weight: 700; }
+.usr-count-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .75rem; color: var(--muted);
+    background: var(--s3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+}
 </style>
 </head>
 <body>
@@ -442,6 +527,7 @@ tbody td { padding: 12px 14px; vertical-align: middle; }
         <button class="tab-btn active" onclick="setTab('resumen',this)">Resumen</button>
         <button class="tab-btn"        onclick="setTab('clientes',this)">Clientes</button>
         <button class="tab-btn"        onclick="setTab('cobros',this)">Cobros</button>
+        <button class="tab-btn"        onclick="setTab('usuarios',this)"><i class="fas fa-users" style="margin-right:5px;font-size:.75rem"></i>Usuarios</button>
     </nav>
     <div class="tb-right">
         <span class="admin-chip"><i class="fas fa-circle" style="color:var(--green);font-size:.45rem;margin-right:4px"></i><?= htmlspecialchars($admin_nombre) ?></span>
@@ -565,7 +651,142 @@ tbody td { padding: 12px 14px; vertical-align: middle; }
     </div>
 </section>
 
+<!-- ─── TAB: USUARIOS ────────────────────────────────────────────────── -->
+<section id="tab-usuarios" class="tab-section">
+    <div class="usr-toolbar">
+        <button class="btn-primary" onclick="usrNuevo()"><i class="fas fa-plus"></i> Nuevo usuario</button>
+        <div class="search-wrap" style="flex:1;min-width:200px;max-width:340px">
+            <i class="fas fa-search"></i>
+            <input type="text" id="usrQ" placeholder="Nombre, email, DNI, teléfono..." oninput="usrDebounce()">
+        </div>
+        <select class="usr-sel" id="usrFilPerfil" onchange="usrCargar(1)">
+            <option value="">Todos los perfiles</option>
+            <option value="1">SuperAdmin</option>
+            <option value="2">Dueño</option>
+            <option value="3">Encargado</option>
+            <option value="4">Empleado</option>
+            <option value="5">Cliente</option>
+        </select>
+        <select class="usr-sel" id="usrFilActivo" onchange="usrCargar(1)">
+            <option value="">Todos</option>
+            <option value="1">Activos</option>
+            <option value="0">Inactivos</option>
+        </select>
+        <span class="usr-count-chip" id="usrConteo"><i class="fas fa-users"></i> –</span>
+    </div>
+    <div class="usr-table-wrap">
+        <table class="usr-table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Contacto</th>
+                    <th>Perfil</th>
+                    <th>Dueño / Predios</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="usrTbody">
+                <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted)"><i class="fas fa-circle-notch fa-spin"></i></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="usr-pag" id="usrPag"></div>
+</section>
+
 </div><!-- /content -->
+
+<!-- ─── MODAL: CREAR / EDITAR USUARIO ────────────────────────────────── -->
+<div class="overlay" id="overlayUsrForm">
+<div class="modal">
+    <div class="modal-title" id="usrFormTitle"><i class="fas fa-user-plus" style="color:var(--green)"></i> Nuevo usuario</div>
+    <input type="hidden" id="usrFormId">
+    <div class="f2">
+        <div class="f-row"><label>Nombre *</label><input type="text" id="usrFormNombre" placeholder="Juan"></div>
+        <div class="f-row"><label>Apellido *</label><input type="text" id="usrFormApellido" placeholder="García"></div>
+    </div>
+    <div class="f2">
+        <div class="f-row"><label>Email *</label><input type="email" id="usrFormEmail" placeholder="juan@email.com"></div>
+        <div class="f-row"><label>Teléfono</label><input type="text" id="usrFormTel" placeholder="11 1234-5678"></div>
+    </div>
+    <div class="f2">
+        <div class="f-row"><label>DNI</label><input type="text" id="usrFormDni" placeholder="Opcional"></div>
+        <div class="f-row" id="usrFormPerfilRow">
+            <label>Perfil *</label>
+            <select id="usrFormPerfil" onchange="usrFormPerfilChange()">
+                <option value="5">Cliente</option>
+                <option value="4">Empleado</option>
+                <option value="3">Encargado</option>
+                <option value="2">Dueño</option>
+                <option value="1">SuperAdmin</option>
+            </select>
+        </div>
+    </div>
+    <div class="f-row" id="usrFormDuenoRow" style="display:none">
+        <label>Dueño asignado *</label>
+        <select id="usrFormDueno"><option value="">Cargando...</option></select>
+    </div>
+    <div class="f-row" id="usrFormPassRow">
+        <label id="usrFormPassLabel">Contraseña *</label>
+        <input type="password" id="usrFormPass" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+    </div>
+    <div class="modal-err" id="usrFormErr"></div>
+    <div class="modal-btns">
+        <button class="btn-cancel" onclick="cerrarOverlay('overlayUsrForm')">Cancelar</button>
+        <button class="btn-ok" id="usrFormBtn" onclick="usrFormSubmit()"><i class="fas fa-check" style="margin-right:5px"></i>Guardar</button>
+    </div>
+</div>
+</div>
+
+<!-- ─── MODAL: CAMBIAR PERFIL ─────────────────────────────────────────── -->
+<div class="overlay" id="overlayUsrPerfil">
+<div class="modal" style="max-width:400px">
+    <div class="modal-title"><i class="fas fa-user-tag" style="color:var(--indigo)"></i> Cambiar perfil</div>
+    <input type="hidden" id="usrPerfilId">
+    <p id="usrPerfilNombre" style="margin-bottom:14px;color:var(--muted);font-size:.85rem"></p>
+    <div class="f-row">
+        <label>Nuevo perfil</label>
+        <select id="usrPerfilSel" onchange="usrPerfilSelChange()">
+            <option value="5">Cliente</option>
+            <option value="4">Empleado</option>
+            <option value="3">Encargado</option>
+            <option value="2">Dueño</option>
+            <option value="1">SuperAdmin</option>
+        </select>
+    </div>
+    <div class="f-row" id="usrPerfilDuenoRow" style="display:none">
+        <label>Dueño asignado *</label>
+        <select id="usrPerfilDueno"><option value="">Seleccioná...</option></select>
+    </div>
+    <div class="modal-err" id="usrPerfilErr"></div>
+    <div class="modal-btns">
+        <button class="btn-cancel" onclick="cerrarOverlay('overlayUsrPerfil')">Cancelar</button>
+        <button class="btn-ok" onclick="usrPerfilSubmit()"><i class="fas fa-check" style="margin-right:5px"></i>Cambiar</button>
+    </div>
+</div>
+</div>
+
+<!-- ─── MODAL: RESET PASSWORD ─────────────────────────────────────────── -->
+<div class="overlay" id="overlayUsrPass">
+<div class="modal" style="max-width:400px">
+    <div class="modal-title"><i class="fas fa-key" style="color:var(--orange)"></i> Resetear contraseña</div>
+    <input type="hidden" id="usrPassId">
+    <p id="usrPassNombre" style="margin-bottom:14px;color:var(--muted);font-size:.85rem"></p>
+    <div class="f-row">
+        <label>Nueva contraseña *</label>
+        <input type="password" id="usrPassNew" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+    </div>
+    <div class="f-row">
+        <label>Confirmar contraseña *</label>
+        <input type="password" id="usrPassConf" placeholder="Repetir contraseña">
+    </div>
+    <div class="modal-err" id="usrPassErr"></div>
+    <div class="modal-btns">
+        <button class="btn-cancel" onclick="cerrarOverlay('overlayUsrPass')">Cancelar</button>
+        <button class="btn-ok" onclick="usrPassSubmit()"><i class="fas fa-key" style="margin-right:5px"></i>Actualizar</button>
+    </div>
+</div>
+</div>
 
 <!-- ─── DETAIL PANEL ──────────────────────────────────────────────────── -->
 <aside class="detail-panel" id="detailPanel">
@@ -821,6 +1042,7 @@ function setTab(tab, btn) {
     if (btn) btn.classList.add('active');
     if (tab === 'clientes' && !S.clientes.length) cargarClientes();
     if (tab === 'cobros') cargarCobros();
+    if (tab === 'usuarios') usrCargar(1);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1356,7 +1578,7 @@ function nextMonth() {
 /* ═══════════════════════════════════════════════════════════════════════
    EVENTS
 ═══════════════════════════════════════════════════════════════════════ */
-['overlayPlan','overlayCobro','overlayConfirm'].forEach(id => {
+['overlayPlan','overlayCobro','overlayConfirm','overlayUsrForm','overlayUsrPerfil','overlayUsrPass'].forEach(id => {
     document.getElementById(id).addEventListener('click', function(e) {
         if (e.target === this) cerrarOverlay(id);
     });
@@ -1364,7 +1586,7 @@ function nextMonth() {
 
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-        ['overlayPlan','overlayCobro','overlayConfirm'].forEach(cerrarOverlay);
+        ['overlayPlan','overlayCobro','overlayConfirm','overlayUsrForm','overlayUsrPerfil','overlayUsrPass'].forEach(cerrarOverlay);
         cerrarDetalle();
     }
     if ((e.ctrlKey||e.metaKey) && e.key === 'k') {
@@ -1373,6 +1595,308 @@ document.addEventListener('keydown', e => {
         setTimeout(() => document.getElementById('searchInput').focus(), 100);
     }
 });
+
+/* ═══════════════════════════════════════════════════════════════════════
+   USUARIOS — STATE & API
+═══════════════════════════════════════════════════════════════════════ */
+const USR_API = 'api/usuarios.php';
+const usrState = { page: 1, pages: 1, total: 0, debTimer: null, duenos: [] };
+
+const PERFIL_LABEL = { 1:'SuperAdmin', 2:'Dueño', 3:'Encargado', 4:'Empleado', 5:'Cliente' };
+const PERFIL_AV_COLOR = {
+    1: ['rgba(191,90,242,.18)','rgba(191,90,242,.4)','#bf5af2'],
+    2: ['rgba(255,159,10,.14)','rgba(255,159,10,.4)','#ff9f0a'],
+    3: ['rgba(10,132,255,.14)','rgba(10,132,255,.4)','#0a84ff'],
+    4: ['rgba(94,92,230,.14)','rgba(94,92,230,.4)','#5e5ce6'],
+    5: ['rgba(76,217,100,.12)','rgba(76,217,100,.35)','#4cd964'],
+};
+
+async function usrFetch(params={}, method='GET', body=null) {
+    const url = USR_API + '?' + new URLSearchParams(params).toString();
+    const opts = { method };
+    if (body) opts.body = body;
+    const r = await fetch(url, opts);
+    return r.json();
+}
+
+async function usrCargar(page=null) {
+    if (page) usrState.page = page;
+    const q       = document.getElementById('usrQ').value.trim();
+    const perfil  = document.getElementById('usrFilPerfil').value;
+    const activo  = document.getElementById('usrFilActivo').value;
+    const params  = { action:'listar', page:usrState.page, q, perfil_id:perfil, activo };
+
+    document.getElementById('usrTbody').innerHTML =
+        '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted)"><i class="fas fa-circle-notch fa-spin"></i></td></tr>';
+
+    const j = await usrFetch(params);
+    if (!j.ok) { toast(j.msg,'err'); return; }
+
+    const { users, total, page: pg, pages } = j.data;
+    usrState.page  = pg;
+    usrState.pages = pages;
+    usrState.total = total;
+
+    document.getElementById('usrConteo').innerHTML = `<i class="fas fa-users"></i> ${total} usuario${total!==1?'s':''}`;
+    usrRenderTabla(users);
+    usrRenderPag();
+}
+
+function usrRenderTabla(users) {
+    const tb = document.getElementById('usrTbody');
+    if (!users.length) {
+        tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-user-slash" style="font-size:1.6rem;display:block;margin-bottom:8px"></i>No se encontraron usuarios</td></tr>';
+        return;
+    }
+    tb.innerHTML = users.map(u => {
+        const pid    = parseInt(u.PERFIL_ID);
+        const av     = PERFIL_AV_COLOR[pid] || PERFIL_AV_COLOR[5];
+        const ini    = ((u.USUARIOS_NOMBRE||'?').charAt(0) + (u.USUARIOS_APELLIDO||'').charAt(0)).toUpperCase();
+        const activo = parseInt(u.ACTIVO);
+        const dni    = (u.USUARIOS_DNI||'').startsWith('SIN-') ? '—' : esc(u.USUARIOS_DNI||'');
+
+        let extra = '';
+        if ([3,4].includes(pid) && u.DUENO_FULL?.trim()) extra = `Dueño: ${esc(u.DUENO_FULL)}`;
+        else if (pid === 2 && parseInt(u.TOTAL_PREDIOS) > 0) extra = `${u.TOTAL_PREDIOS} predio${u.TOTAL_PREDIOS>1?'s':''}`;
+        else if (pid === 2) extra = 'Sin predios';
+        else extra = '—';
+
+        const uid = parseInt(u.USUARIOS_ID);
+        return `<tr>
+            <td>
+                <div class="usr-name-cell">
+                    <div class="usr-mini-av" style="background:${av[0]};border:1.5px solid ${av[1]};color:${av[2]}">${ini}</div>
+                    <div>
+                        <div class="usr-fullname">${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}</div>
+                        <div class="usr-sub">ID #${uid} · DNI ${dni}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div>${esc(u.USUARIOS_EMAIL||'—')}</div>
+                <div class="usr-sub">${esc(u.USUARIOS_TELEFONO||'—')}</div>
+            </td>
+            <td><span class="pbadge p${pid}">${esc(PERFIL_LABEL[pid]||u.PERFIL_NOMBRE)}</span></td>
+            <td class="usr-sub" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${extra}</td>
+            <td>
+                <span class="sbadge ${activo?'on':'off'}">
+                    <i class="fas fa-circle" style="font-size:.4rem"></i>
+                    ${activo ? 'Activo' : 'Inactivo'}
+                </span>
+            </td>
+            <td>
+                <div class="usr-act">
+                    <button class="usr-btn" title="Editar datos" onclick="usrEditar(${uid})"><i class="fas fa-pen"></i></button>
+                    <button class="usr-btn key" title="Resetear contraseña" onclick="usrResetPass(${uid},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}')"><i class="fas fa-key"></i></button>
+                    <button class="usr-btn role" title="Cambiar perfil" onclick="usrCambiarPerfil(${uid},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}',${pid})"><i class="fas fa-user-tag"></i></button>
+                    <button class="usr-btn ${activo?'red':'green'}" title="${activo?'Desactivar':'Activar'}" onclick="usrToggle(${uid},${activo},'${esc(u.USUARIOS_NOMBRE)}')">
+                        <i class="fas fa-${activo?'ban':'check'}"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function usrRenderPag() {
+    const { page, pages, total, per_page } = { ...usrState, per_page: 20 };
+    const from = total === 0 ? 0 : (page-1)*20+1;
+    const to   = Math.min(page*20, total);
+    const pag  = document.getElementById('usrPag');
+    if (pages <= 1) { pag.innerHTML = ''; return; }
+
+    let btns = '';
+    const start = Math.max(1, page-2), end = Math.min(pages, page+2);
+    if (start > 1) btns += `<button class="usr-pag-btn" onclick="usrCargar(1)">1</button>`;
+    if (start > 2) btns += `<span style="color:var(--muted);padding:0 4px">…</span>`;
+    for (let p=start; p<=end; p++) btns += `<button class="usr-pag-btn${p===page?' active':''}" onclick="usrCargar(${p})">${p}</button>`;
+    if (end < pages-1) btns += `<span style="color:var(--muted);padding:0 4px">…</span>`;
+    if (end < pages) btns += `<button class="usr-pag-btn" onclick="usrCargar(${pages})">${pages}</button>`;
+
+    pag.innerHTML = `
+        <span class="usr-pag-info">${from}–${to} de ${total}</span>
+        <div class="usr-pag-btns">
+            <button class="usr-pag-btn" onclick="usrCargar(${page-1})" ${page<=1?'disabled':''}>‹ Ant.</button>
+            ${btns}
+            <button class="usr-pag-btn" onclick="usrCargar(${page+1})" ${page>=pages?'disabled':''}>Sig. ›</button>
+        </div>`;
+}
+
+function usrDebounce() {
+    clearTimeout(usrState.debTimer);
+    usrState.debTimer = setTimeout(() => usrCargar(1), 380);
+}
+
+/* ── NUEVO ───────────────────────────────────────────────────────────── */
+function usrNuevo() {
+    document.getElementById('usrFormTitle').innerHTML = '<i class="fas fa-user-plus" style="color:var(--green)"></i> Nuevo usuario';
+    document.getElementById('usrFormId').value      = '';
+    document.getElementById('usrFormNombre').value  = '';
+    document.getElementById('usrFormApellido').value= '';
+    document.getElementById('usrFormEmail').value   = '';
+    document.getElementById('usrFormTel').value     = '';
+    document.getElementById('usrFormDni').value     = '';
+    document.getElementById('usrFormPerfil').value  = '5';
+    document.getElementById('usrFormPass').value    = '';
+    document.getElementById('usrFormErr').textContent = '';
+    document.getElementById('usrFormPerfilRow').style.display = '';
+    document.getElementById('usrFormPassRow').style.display   = '';
+    document.getElementById('usrFormPassLabel').textContent   = 'Contraseña *';
+    usrFormPerfilChange();
+    document.getElementById('overlayUsrForm').classList.add('show');
+    setTimeout(() => document.getElementById('usrFormNombre').focus(), 80);
+}
+
+/* ── EDITAR ──────────────────────────────────────────────────────────── */
+async function usrEditar(id) {
+    const j = await usrFetch({ action:'get', id });
+    if (!j.ok) { toast(j.msg,'err'); return; }
+    const u = j.data;
+    document.getElementById('usrFormTitle').innerHTML = '<i class="fas fa-pen" style="color:var(--blue)"></i> Editar usuario';
+    document.getElementById('usrFormId').value       = u.USUARIOS_ID;
+    document.getElementById('usrFormNombre').value   = u.USUARIOS_NOMBRE||'';
+    document.getElementById('usrFormApellido').value = u.USUARIOS_APELLIDO||'';
+    document.getElementById('usrFormEmail').value    = u.USUARIOS_EMAIL||'';
+    document.getElementById('usrFormTel').value      = u.USUARIOS_TELEFONO||'';
+    document.getElementById('usrFormDni').value      = (u.USUARIOS_DNI||'').startsWith('SIN-') ? '' : (u.USUARIOS_DNI||'');
+    document.getElementById('usrFormErr').textContent = '';
+    // En editar: no se muestra perfil ni contraseña obligatoria
+    document.getElementById('usrFormPerfilRow').style.display = 'none';
+    document.getElementById('usrFormPassRow').style.display   = '';
+    document.getElementById('usrFormPassLabel').textContent   = 'Nueva contraseña (dejar vacío para no cambiar)';
+    document.getElementById('usrFormPass').value = '';
+    document.getElementById('usrFormDuenoRow').style.display  = 'none';
+    document.getElementById('overlayUsrForm').classList.add('show');
+    setTimeout(() => document.getElementById('usrFormNombre').focus(), 80);
+}
+
+function usrFormPerfilChange() {
+    const pid = parseInt(document.getElementById('usrFormPerfil').value);
+    const needsDueno = [3,4].includes(pid);
+    document.getElementById('usrFormDuenoRow').style.display = needsDueno ? '' : 'none';
+    if (needsDueno) usrCargarDuenos('usrFormDueno');
+}
+
+async function usrCargarDuenos(selId, selValor=null) {
+    if (!usrState.duenos.length) {
+        const j = await usrFetch({ action:'listar_duenos' });
+        if (j.ok) usrState.duenos = j.data;
+    }
+    const sel = document.getElementById(selId);
+    sel.innerHTML = '<option value="">— Seleccioná un dueño —</option>' +
+        usrState.duenos.map(d => `<option value="${d.USUARIOS_ID}">${esc(d.USUARIOS_NOMBRE)} ${esc(d.USUARIOS_APELLIDO)}</option>`).join('');
+    if (selValor) sel.value = selValor;
+}
+
+async function usrFormSubmit() {
+    const id      = document.getElementById('usrFormId').value;
+    const isEdit  = !!id;
+    const err     = document.getElementById('usrFormErr');
+    err.textContent = '';
+    const fd = new FormData();
+    fd.append('action', isEdit ? 'editar' : 'crear');
+    if (isEdit) fd.append('id', id);
+    fd.append('nombre',   document.getElementById('usrFormNombre').value.trim());
+    fd.append('apellido', document.getElementById('usrFormApellido').value.trim());
+    fd.append('email',    document.getElementById('usrFormEmail').value.trim());
+    fd.append('telefono', document.getElementById('usrFormTel').value.trim());
+    fd.append('dni',      document.getElementById('usrFormDni').value.trim());
+    if (!isEdit) {
+        fd.append('perfil_id', document.getElementById('usrFormPerfil').value);
+        fd.append('dueno_id',  document.getElementById('usrFormDueno').value||'');
+    }
+    const pass = document.getElementById('usrFormPass').value;
+    if (pass || !isEdit) fd.append('password', pass);
+
+    const btn = document.getElementById('usrFormBtn');
+    btn.disabled = true;
+    const j = await usrFetch({ action: isEdit ? 'editar' : 'crear' }, 'POST', fd);
+    btn.disabled = false;
+    if (!j.ok) { err.textContent = j.msg; return; }
+    cerrarOverlay('overlayUsrForm');
+    toast(j.msg);
+    usrCargar();
+}
+
+/* ── RESET CONTRASEÑA ────────────────────────────────────────────────── */
+function usrResetPass(id, nombre) {
+    document.getElementById('usrPassId').value          = id;
+    document.getElementById('usrPassNombre').textContent = `Usuario: ${nombre}`;
+    document.getElementById('usrPassNew').value          = '';
+    document.getElementById('usrPassConf').value         = '';
+    document.getElementById('usrPassErr').textContent    = '';
+    document.getElementById('overlayUsrPass').classList.add('show');
+    setTimeout(() => document.getElementById('usrPassNew').focus(), 80);
+}
+
+async function usrPassSubmit() {
+    const pass  = document.getElementById('usrPassNew').value;
+    const conf  = document.getElementById('usrPassConf').value;
+    const err   = document.getElementById('usrPassErr');
+    err.textContent = '';
+    if (pass.length < 6) { err.textContent = 'Mínimo 6 caracteres.'; return; }
+    if (pass !== conf)   { err.textContent = 'Las contraseñas no coinciden.'; return; }
+    const fd = new FormData();
+    fd.append('action',   'reset_password');
+    fd.append('id',       document.getElementById('usrPassId').value);
+    fd.append('password', pass);
+    const j = await usrFetch({ action:'reset_password' }, 'POST', fd);
+    if (!j.ok) { err.textContent = j.msg; return; }
+    cerrarOverlay('overlayUsrPass');
+    toast(j.msg);
+}
+
+/* ── CAMBIAR PERFIL ──────────────────────────────────────────────────── */
+async function usrCambiarPerfil(id, nombre, perfilActual) {
+    document.getElementById('usrPerfilId').value          = id;
+    document.getElementById('usrPerfilNombre').textContent = `Usuario: ${nombre} · Perfil actual: ${PERFIL_LABEL[perfilActual]||perfilActual}`;
+    document.getElementById('usrPerfilSel').value          = perfilActual;
+    document.getElementById('usrPerfilErr').textContent    = '';
+    usrState.duenos = []; // forzar reload
+    usrPerfilSelChange();
+    document.getElementById('overlayUsrPerfil').classList.add('show');
+}
+
+function usrPerfilSelChange() {
+    const pid = parseInt(document.getElementById('usrPerfilSel').value);
+    const needsDueno = [3,4].includes(pid);
+    document.getElementById('usrPerfilDuenoRow').style.display = needsDueno ? '' : 'none';
+    if (needsDueno) usrCargarDuenos('usrPerfilDueno');
+}
+
+async function usrPerfilSubmit() {
+    const err = document.getElementById('usrPerfilErr');
+    err.textContent = '';
+    const fd = new FormData();
+    fd.append('action',    'cambiar_perfil');
+    fd.append('id',        document.getElementById('usrPerfilId').value);
+    fd.append('perfil_id', document.getElementById('usrPerfilSel').value);
+    fd.append('dueno_id',  document.getElementById('usrPerfilDueno').value||'');
+    const j = await usrFetch({ action:'cambiar_perfil' }, 'POST', fd);
+    if (!j.ok) { err.textContent = j.msg; return; }
+    cerrarOverlay('overlayUsrPerfil');
+    toast(j.msg);
+    usrCargar();
+}
+
+/* ── TOGGLE ACTIVO ───────────────────────────────────────────────────── */
+function usrToggle(id, activo, nombre) {
+    const accion  = activo ? 'desactivar' : 'activar';
+    const tipo    = activo ? 'danger' : 'default';
+    confirmar(
+        `¿Querés ${accion} la cuenta de ${nombre}?`,
+        activo ? 'Desactivar' : 'Activar',
+        async () => {
+            const fd = new FormData();
+            fd.append('action','toggle'); fd.append('id',id);
+            const j = await usrFetch({ action:'toggle' }, 'POST', fd);
+            if (!j.ok) { toast(j.msg,'err'); return; }
+            toast(j.msg);
+            usrCargar();
+        },
+        tipo
+    );
+}
 
 /* ═══════════════════════════════════════════════════════════════════════
    INIT
