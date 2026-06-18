@@ -481,16 +481,19 @@ tbody td { padding: 12px 14px; vertical-align: middle; }
 .sbadge.on  { background: rgba(76,217,100,.1);  border: 1px solid rgba(76,217,100,.25);  color: var(--green); }
 .sbadge.off { background: rgba(255,69,58,.08);   border: 1px solid rgba(255,69,58,.2);    color: var(--red); }
 .usr-act { display: flex; gap: 4px; }
+.usr-act { flex-wrap: wrap; gap: 5px; }
 .usr-btn {
-    width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border);
-    background: var(--s3); color: var(--muted); cursor: pointer; font-size: .78rem;
-    display: flex; align-items: center; justify-content: center; transition: all .15s;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--s3); color: var(--muted); cursor: pointer;
+    font-size: .72rem; font-weight: 600; white-space: nowrap; transition: all .15s;
 }
-.usr-btn:hover       { border-color: var(--border2); color: var(--text); }
-.usr-btn.red:hover   { border-color: rgba(255,69,58,.4); color: var(--red); }
-.usr-btn.green:hover { border-color: rgba(76,217,100,.4); color: var(--green); }
-.usr-btn.key:hover   { border-color: rgba(255,159,10,.4); color: var(--orange); }
-.usr-btn.role:hover  { border-color: rgba(94,92,230,.4); color: var(--indigo); }
+.usr-btn:hover           { border-color: var(--border2); color: var(--text); background: var(--s2); }
+.usr-btn.edit:hover      { border-color: rgba(10,132,255,.4);  color: var(--blue); }
+.usr-btn.key:hover       { border-color: rgba(255,159,10,.4);  color: var(--orange); }
+.usr-btn.role:hover      { border-color: rgba(94,92,230,.4);   color: var(--indigo); }
+.usr-btn.deactivate:hover{ border-color: rgba(255,69,58,.4);   color: var(--red); }
+.usr-btn.activate:hover  { border-color: rgba(76,217,100,.4);  color: var(--green); }
 .usr-pag {
     display: flex; align-items: center; justify-content: space-between;
     margin-top: 16px; padding: 0 2px;
@@ -1686,11 +1689,11 @@ function usrRenderTabla(users) {
             </td>
             <td>
                 <div class="usr-act">
-                    <button class="usr-btn" title="Editar datos" onclick="usrEditar(${uid})"><i class="fas fa-pen"></i></button>
-                    <button class="usr-btn key" title="Resetear contraseña" onclick="usrResetPass(${uid},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}')"><i class="fas fa-key"></i></button>
-                    <button class="usr-btn role" title="Cambiar perfil" onclick="usrCambiarPerfil(${uid},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}',${pid})"><i class="fas fa-user-tag"></i></button>
-                    <button class="usr-btn ${activo?'red':'green'}" title="${activo?'Desactivar':'Activar'}" onclick="usrToggle(${uid},${activo},'${esc(u.USUARIOS_NOMBRE)}')">
-                        <i class="fas fa-${activo?'ban':'check'}"></i>
+                    <button class="usr-btn edit" onclick="usrEditar(${uid})"><i class="fas fa-pen"></i> Editar</button>
+                    <button class="usr-btn key"  onclick="usrResetPass(${uid},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}')"><i class="fas fa-key"></i> Contraseña</button>
+                    <button class="usr-btn role" onclick="usrCambiarPerfil(${uid},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}',${pid})"><i class="fas fa-user-tag"></i> Perfil</button>
+                    <button class="usr-btn ${activo?'deactivate':'activate'}" onclick="usrToggle(${uid},${activo},'${esc(u.USUARIOS_NOMBRE)}')">
+                        <i class="fas fa-${activo?'ban':'check-circle'}"></i> ${activo?'Desactivar':'Activar'}
                     </button>
                 </div>
             </td>
