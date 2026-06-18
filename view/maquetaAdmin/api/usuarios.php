@@ -358,6 +358,71 @@ case 'rechazar':
     if (!mysqli_affected_rows($link)) resp(false,'No encontrado.');
     resp(true,'Cuenta eliminada.');
 
+// ── LISTAR PAGINADO (solo SA) ────────────────────────────────────────────
+case 'listar':
+    if (!is_superadmin()) resp(false,'Sin permisos.');
+    $page    = max(1,(int)($_GET['page']??1));
+    $perPage = 20;
+    $offset  = ($page-1)*$perPage;
+    $q       = e($link,$_GET['q']??'');
+    $perfil  = (int)($_GET['perfil_id']??0);
+    $activo  = $_GET['activo']??'';
+
+    $where = ['1=1'];
+    if ($q) $where[] = "(u.USUARIOS_NOMBRE LIKE '%$q%' OR u.USUARIOS_APELLIDO LIKE '%$q%'
+                         OR u.USUARIOS_EMAIL LIKE '%$q%' OR u.USUARIOS_DNI LIKE '%$q%'
+                         OR u.USUARIOS_TELEFONO LIKE '%$q%')";
+    if ($perfil) $where[] = "u.PERFIL_ID=$perfil";
+    if ($activo !== '') $where[] = "u.ACTIVO=".(int)$activo;
+    $w = implode(' AND ', $where);
+
+    $total = (int)(mysqli_fetch_assoc(mysqli_query($link,"SELECT COUNT(*) AS n FROM usuarios u WHERE $w"))['n'] ?? 0);
+    $rows  = [];
+    $qr    = mysqli_query($link,"
+        SELECT u.USUARIOS_ID, u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO,
+               u.USUARIOS_EMAIL, u.USUARIOS_TELEFONO, u.USUARIOS_DNI,
+               u.PERFIL_ID, u.ACTIVO, u.DUENO_ID, p.PERFIL_NOMBRE,
+               CONCAT(du.USUARIOS_NOMBRE,' ',du.USUARIOS_APELLIDO) AS DUENO_FULL,
+               (SELECT COUNT(*) FROM complejo c WHERE c.USUARIOS_ID=u.USUARIOS_ID AND c.ACTIVO=1) AS TOTAL_PREDIOS
+        FROM usuarios u
+        JOIN perfil p ON p.PERFIL_ID=u.PERFIL_ID
+        LEFT JOIN usuarios du ON du.USUARIOS_ID=u.DUENO_ID
+        WHERE $w
+        ORDER BY u.USUARIOS_ID DESC
+        LIMIT $perPage OFFSET $offset
+    ");
+    while ($r=mysqli_fetch_assoc($qr)) $rows[]=$r;
+    resp(true,'',['users'=>$rows,'total'=>$total,'page'=>$page,'pages'=>max(1,(int)ceil($total/$perPage))]);
+
+// ── RESET PASSWORD (solo SA) ─────────────────────────────────────────────
+case 'reset_password':
+    if (!is_superadmin()) resp(false,'Sin permisos.');
+    $id   = (int)($_POST['id']??0);
+    $pass = $_POST['password']??'';
+    if (!$id) resp(false,'ID inválido.');
+    if (strlen($pass)<6) resp(false,'Mínimo 6 caracteres.');
+    if (!mysqli_fetch_assoc(mysqli_query($link,"SELECT USUARIOS_ID FROM usuarios WHERE USUARIOS_ID=$id")))
+        resp(false,'Usuario no encontrado.');
+    $hash = e($link,password_hash($pass,PASSWORD_DEFAULT));
+    mysqli_query($link,"UPDATE usuarios SET USUARIOS_PASSWORD='$hash' WHERE USUARIOS_ID=$id");
+    resp(true,'Contraseña actualizada.');
+
+// ── CAMBIAR PERFIL (solo SA) ─────────────────────────────────────────────
+case 'cambiar_perfil':
+    if (!is_superadmin()) resp(false,'Sin permisos.');
+    $id       = (int)($_POST['id']??0);
+    $perfilId = (int)($_POST['perfil_id']??0);
+    $duenoId  = (int)($_POST['dueno_id']??0);
+    if (!$id || !$perfilId) resp(false,'Datos incompletos.');
+    if (!in_array($perfilId,[1,2,3,4,5])) resp(false,'Perfil inválido.');
+    if ($id===current_uid()) resp(false,'No podés cambiar tu propio perfil.');
+    if (in_array($perfilId,[3,4]) && !$duenoId) resp(false,'El staff requiere un dueño asignado.');
+    if (!mysqli_fetch_assoc(mysqli_query($link,"SELECT USUARIOS_ID FROM usuarios WHERE USUARIOS_ID=$id")))
+        resp(false,'Usuario no encontrado.');
+    $duenoSQ = in_array($perfilId,[3,4]) ? (int)$duenoId : 'NULL';
+    mysqli_query($link,"UPDATE usuarios SET PERFIL_ID=$perfilId,DUENO_ID=$duenoSQ WHERE USUARIOS_ID=$id");
+    resp(true,'Perfil actualizado.');
+
 default:
     resp(false,'Acción no reconocida.');
 }

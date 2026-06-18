@@ -1951,10 +1951,62 @@ if ($perfil >= 2) {
              VIEW: USUARIOS
         ══════════════════════════════ -->
         <div class="view" id="view-usuarios">
+        <?php if ($perfil === 1): ?>
+            <!-- ── SA: gestión completa de usuarios ── -->
             <div class="page-header">
                 <div class="page-header-left">
                     <h1>Usuarios</h1>
-                    <p>Gestioná cuentas y aprobaciones</p>
+                    <p>Todos los usuarios del sistema</p>
+                </div>
+                <div class="page-header-right">
+                    <button class="btn btn-primary" onclick="staffAbrirCrear()"><i class="fas fa-plus"></i> Nuevo usuario</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="dt-toolbar">
+                    <div class="dt-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="usrDshQ" placeholder="Nombre, email, DNI..." oninput="usrDshDebounce()">
+                    </div>
+                    <div class="dt-filter">
+                        <select class="form-select" id="usrDshPerfil" onchange="usrDshCargar(1)" style="font-size:.8rem;padding:5px 10px;min-width:140px">
+                            <option value="">Todos los perfiles</option>
+                            <option value="1">SuperAdmin</option>
+                            <option value="2">Dueño</option>
+                            <option value="3">Encargado</option>
+                            <option value="4">Empleado</option>
+                            <option value="5">Cliente</option>
+                        </select>
+                        <select class="form-select" id="usrDshActivo" onchange="usrDshCargar(1)" style="font-size:.8rem;padding:5px 10px;min-width:110px">
+                            <option value="">Todos</option>
+                            <option value="1">Activos</option>
+                            <option value="0">Inactivos</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="usrDshTableWrap">
+                    <table>
+                        <thead><tr>
+                            <th>Usuario</th>
+                            <th>Email / Teléfono</th>
+                            <th>Perfil</th>
+                            <th>Ref.</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr></thead>
+                        <tbody id="usrDshTbody">
+                            <tr><td colspan="6"><div class="empty-state"><div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div><p>Cargando...</p></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="usrDshPag" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)"></div>
+            </div>
+        <?php else: ?>
+            <!-- ── Dueño: pendientes de aprobación ── -->
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1>Usuarios</h1>
+                    <p>Cuentas pendientes de aprobación</p>
                 </div>
             </div>
             <div class="card">
@@ -1972,11 +2024,7 @@ if ($perfil >= 2) {
                 <?php else: ?>
                     <table>
                         <thead><tr>
-                            <th>Usuario</th>
-                            <th>DNI</th>
-                            <th>Teléfono</th>
-                            <th>Perfil</th>
-                            <th>Acciones</th>
+                            <th>Usuario</th><th>DNI</th><th>Teléfono</th><th>Perfil</th><th>Acciones</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($pendientes as $u): ?>
@@ -1990,17 +2038,13 @@ if ($perfil >= 2) {
                                     </div>
                                 </div>
                             </td>
-                            <td style="color:var(--muted); font-family:monospace"><?= htmlspecialchars($u['USUARIOS_DNI']) ?></td>
+                            <td style="color:var(--muted);font-family:monospace"><?= htmlspecialchars($u['USUARIOS_DNI']) ?></td>
                             <td style="color:var(--muted)"><?= htmlspecialchars($u['USUARIOS_TELEFONO'] ?? '—') ?></td>
                             <td><span class="badge pending"><?= htmlspecialchars($u['PERFIL_NOMBRE']) ?></span></td>
                             <td>
                                 <div class="row-actions">
-                                    <button class="btn btn-approve btn-sm" onclick="aprobarUsuario(<?= $u['USUARIOS_ID'] ?>, this)">
-                                        <i class="fas fa-check"></i> Aprobar
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick="rechazarUsuario(<?= $u['USUARIOS_ID'] ?>, this)">
-                                        <i class="fas fa-ban"></i> Rechazar
-                                    </button>
+                                    <button class="btn btn-approve btn-sm" onclick="aprobarUsuario(<?= $u['USUARIOS_ID'] ?>, this)"><i class="fas fa-check"></i> Aprobar</button>
+                                    <button class="btn btn-danger btn-sm"  onclick="rechazarUsuario(<?= $u['USUARIOS_ID'] ?>, this)"><i class="fas fa-ban"></i> Rechazar</button>
                                 </div>
                             </td>
                         </tr>
@@ -2010,6 +2054,7 @@ if ($perfil >= 2) {
                 <?php endif; ?>
                 </div>
             </div>
+        <?php endif; ?>
         </div><!-- /view-usuarios -->
 
 
@@ -5492,6 +5537,7 @@ showView = function(el) {
     if (name === 'cierres')   loadCierres();
     if (name === 'turnos')    loadTurnos();
     if (name === 'staff')     loadStaff();
+    if (name === 'usuarios' && PERFIL === 1) usrDshCargar(1);
     if (name === 'duenos')    loadDuenos();
     if (name === 'agenda') {
         document.getElementById('agendaFechaInput').value = agendaFechaStr(agendaFecha);
@@ -6724,6 +6770,70 @@ async function turnoEliminar(id) {
         <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)">
             <button class="btn" style="background:var(--s1);border:1px solid var(--border)" onclick="closeModal('modalStaff')">Cancelar</button>
             <button class="btn btn-primary" onclick="submitStaff()"><i class="fas fa-save"></i> Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════
+     MODAL: RESET PASSWORD (SA)
+══════════════════════════════ -->
+<div class="modal-overlay" id="modalUsrPass">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-head">
+            <div class="modal-head-icon" style="background:rgba(255,149,0,.15)"><i class="fas fa-key" style="color:var(--orange)"></i></div>
+            <div><h3>Resetear contraseña</h3><p id="usrPassSubDsh">Usuario seleccionado</p></div>
+            <button class="modal-close" onclick="closeModal('modalUsrPass')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="padding:20px">
+            <input type="hidden" id="usrPassIdDsh">
+            <div class="form-row">
+                <label class="form-label">Nueva contraseña *</label>
+                <input type="password" class="form-input" id="usrPassNewDsh" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+            </div>
+            <div class="form-row">
+                <label class="form-label">Confirmar contraseña *</label>
+                <input type="password" class="form-input" id="usrPassConfDsh" placeholder="Repetir contraseña">
+            </div>
+            <div class="form-error" id="usrPassErrDsh"></div>
+        </div>
+        <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)">
+            <button class="btn" style="background:var(--s1);border:1px solid var(--border)" onclick="closeModal('modalUsrPass')">Cancelar</button>
+            <button class="btn btn-primary" onclick="usrPassSubmitDsh()"><i class="fas fa-key"></i> Actualizar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════
+     MODAL: CAMBIAR PERFIL (SA)
+══════════════════════════════ -->
+<div class="modal-overlay" id="modalUsrPerfilDsh">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-head">
+            <div class="modal-head-icon b"><i class="fas fa-user-tag"></i></div>
+            <div><h3>Cambiar perfil</h3><p id="usrPerfilSubDsh">Usuario seleccionado</p></div>
+            <button class="modal-close" onclick="closeModal('modalUsrPerfilDsh')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="padding:20px">
+            <input type="hidden" id="usrPerfilIdDsh">
+            <div class="form-row">
+                <label class="form-label">Nuevo perfil *</label>
+                <select class="form-select" id="usrPerfilSelDsh" onchange="usrPerfilDshChange()">
+                    <option value="5">Cliente</option>
+                    <option value="4">Empleado</option>
+                    <option value="3">Encargado</option>
+                    <option value="2">Dueño</option>
+                    <option value="1">SuperAdmin</option>
+                </select>
+            </div>
+            <div class="form-row" id="usrPerfilDuenoRowDsh" style="display:none">
+                <label class="form-label">Dueño asignado *</label>
+                <select class="form-select" id="usrPerfilDuenoDsh"><option value="">Seleccioná...</option></select>
+            </div>
+            <div class="form-error" id="usrPerfilErrDsh"></div>
+        </div>
+        <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)">
+            <button class="btn" style="background:var(--s1);border:1px solid var(--border)" onclick="closeModal('modalUsrPerfilDsh')">Cancelar</button>
+            <button class="btn btn-primary" onclick="usrPerfilSubmitDsh()"><i class="fas fa-check"></i> Cambiar</button>
         </div>
     </div>
 </div>
@@ -9050,6 +9160,176 @@ function wizVerCliente() {
     setTimeout(pollPendientes, 5000);
     setInterval(pollPendientes, 30000);
 })();
+
+/* ═══════════════════════════════════════════════════════════════
+   USUARIOS DSH — gestión completa (solo SA en view-usuarios)
+═══════════════════════════════════════════════════════════════ */
+const usrDshState = { page:1, pages:1, total:0, debTimer:null };
+const USR_DSH_API = 'api/usuarios.php';
+
+async function usrDshCargar(page) {
+    if (page) usrDshState.page = page;
+    const q      = document.getElementById('usrDshQ')?.value.trim() || '';
+    const perfil = document.getElementById('usrDshPerfil')?.value || '';
+    const activo = document.getElementById('usrDshActivo')?.value ?? '';
+    const params = new URLSearchParams({ action:'listar', page:usrDshState.page, q, perfil_id:perfil, activo });
+
+    const tb = document.getElementById('usrDshTbody');
+    if (!tb) return;
+    tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div><p>Cargando...</p></div></td></tr>';
+
+    const r  = await fetch(`${USR_DSH_API}?${params}`);
+    const j  = await r.json();
+    if (!j.ok) { toast(j.msg, 'err'); return; }
+
+    const { users, total, page:pg, pages } = j.data;
+    usrDshState.page  = pg;
+    usrDshState.pages = pages;
+    usrDshState.total = total;
+    usrDshRenderTabla(users);
+    usrDshRenderPag(total, pg, pages);
+}
+
+function usrDshRenderTabla(users) {
+    const tb = document.getElementById('usrDshTbody');
+    if (!users.length) {
+        tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="es-icon"><i class="fas fa-users-slash"></i></div><p>No se encontraron usuarios</p></div></td></tr>';
+        return;
+    }
+    tb.innerHTML = users.map(u => {
+        const pid    = parseInt(u.PERFIL_ID);
+        const badge  = PERFIL_BADGE[pid] || `<span class="badge">${esc(u.PERFIL_NOMBRE)}</span>`;
+        const activo = parseInt(u.ACTIVO);
+        const estado = activo
+            ? '<span class="badge active">Activo</span>'
+            : '<span class="badge pending">Inactivo</span>';
+        const dni    = (u.USUARIOS_DNI||'').startsWith('SIN-') ? '—' : esc(u.USUARIOS_DNI||'');
+        let ref = '—';
+        if ([3,4].includes(pid) && u.DUENO_FULL?.trim()) ref = `<span style="font-size:11px;color:var(--muted)">↳ ${esc(u.DUENO_FULL)}</span>`;
+        else if (pid===2 && parseInt(u.TOTAL_PREDIOS)>0) ref = `<span style="font-size:11px;color:var(--muted)">${u.TOTAL_PREDIOS} predio${u.TOTAL_PREDIOS>1?'s':''}</span>`;
+
+        return `<tr>
+            <td>
+                <div class="user-cell">
+                    <div class="user-av">${(u.USUARIOS_NOMBRE||'?')[0].toUpperCase()}</div>
+                    <div>
+                        <div class="user-name">${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}</div>
+                        <div class="user-email" style="font-size:10px;color:var(--muted)">DNI: ${dni}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div>${esc(u.USUARIOS_EMAIL||'—')}</div>
+                <div class="user-email">${esc(u.USUARIOS_TELEFONO||'—')}</div>
+            </td>
+            <td>${badge}</td>
+            <td>${ref}</td>
+            <td>${estado}</td>
+            <td>
+                <div class="row-actions">
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="staffAbrirEditar(${u.USUARIOS_ID})" title="Editar datos"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrPassAbrirDsh(${u.USUARIOS_ID},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}')" title="Contraseña"><i class="fas fa-key"></i></button>
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrPerfilAbrirDsh(${u.USUARIOS_ID},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}',${pid})" title="Cambiar perfil"><i class="fas fa-user-tag"></i></button>
+                    <button class="btn btn-sm ${activo?'btn-danger':''}" style="${activo?'':'background:var(--s2);border:1px solid var(--border);color:var(--green)'}" onclick="usrDshToggle(${u.USUARIOS_ID},${activo},'${esc(u.USUARIOS_NOMBRE)}')" title="${activo?'Desactivar':'Activar'}">
+                        <i class="fas fa-${activo?'ban':'check'}"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function usrDshRenderPag(total, page, pages) {
+    const el = document.getElementById('usrDshPag');
+    if (!el) return;
+    if (pages <= 1) { el.innerHTML = `<span style="font-size:.8rem;color:var(--muted)">${total} usuario${total!==1?'s':''}</span>`; return; }
+    const from = (page-1)*20+1, to = Math.min(page*20, total);
+    el.innerHTML = `
+        <span style="font-size:.8rem;color:var(--muted)">${from}–${to} de ${total}</span>
+        <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrDshCargar(${page-1})" ${page<=1?'disabled':''}>‹</button>
+            <span style="font-size:.8rem;color:var(--muted);padding:4px 8px">${page} / ${pages}</span>
+            <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrDshCargar(${page+1})" ${page>=pages?'disabled':''}>›</button>
+        </div>`;
+}
+
+function usrDshDebounce() {
+    clearTimeout(usrDshState.debTimer);
+    usrDshState.debTimer = setTimeout(() => usrDshCargar(1), 380);
+}
+
+function usrDshToggle(id, activo, nombre) {
+    confirmar(
+        `¿${activo?'Desactivar':'Activar'} la cuenta de ${nombre}?`,
+        activo ? 'Desactivar' : 'Activar',
+        async () => {
+            const fd = new FormData(); fd.append('id',id);
+            const r = await fetch(`${USR_DSH_API}?action=toggle`,{method:'POST',body:fd});
+            const j = await r.json();
+            if (!j.ok) { toast(j.msg,'err'); return; }
+            toast(j.msg);
+            usrDshCargar();
+        }
+    );
+}
+
+// ── Reset contraseña ──────────────────────────────────────────────────────
+function usrPassAbrirDsh(id, nombre) {
+    document.getElementById('usrPassIdDsh').value         = id;
+    document.getElementById('usrPassSubDsh').textContent  = nombre;
+    document.getElementById('usrPassNewDsh').value        = '';
+    document.getElementById('usrPassConfDsh').value       = '';
+    document.getElementById('usrPassErrDsh').textContent  = '';
+    openModal('modalUsrPass');
+}
+
+async function usrPassSubmitDsh() {
+    const pass = document.getElementById('usrPassNewDsh').value;
+    const conf = document.getElementById('usrPassConfDsh').value;
+    const err  = document.getElementById('usrPassErrDsh');
+    err.textContent = '';
+    if (pass.length < 6) { err.textContent = 'Mínimo 6 caracteres.'; return; }
+    if (pass !== conf)   { err.textContent = 'Las contraseñas no coinciden.'; return; }
+    const fd = new FormData();
+    fd.append('id', document.getElementById('usrPassIdDsh').value);
+    fd.append('password', pass);
+    const r = await fetch(`${USR_DSH_API}?action=reset_password`,{method:'POST',body:fd});
+    const j = await r.json();
+    if (!j.ok) { err.textContent = j.msg; return; }
+    closeModal('modalUsrPass');
+    toast(j.msg);
+}
+
+// ── Cambiar perfil ────────────────────────────────────────────────────────
+async function usrPerfilAbrirDsh(id, nombre, perfilActual) {
+    document.getElementById('usrPerfilIdDsh').value         = id;
+    document.getElementById('usrPerfilSubDsh').textContent  = nombre;
+    document.getElementById('usrPerfilSelDsh').value        = perfilActual;
+    document.getElementById('usrPerfilErrDsh').textContent  = '';
+    await poblarSelectDuenos('usrPerfilDuenoDsh');
+    usrPerfilDshChange();
+    openModal('modalUsrPerfilDsh');
+}
+
+function usrPerfilDshChange() {
+    const pid = parseInt(document.getElementById('usrPerfilSelDsh').value);
+    document.getElementById('usrPerfilDuenoRowDsh').style.display = [3,4].includes(pid) ? '' : 'none';
+}
+
+async function usrPerfilSubmitDsh() {
+    const err = document.getElementById('usrPerfilErrDsh');
+    err.textContent = '';
+    const fd = new FormData();
+    fd.append('id',        document.getElementById('usrPerfilIdDsh').value);
+    fd.append('perfil_id', document.getElementById('usrPerfilSelDsh').value);
+    fd.append('dueno_id',  document.getElementById('usrPerfilDuenoDsh').value||'');
+    const r = await fetch(`${USR_DSH_API}?action=cambiar_perfil`,{method:'POST',body:fd});
+    const j = await r.json();
+    if (!j.ok) { err.textContent = j.msg; return; }
+    closeModal('modalUsrPerfilDsh');
+    toast(j.msg);
+    usrDshCargar();
+}
 </script>
 
 </body>
