@@ -226,3 +226,99 @@ function enviarRecordatorioCobro(array $datos): bool {
         return false;
     }
 }
+
+/**
+ * Envía un recordatorio al desarrollador (cantonnico2@gmail.com)
+ * sobre un cobro próximo de un cliente.
+ */
+function enviarRecordatorioDesarrollador(array $datos): bool {
+    if (!defined('MAIL_ENABLED') || !MAIL_ENABLED) return false;
+
+    $nombre       = trim(($datos['USUARIOS_NOMBRE'] ?? '') . ' ' . ($datos['USUARIOS_APELLIDO'] ?? ''));
+    $clienteEmail = $datos['USUARIOS_EMAIL'] ?? '';
+    $plan         = $datos['PLAN_NOMBRE']    ?? 'Sin plan';
+    $precio       = (float)($datos['PLAN_PRECIO'] ?? 0);
+    $prox         = $datos['PROXIMO_COBRO']  ?? '';
+    $desc         = $datos['DESCRIPCION']    ?? '';
+
+    $precio_fmt = '$' . number_format($precio, 0, ',', '.');
+
+    $prox_fmt = $prox ?: 'Sin definir';
+    if ($prox) {
+        $d = DateTime::createFromFormat('Y-m-d', $prox);
+        if ($d) {
+            $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+            $prox_fmt = $d->format('j') . ' de ' . $meses[(int)$d->format('n')-1] . ' de ' . $d->format('Y');
+        }
+    }
+
+    $html = "<!DOCTYPE html>
+<html lang='es'>
+<head><meta charset='utf-8'><title>Recordatorio de cobro</title></head>
+<body style='margin:0;padding:0;background:#0d0d15;font-family:Segoe UI,Arial,sans-serif'>
+<table width='100%' cellpadding='0' cellspacing='0' style='background:#0d0d15;padding:32px 0'>
+  <tr><td align='center'>
+    <table width='520' cellpadding='0' cellspacing='0' style='background:#101018;border:1px solid #2a2a3a;border-radius:16px;overflow:hidden;max-width:95%'>
+      <tr><td style='background:#101018;padding:24px 32px;border-bottom:1px solid #2a2a3a'>
+        <div style='font-size:13px;font-weight:800;color:#4cd964;letter-spacing:.06em;text-transform:uppercase'>🔔 La Canchita · Dev Panel</div>
+      </td></tr>
+      <tr><td style='padding:28px 32px 0'>
+        <div style='font-size:22px;font-weight:800;color:#fff;line-height:1.2'>Recordatorio de cobro</div>
+        <div style='font-size:14px;color:#888;margin-top:6px'>" . htmlspecialchars($desc) . "</div>
+      </td></tr>
+      <tr><td style='padding:20px 32px'>
+        <table width='100%' cellpadding='0' cellspacing='0' style='background:#16161f;border-radius:12px;overflow:hidden;border:1px solid #2a2a3a'>
+          <tr><td colspan='2' style='padding:12px 18px;font-size:11px;font-weight:700;color:#4cd964;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #2a2a3a'>Cliente</td></tr>
+          <tr style='border-bottom:1px solid #1d1d28'>
+            <td style='padding:12px 18px;font-size:13px;color:#666;width:40%'>Nombre</td>
+            <td style='padding:12px 18px;font-size:13px;font-weight:700;color:#fff'>" . htmlspecialchars($nombre) . "</td>
+          </tr>
+          <tr style='border-bottom:1px solid #1d1d28'>
+            <td style='padding:12px 18px;font-size:13px;color:#666'>Email</td>
+            <td style='padding:12px 18px;font-size:13px;color:#aaa'>" . htmlspecialchars($clienteEmail) . "</td>
+          </tr>
+          <tr style='border-bottom:1px solid #1d1d28'>
+            <td style='padding:12px 18px;font-size:13px;color:#666'>Plan</td>
+            <td style='padding:12px 18px;font-size:13px;font-weight:600;color:#fff'>" . htmlspecialchars($plan) . "</td>
+          </tr>
+          <tr style='border-bottom:1px solid #1d1d28'>
+            <td style='padding:12px 18px;font-size:13px;color:#666'>Monto</td>
+            <td style='padding:12px 18px;font-size:16px;font-weight:800;color:#4cd964'>{$precio_fmt}</td>
+          </tr>
+          <tr>
+            <td style='padding:12px 18px;font-size:13px;color:#666'>Próximo cobro</td>
+            <td style='padding:12px 18px;font-size:13px;font-weight:700;color:#ff9500'>" . htmlspecialchars(ucfirst($prox_fmt)) . "</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style='padding:0 32px 28px;text-align:center'>
+        <p style='margin:0;font-size:12px;color:#444'>Recordatorio automático · La Canchita Dev Panel</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>";
+
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = MAIL_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = MAIL_USER;
+        $mail->Password   = MAIL_PASS;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = MAIL_PORT;
+        $mail->CharSet    = 'UTF-8';
+        $mail->setFrom(MAIL_FROM, MAIL_FROM_NAME);
+        $mail->addAddress('cantonnico2@gmail.com', 'Nico - La Canchita');
+        $mail->isHTML(true);
+        $mail->Subject = "⏰ Cobrar a {$nombre} — {$prox_fmt}";
+        $mail->Body    = $html;
+        $mail->AltBody = "Recordatorio: cobrar a {$nombre} | {$plan} | {$precio_fmt} | Vence: {$prox_fmt}";
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log('Mailer recordatorio dev error: ' . $mail->ErrorInfo);
+        return false;
+    }
+}

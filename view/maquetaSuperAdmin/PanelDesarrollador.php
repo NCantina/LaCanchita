@@ -405,6 +405,46 @@ tbody td { padding: 12px 14px; vertical-align: middle; }
 .btn-confirm-ok.default { background: var(--green); color: #000; }
 .btn-confirm-ok:hover { filter: brightness(1.1); }
 
+/* ─── RECORDATORIO ────────────────────────────────────────────────── */
+.rec-info-box {
+    background: var(--s2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 16px;
+}
+.rec-info-box strong { color: #fff; font-size: .9rem; }
+.rec-info-box small  { color: var(--muted); font-size: .78rem; display: block; margin-top: 3px; }
+.rec-presets  { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.rec-preset {
+    padding: 6px 15px; border-radius: 20px; border: 1.5px solid var(--border2);
+    background: transparent; color: var(--muted); font-size: .8rem; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+}
+.rec-preset:hover  { border-color: var(--orange); color: var(--orange); }
+.rec-preset.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+.rec-custom { display: flex; gap: 8px; margin-top: 10px; }
+.rec-custom input  { width: 72px; text-align: center; }
+.rec-custom select { flex: 1; }
+.rec-preview {
+    font-size: .78rem; color: var(--muted); margin-top: 8px;
+    padding: 8px 12px; background: var(--s2); border-radius: 8px;
+    border-left: 3px solid var(--orange); display: none;
+}
+.rec-preview.show { display: block; }
+.rec-sep  { border-top: 1px solid var(--border); margin: 14px 0; }
+.rec-list { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+.rec-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--s2); border: 1px solid var(--border); border-radius: 9px;
+    padding: 9px 13px; font-size: .8rem;
+}
+.rec-item-ico  { font-size: .9rem; color: var(--orange); flex-shrink: 0; }
+.rec-item-info { flex: 1; }
+.rec-item-info strong { color: #fff; display: block; }
+.rec-item-info small  { color: var(--muted); }
+.rec-item.sent .rec-item-ico { color: var(--green); }
+.rec-item.sent strong { color: var(--muted); }
+.rec-del { background: none; border: none; color: var(--muted2); cursor: pointer; padding: 4px 6px; font-size: .78rem; border-radius: 5px; }
+.rec-del:hover { color: var(--red); background: rgba(231,76,60,.1); }
+
 /* Loading skeleton */
 .skel-row { display: flex; gap: 14px; padding: 14px; border-bottom: 1px solid var(--border); }
 .skel-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--s2); animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
@@ -789,6 +829,45 @@ tbody td { padding: 12px 14px; vertical-align: middle; }
 </div>
 </div>
 
+<!-- ─── MODAL: RECORDATORIO ─────────────────────────────────────────── -->
+<div class="overlay" id="overlayRecordatorio">
+<div class="modal" style="max-width:460px">
+    <div class="modal-title"><i class="fas fa-bell" style="color:var(--orange);margin-right:8px"></i>Programar recordatorio</div>
+    <input type="hidden" id="recUserId">
+    <div class="rec-info-box" id="recInfoBox"></div>
+    <div class="f-row">
+        <label>¿Con cuánta anticipación avisarte?</label>
+        <div class="rec-presets">
+            <button class="rec-preset" data-cant="1" data-unit="horas" onclick="recSelPreset(this)">1 hora</button>
+            <button class="rec-preset active" data-cant="1" data-unit="dias" onclick="recSelPreset(this)">1 día</button>
+            <button class="rec-preset" data-cant="3" data-unit="dias" onclick="recSelPreset(this)">3 días</button>
+            <button class="rec-preset" data-cant="7" data-unit="dias" onclick="recSelPreset(this)">1 semana</button>
+        </div>
+    </div>
+    <div class="f-row" style="margin-top:14px">
+        <label>O personalizá</label>
+        <div class="rec-custom">
+            <input type="number" id="recCant" class="f-input" min="1" max="60" value="1" oninput="recDeselectPresets()">
+            <select id="recUnit" class="f-input" onchange="recDeselectPresets()">
+                <option value="horas">horas antes</option>
+                <option value="dias" selected>días antes</option>
+            </select>
+        </div>
+    </div>
+    <div class="rec-preview" id="recPreview"></div>
+    <div id="recActivos" style="display:none">
+        <div class="rec-sep"></div>
+        <label style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recordatorios activos</label>
+        <div class="rec-list" id="recList"></div>
+    </div>
+    <div class="modal-err" id="recErr"></div>
+    <div class="modal-btns">
+        <button class="btn-cancel" onclick="cerrarOverlay('overlayRecordatorio')">Cancelar</button>
+        <button class="btn-ok" id="recBtn" onclick="recSubmit()"><i class="fas fa-bell" style="margin-right:5px"></i>Guardar recordatorio</button>
+    </div>
+</div>
+</div>
+
 <!-- ─── DETAIL PANEL ──────────────────────────────────────────────────── -->
 <aside class="detail-panel" id="detailPanel">
     <div class="dp-head">
@@ -1051,8 +1130,9 @@ function setTab(tab, btn) {
    RESUMEN
 ═══════════════════════════════════════════════════════════════════════ */
 async function cargarResumen() {
-    // Auto-mark overdue (silently)
+    // Auto-mark overdue and process pending reminders (silently)
     fetch(API, { method:'POST', body: new URLSearchParams({action:'marcar_vencidos'}) });
+    fetch(API, { method:'POST', body: new URLSearchParams({action:'procesar_recordatorios'}) });
 
     // Stats
     const j = await apiFetch({ get: {action:'stats'} });
@@ -1364,18 +1444,108 @@ function scheduleSaveNotas() {
 function dpCobrar()     { if (S.selected) abrirModalCobro(S.selected); }
 function dpEditarPlan() { if (S.selected) abrirModalPlan(S.selected); }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   RECORDATORIO
+═══════════════════════════════════════════════════════════════════════ */
 async function dpRecordatorio() {
     if (!S.selected) return;
-    const btn = document.getElementById('dpBtnRecordatorio');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Enviando...';
+    const c = S.selected;
+    if (!c.PROXIMO_COBRO) {
+        toast('Sin fecha de próximo cobro. Editá el plan primero.', 'err'); return;
+    }
+    document.getElementById('recUserId').value = c.USUARIOS_ID;
+    const [y,m,d] = c.PROXIMO_COBRO.split('-');
+    document.getElementById('recInfoBox').innerHTML =
+        `<strong>${esc(c.USUARIOS_NOMBRE+' '+c.USUARIOS_APELLIDO)}</strong>
+         <small>Próximo cobro: <b style="color:var(--orange)">${d}/${m}/${y}</b>
+         &nbsp;·&nbsp; ${esc(c.PLAN_NOMBRE||'Sin plan')} &nbsp;·&nbsp; ${fmt(c.PLAN_PRECIO||0)}</small>`;
+    // Reset
+    document.querySelectorAll('.rec-preset').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.rec-preset[data-cant="1"][data-unit="dias"]').classList.add('active');
+    document.getElementById('recCant').value = 1;
+    document.getElementById('recUnit').value = 'dias';
+    showModalErr('recErr','');
+    recActualizarPreview();
+    await recCargarLista(c.USUARIOS_ID);
+    document.getElementById('overlayRecordatorio').classList.add('show');
+}
+
+function recSelPreset(btn) {
+    document.querySelectorAll('.rec-preset').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('recCant').value = btn.dataset.cant;
+    document.getElementById('recUnit').value = btn.dataset.unit;
+    recActualizarPreview();
+}
+
+function recDeselectPresets() {
+    document.querySelectorAll('.rec-preset').forEach(b=>b.classList.remove('active'));
+    recActualizarPreview();
+}
+
+function recActualizarPreview() {
+    const c = S.selected;
+    if (!c?.PROXIMO_COBRO) return;
+    const cant = parseInt(document.getElementById('recCant').value) || 1;
+    const unit = document.getElementById('recUnit').value;
+    const [y,m,d] = c.PROXIMO_COBRO.split('-').map(Number);
+    const base = new Date(y, m-1, d, unit === 'horas' ? 0 : 9, 0, 0);
+    if (unit === 'horas') base.setHours(base.getHours() - cant);
+    else base.setDate(base.getDate() - cant);
+    const preview = document.getElementById('recPreview');
+    const fechaStr = base.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const horaStr  = base.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+    preview.textContent = `📅 Se enviará el ${fechaStr} a las ${horaStr} a cantonnico2@gmail.com`;
+    preview.classList.add('show');
+}
+
+async function recCargarLista(uid) {
+    const j = await apiFetch({ get: {action:'listar_recordatorios', usuarios_id: uid} });
+    const section = document.getElementById('recActivos');
+    const list    = document.getElementById('recList');
+    if (!j.ok || !j.data.length) { section.style.display='none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = j.data.map(r => {
+        const [fd,ft] = r.ENVIAR_EN.split(' ');
+        const [fy,fm,fdd] = fd.split('-');
+        const sent = r.ENVIADO == 1;
+        return `<div class="rec-item${sent?' sent':''}">
+            <i class="fas ${sent?'fa-check-circle':'fa-bell'} rec-item-ico"></i>
+            <div class="rec-item-info">
+                <strong>${esc(r.DESCRIPCION||'')}</strong>
+                <small>${fdd}/${fm}/${fy} ${ft?ft.substring(0,5):''} · ${sent?'<span style="color:var(--green)">Enviado ✓</span>':'Pendiente'}</small>
+            </div>
+            ${!sent?`<button class="rec-del" onclick="recEliminar(${r.REC_ID})" title="Eliminar"><i class="fas fa-trash-alt"></i></button>`:''}
+        </div>`;
+    }).join('');
+}
+
+async function recEliminar(id) {
     const fd = new FormData();
-    fd.append('action', 'recordatorio');
-    fd.append('usuarios_id', S.selected.USUARIOS_ID);
+    fd.append('action','eliminar_recordatorio');
+    fd.append('rec_id', id);
     const j = await fetch(API,{method:'POST',body:fd}).then(r=>r.json()).catch(()=>null);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-bell"></i> Recordatorio';
-    toast(j?.ok ? j.msg : (j?.msg||'Error'), j?.ok ? 'ok' : 'err');
+    if (!j?.ok) { toast(j?.msg||'Error al eliminar','err'); return; }
+    toast('Recordatorio eliminado');
+    await recCargarLista(S.selected?.USUARIOS_ID);
+}
+
+async function recSubmit() {
+    const uid  = document.getElementById('recUserId').value;
+    const cant = parseInt(document.getElementById('recCant').value)||0;
+    const unit = document.getElementById('recUnit').value;
+    if (cant < 1) { showModalErr('recErr','Ingresá una cantidad válida (mínimo 1).'); return; }
+    setLoading('recBtn', true, '<i class="fas fa-bell" style="margin-right:5px"></i>Guardar recordatorio');
+    const fd = new FormData();
+    fd.append('action','guardar_recordatorio');
+    fd.append('usuarios_id', uid);
+    fd.append('cantidad', cant);
+    fd.append('unidad', unit);
+    const j = await fetch(API,{method:'POST',body:fd}).then(r=>r.json()).catch(()=>null);
+    setLoading('recBtn', false, '<i class="fas fa-bell" style="margin-right:5px"></i>Guardar recordatorio');
+    if (!j?.ok) { showModalErr('recErr', j?.msg||'Error'); return; }
+    toast('Recordatorio guardado ✓');
+    await recCargarLista(uid);
 }
 
 async function dpToggle() {
@@ -1580,7 +1750,7 @@ function nextMonth() {
 /* ═══════════════════════════════════════════════════════════════════════
    EVENTS
 ═══════════════════════════════════════════════════════════════════════ */
-['overlayPlan','overlayCobro','overlayConfirm','overlayUsrForm','overlayUsrPerfil','overlayUsrPass'].forEach(id => {
+['overlayPlan','overlayCobro','overlayConfirm','overlayUsrForm','overlayUsrPerfil','overlayUsrPass','overlayRecordatorio'].forEach(id => {
     document.getElementById(id).addEventListener('click', function(e) {
         if (e.target === this) cerrarOverlay(id);
     });
@@ -1588,7 +1758,7 @@ function nextMonth() {
 
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-        ['overlayPlan','overlayCobro','overlayConfirm','overlayUsrForm','overlayUsrPerfil','overlayUsrPass'].forEach(cerrarOverlay);
+        ['overlayPlan','overlayCobro','overlayConfirm','overlayUsrForm','overlayUsrPerfil','overlayUsrPass','overlayRecordatorio'].forEach(cerrarOverlay);
         cerrarDetalle();
     }
     if ((e.ctrlKey||e.metaKey) && e.key === 'k') {

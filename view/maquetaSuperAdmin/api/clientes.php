@@ -57,6 +57,18 @@ mysqli_query($link,
         CREATED_AT      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
 );
+mysqli_query($link,
+    "CREATE TABLE IF NOT EXISTS recordatorio_plataforma (
+        REC_ID      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        USUARIOS_ID INT UNSIGNED NOT NULL,
+        ENVIAR_EN   DATETIME NOT NULL,
+        DESCRIPCION VARCHAR(200),
+        ENVIADO     TINYINT(1) NOT NULL DEFAULT 0,
+        ENVIADO_EN  DATETIME,
+        CREATED_AT  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_pendientes (ENVIADO, ENVIAR_EN)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+);
 
 // ── AUTO MARCAR VENCIDOS ─────────────────────────────────────────────────────
 if ($action === 'marcar_vencidos') {
@@ -333,6 +345,93 @@ if ($action === 'recordatorio') {
     ]);
     if (!$ok) resp(false, 'Error al enviar. Verificá la configuración SMTP en config/mail.php.');
     resp(true, 'Recordatorio enviado a ' . $u['USUARIOS_EMAIL']);
+}
+
+// ── GUARDAR RECORDATORIO ─────────────────────────────────────────────────────
+if ($action === 'guardar_recordatorio') {
+    $uid      = (int)($_POST['usuarios_id'] ?? 0);
+    $cantidad = max(0, (int)($_POST['cantidad'] ?? 1));
+    $unidad   = in_array($_POST['unidad'] ?? '', ['horas','dias']) ? $_POST['unidad'] : 'dias';
+
+    if (!$uid) resp(false, 'usuarios_id requerido.');
+
+    $sp = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT sp.PROXIMO_COBRO, u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO
+         FROM usuarios u
+         LEFT JOIN suscripcion_plataforma sp ON sp.USUARIOS_ID=u.USUARIOS_ID
+         WHERE u.USUARIOS_ID=$uid LIMIT 1"
+    ));
+    if (!$sp || !$sp['PROXIMO_COBRO']) resp(false, 'El cliente no tiene fecha de próximo cobro. Editá el plan primero.');
+
+    if ($unidad === 'horas') {
+        $base = new DateTime($sp['PROXIMO_COBRO'] . ' 00:00:00');
+        $base->modify("-{$cantidad} hours");
+        $desc = $cantidad === 1 ? '1 hora antes' : "{$cantidad} horas antes";
+    } else {
+        $base = new DateTime($sp['PROXIMO_COBRO'] . ' 09:00:00');
+        $base->modify("-{$cantidad} days");
+        $desc = $cantidad === 0 ? 'El mismo día' : ($cantidad === 1 ? '1 día antes' : "{$cantidad} días antes");
+    }
+    $enviarEn = $base->format('Y-m-d H:i:s');
+    $eDesc    = e($desc);
+
+    $stmt = mysqli_prepare($link,
+        "INSERT INTO recordatorio_plataforma (USUARIOS_ID, ENVIAR_EN, DESCRIPCION) VALUES (?, ?, ?)"
+    );
+    mysqli_stmt_bind_param($stmt, 'iss', $uid, $enviarEn, $eDesc);
+    if (!mysqli_stmt_execute($stmt)) resp(false, 'Error al guardar.');
+    resp(true, 'Recordatorio guardado.', ['rec_id' => mysqli_insert_id($link), 'enviar_en' => $enviarEn]);
+}
+
+// ── LISTAR RECORDATORIOS ─────────────────────────────────────────────────────
+if ($action === 'listar_recordatorios') {
+    $uid = (int)($_GET['usuarios_id'] ?? 0);
+    if (!$uid) resp(false, 'usuarios_id requerido.');
+    $q = mysqli_query($link,
+        "SELECT REC_ID, ENVIAR_EN, DESCRIPCION, ENVIADO
+         FROM recordatorio_plataforma
+         WHERE USUARIOS_ID=$uid ORDER BY ENVIAR_EN ASC LIMIT 20"
+    );
+    $rows = [];
+    while ($r = mysqli_fetch_assoc($q)) $rows[] = $r;
+    resp(true, '', $rows);
+}
+
+// ── ELIMINAR RECORDATORIO ─────────────────────────────────────────────────────
+if ($action === 'eliminar_recordatorio') {
+    $id = (int)($_POST['rec_id'] ?? 0);
+    if (!$id) resp(false, 'rec_id requerido.');
+    $stmt = mysqli_prepare($link, "DELETE FROM recordatorio_plataforma WHERE REC_ID=?");
+    mysqli_stmt_bind_param($stmt, 'i', $id);
+    if (!mysqli_stmt_execute($stmt)) resp(false, 'Error al eliminar.');
+    resp(true, 'Recordatorio eliminado.');
+}
+
+// ── PROCESAR RECORDATORIOS PENDIENTES ─────────────────────────────────────────
+if ($action === 'procesar_recordatorios') {
+    $q = mysqli_query($link,
+        "SELECT r.REC_ID, r.DESCRIPCION,
+                u.USUARIOS_ID, u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO, u.USUARIOS_EMAIL,
+                sp.PLAN_NOMBRE, sp.PLAN_PRECIO, sp.PROXIMO_COBRO
+         FROM recordatorio_plataforma r
+         JOIN usuarios u ON u.USUARIOS_ID=r.USUARIOS_ID
+         LEFT JOIN suscripcion_plataforma sp ON sp.USUARIOS_ID=r.USUARIOS_ID
+         WHERE r.ENVIADO=0 AND r.ENVIAR_EN <= NOW()
+         ORDER BY r.ENVIAR_EN ASC LIMIT 20"
+    );
+    $enviados = 0; $ids = [];
+    require_once __DIR__ . '/../../../config/dist/script/php/mailer.php';
+    while ($r = mysqli_fetch_assoc($q)) {
+        if (enviarRecordatorioDesarrollador($r)) {
+            $ids[] = (int)$r['REC_ID'];
+            $enviados++;
+        }
+    }
+    if ($ids) {
+        $list = implode(',', $ids);
+        mysqli_query($link, "UPDATE recordatorio_plataforma SET ENVIADO=1, ENVIADO_EN=NOW() WHERE REC_ID IN ($list)");
+    }
+    resp(true, '', ['enviados' => $enviados]);
 }
 
 resp(false, 'Acción no reconocida.');
