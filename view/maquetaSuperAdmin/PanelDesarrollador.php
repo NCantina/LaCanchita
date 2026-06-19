@@ -721,7 +721,6 @@ tbody td { padding: 12px 14px; vertical-align: middle; }
                 <option value="4">Empleado</option>
                 <option value="3">Encargado</option>
                 <option value="2">Dueño</option>
-                <option value="1">SuperAdmin</option>
             </select>
         </div>
     </div>
@@ -754,7 +753,6 @@ tbody td { padding: 12px 14px; vertical-align: middle; }
             <option value="4">Empleado</option>
             <option value="3">Encargado</option>
             <option value="2">Dueño</option>
-            <option value="1">SuperAdmin</option>
         </select>
     </div>
     <div class="f-row" id="usrPerfilDuenoRow" style="display:none">

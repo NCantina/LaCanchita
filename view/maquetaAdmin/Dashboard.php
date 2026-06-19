@@ -6096,8 +6096,7 @@ function staffAbrirCrear() {
         perfilSel.innerHTML = `
             <option value="5">Cliente</option>
             <option value="4">Empleado</option>
-            <option value="3" selected>Encargado</option>
-            <option value="1">SuperAdmin</option>`;
+            <option value="3" selected>Encargado</option>`;
     } else {
         perfilSel.innerHTML = `
             <option value="3" selected>Encargado</option>
@@ -6821,7 +6820,6 @@ async function turnoEliminar(id) {
                     <option value="5">Cliente</option>
                     <option value="4">Empleado</option>
                     <option value="3">Encargado</option>
-                    <option value="1">SuperAdmin</option>
                 </select>
             </div>
             <div class="form-row" id="usrPerfilDuenoRowDsh" style="display:none">

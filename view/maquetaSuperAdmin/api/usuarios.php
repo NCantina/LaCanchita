@@ -83,7 +83,7 @@ case 'crear':
     if (!$nombre)  resp(false,'Nombre obligatorio.');
     if (!$apellido) resp(false,'Apellido obligatorio.');
     if (!$email || !filter_var($email,FILTER_VALIDATE_EMAIL)) resp(false,'Email inválido.');
-    if (!in_array($perfilId,[1,2,3,4,5])) resp(false,'Perfil inválido.');
+    if (!in_array($perfilId,[2,3,4,5])) resp(false,'Perfil inválido.');
     if (strlen($pass)<6) resp(false,'La contraseña debe tener al menos 6 caracteres.');
     if (in_array($perfilId,[3,4]) && !$duenoId) resp(false,'El staff requiere un dueño asignado.');
 
@@ -142,7 +142,7 @@ case 'cambiar_perfil':
     $duenoId  = (int)($_POST['dueno_id']??0);
 
     if (!$id || !$perfilId) resp(false,'Datos incompletos.');
-    if (!in_array($perfilId,[1,2,3,4,5])) resp(false,'Perfil inválido.');
+    if (!in_array($perfilId,[2,3,4,5])) resp(false,'Perfil inválido.');
     if ($id===current_uid()) resp(false,'No podés cambiar tu propio perfil.');
     if (in_array($perfilId,[3,4]) && !$duenoId) resp(false,'El staff requiere un dueño asignado.');
 
