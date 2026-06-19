@@ -1041,6 +1041,7 @@ function setTab(tab, btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
     if (btn) btn.classList.add('active');
+    if (tab === 'resumen') cargarResumen();
     if (tab === 'clientes' && !S.clientes.length) cargarClientes();
     if (tab === 'cobros') cargarCobros();
     if (tab === 'usuarios') usrCargar(1);

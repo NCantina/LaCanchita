@@ -27,6 +27,37 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 function resp($ok, $msg, $data = null) { echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 function e($v) { global $link; return mysqli_real_escape_string($link, trim((string)($v??''))); }
 
+// ── CREAR TABLAS SI NO EXISTEN ───────────────────────────────────────────────
+mysqli_query($link,
+    "CREATE TABLE IF NOT EXISTS suscripcion_plataforma (
+        SUSCRIPCION_ID  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        USUARIOS_ID     INT UNSIGNED NOT NULL,
+        PLAN_NOMBRE     VARCHAR(80)  NOT NULL DEFAULT 'Estándar',
+        PLAN_PRECIO     DECIMAL(10,2) NOT NULL DEFAULT 0,
+        PLAN_CICLO      ENUM('mensual','trimestral','anual') NOT NULL DEFAULT 'mensual',
+        PROXIMO_COBRO   DATE,
+        ULTIMO_COBRO    DATE,
+        ESTADO          ENUM('prueba','activo','vencido','cancelado') NOT NULL DEFAULT 'prueba',
+        MEDIO_COBRO     VARCHAR(50)  DEFAULT 'transferencia',
+        NOTAS           TEXT,
+        CREATED_AT      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UPDATED_AT      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_usuario (USUARIOS_ID)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+);
+mysqli_query($link,
+    "CREATE TABLE IF NOT EXISTS cobro_plataforma (
+        COBRO_ID        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        USUARIOS_ID     INT UNSIGNED NOT NULL,
+        COBRO_MONTO     DECIMAL(10,2) NOT NULL,
+        COBRO_FECHA     DATE NOT NULL,
+        COBRO_PERIODO   VARCHAR(7),
+        COBRO_MEDIO     VARCHAR(50),
+        COBRO_NOTAS     TEXT,
+        CREATED_AT      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+);
+
 // ── AUTO MARCAR VENCIDOS ─────────────────────────────────────────────────────
 if ($action === 'marcar_vencidos') {
     mysqli_query($link,
