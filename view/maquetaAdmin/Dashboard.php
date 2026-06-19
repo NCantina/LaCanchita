@@ -9447,6 +9447,199 @@ async function usrPerfilSubmitDsh() {
     toast(j.msg);
     usrDshCargar();
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PLANES
+═══════════════════════════════════════════════════════════════════════ */
+const PLAN_API = 'api/planes.php';
+let planData = [], planFilterVal = 'all', planSearchVal = '';
+
+async function loadPlanes() {
+    document.getElementById('planTbody').innerHTML =
+        `<tr><td colspan="7"><div class="empty-state">
+            <div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div>
+            <p style="color:var(--muted)">Cargando…</p>
+        </div></td></tr>`;
+    const res  = await fetch(`${PLAN_API}?action=listar`);
+    const json = await res.json();
+    if (!json.ok) { toast(json.msg,'err'); return; }
+    planData = json.data || [];
+    renderPlanes();
+}
+
+function renderPlanes() {
+    const s = planSearchVal.toLowerCase();
+    const filtered = planData.filter(r => {
+        const mf = planFilterVal === 'all' || String(r.ACTIVO) === planFilterVal;
+        const ms = !s || r.PLAN_NOMBRE.toLowerCase().includes(s)
+                     || (r.COMPLEJO_NOMBRE||'').toLowerCase().includes(s)
+                     || (r.PLAN_DESCRIPCION||'').toLowerCase().includes(s);
+        return mf && ms;
+    });
+
+    if (!filtered.length) {
+        document.getElementById('planTbody').innerHTML =
+            `<tr><td colspan="7"><div class="empty-state">
+                <div class="es-icon"><i class="fas fa-tags"></i></div>
+                <h4>Sin planes</h4>
+                <p>${planData.length ? 'No hay planes con los filtros actuales.' : 'Creá tu primer plan de suscripción.'}</p>
+                <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="planesAbrirCrear()">
+                    <i class="fas fa-plus"></i> Nuevo plan
+                </button>
+            </div></td></tr>`;
+        return;
+    }
+
+    const fmtARS = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+
+    document.getElementById('planTbody').innerHTML = filtered.map((r,i) => {
+        const activo = parseInt(r.ACTIVO);
+        const creditos = parseInt(r.PLAN_CREDITOS);
+        const creditosTxt = creditos === 0 ? '<span style="color:var(--green)">Ilimitados</span>' : `${creditos} crédito${creditos!==1?'s':''}`;
+        return `<tr style="animation:fadeUp .25s ease ${i*.04}s both">
+            <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,149,0,.12);color:var(--orange);
+                                display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:13px">${escHtml(r.PLAN_NOMBRE)}</div>
+                        <div style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                            ${r.PLAN_DESCRIPCION ? escHtml(r.PLAN_DESCRIPCION) : '—'}
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+                    <i class="fas fa-building" style="color:var(--blue);font-size:11px"></i>
+                    <span style="font-weight:600">${escHtml(r.COMPLEJO_NOMBRE)}</span>
+                </div>
+            </td>
+            <td style="font-weight:800;font-size:14px;color:var(--green)">${fmtARS(r.PLAN_PRECIO)}</td>
+            <td style="font-size:12px">${creditosTxt}</td>
+            <td style="font-size:12px">${r.PLAN_DURACION} día${r.PLAN_DURACION!=1?'s':''}</td>
+            <td><span class="badge ${activo?'active':'inactive'}">${activo?'Activo':'Inactivo'}</span></td>
+            <td>
+                <div class="row-actions">
+                    <button class="act-btn edit" title="Editar" onclick="planesAbrirEditar(${r.PLAN_ID})">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button class="act-btn toggle ${activo?'on':''}" title="${activo?'Desactivar':'Activar'}"
+                        onclick="planToggle(${r.PLAN_ID},this)">
+                        <i class="fas ${activo?'fa-toggle-on':'fa-toggle-off'}"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function planFilter()           { planSearchVal = document.getElementById('planSearch').value; renderPlanes(); }
+function planSetFilter(btn, v)  {
+    document.querySelectorAll('[data-planf]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); planFilterVal = v; renderPlanes();
+}
+
+async function planCargarComplejos(selValor) {
+    const res  = await fetch(`${PLAN_API}?action=mis_complejos`);
+    const json = await res.json();
+    const sel  = document.getElementById('mPlanComplejo');
+    if (!json.ok || !json.data.length) {
+        sel.innerHTML = '<option value="">Sin predios activos</option>';
+        return;
+    }
+    sel.innerHTML = json.data.map(c =>
+        `<option value="${c.COMPLEJO_ID}" ${selValor==c.COMPLEJO_ID?'selected':''}>${escHtml(c.COMPLEJO_NOMBRE)}</option>`
+    ).join('');
+}
+
+async function planesAbrirCrear() {
+    document.getElementById('mPlanId').value      = '';
+    document.getElementById('mPlanNombre').value  = '';
+    document.getElementById('mPlanDesc').value    = '';
+    document.getElementById('mPlanPrecio').value  = '';
+    document.getElementById('mPlanCreditos').value = '0';
+    document.getElementById('mPlanDuracion').value = '30';
+    document.getElementById('mPlanNombreErr').textContent = '';
+    document.getElementById('mPlanErr').textContent = '';
+    document.getElementById('mPlanTitle').textContent = 'Nuevo plan';
+    document.getElementById('mPlanSub').textContent   = 'Completá los datos del plan de suscripción';
+    await planCargarComplejos('');
+    openModal('modalPlan');
+    setTimeout(() => document.getElementById('mPlanNombre').focus(), 80);
+}
+
+async function planesAbrirEditar(id) {
+    const r = planData.find(p => p.PLAN_ID == id);
+    if (!r) return;
+    document.getElementById('mPlanId').value       = r.PLAN_ID;
+    document.getElementById('mPlanNombre').value   = r.PLAN_NOMBRE;
+    document.getElementById('mPlanDesc').value     = r.PLAN_DESCRIPCION || '';
+    document.getElementById('mPlanPrecio').value   = r.PLAN_PRECIO;
+    document.getElementById('mPlanCreditos').value = r.PLAN_CREDITOS;
+    document.getElementById('mPlanDuracion').value = r.PLAN_DURACION;
+    document.getElementById('mPlanNombreErr').textContent = '';
+    document.getElementById('mPlanErr').textContent = '';
+    document.getElementById('mPlanTitle').textContent = 'Editar plan';
+    document.getElementById('mPlanSub').textContent   = escHtml(r.PLAN_NOMBRE);
+    await planCargarComplejos(r.COMPLEJO_ID);
+    openModal('modalPlan');
+    setTimeout(() => document.getElementById('mPlanNombre').focus(), 80);
+}
+
+async function planesGuardar() {
+    const id       = document.getElementById('mPlanId').value;
+    const nombre   = document.getElementById('mPlanNombre').value.trim();
+    const complejo = document.getElementById('mPlanComplejo').value;
+    const precio   = document.getElementById('mPlanPrecio').value;
+    const creditos = document.getElementById('mPlanCreditos').value;
+    const duracion = document.getElementById('mPlanDuracion').value;
+    const desc     = document.getElementById('mPlanDesc').value.trim();
+
+    document.getElementById('mPlanNombreErr').textContent = '';
+    document.getElementById('mPlanErr').textContent = '';
+
+    if (!nombre) { document.getElementById('mPlanNombreErr').textContent = 'El nombre es obligatorio.'; return; }
+    if (!complejo) { document.getElementById('mPlanErr').textContent = 'Seleccioná un predio.'; return; }
+
+    const btn = document.getElementById('mPlanBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Guardando…';
+
+    const fd = new FormData();
+    fd.append('action',      id ? 'editar' : 'crear');
+    if (id) fd.append('id', id);
+    fd.append('complejo_id', complejo);
+    fd.append('nombre',      nombre);
+    fd.append('descripcion', desc);
+    fd.append('precio',      precio || 0);
+    fd.append('creditos',    creditos || 0);
+    fd.append('duracion',    duracion || 30);
+
+    const res  = await fetch(PLAN_API, { method:'POST', body: fd });
+    const json = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = orig;
+
+    if (!json.ok) { document.getElementById('mPlanErr').textContent = json.msg; return; }
+    closeModal('modalPlan');
+    toast(json.msg, 'ok');
+    await loadPlanes();
+}
+
+async function planToggle(id, btn) {
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    const fd = new FormData(); fd.append('action','toggle'); fd.append('id', id);
+    const json = await fetch(PLAN_API,{method:'POST',body:fd}).then(r=>r.json()).catch(()=>null);
+    btn.disabled = false;
+    if (!json?.ok) { toast(json?.msg||'Error','err'); btn.innerHTML=orig; return; }
+    toast(json.msg,'ok');
+    await loadPlanes();
+}
 </script>
 
 </body>
