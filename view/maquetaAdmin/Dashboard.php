@@ -1470,6 +1470,10 @@ if ($perfil >= 2) {
         <div class="sb-item" data-view="pagos" onclick="showView(this)">
             <i class="fas fa-dollar-sign"></i> Cobros
         </div>
+        <div class="sb-section">Plataforma</div>
+        <div class="sb-item" data-view="planes" onclick="showView(this)">
+            <i class="fas fa-tags"></i> Planes
+        </div>
         <div class="sb-section">Personas</div>
         <div class="sb-item" data-view="staff" onclick="showView(this)">
             <i class="fas fa-id-badge"></i> Staff del cliente
@@ -1510,6 +1514,10 @@ if ($perfil >= 2) {
         </div>
         <div class="sb-item" data-view="pagos" onclick="showView(this)">
             <i class="fas fa-dollar-sign"></i> Cobros
+        </div>
+        <div class="sb-section">Plataforma</div>
+        <div class="sb-item" data-view="planes" onclick="showView(this)">
+            <i class="fas fa-tags"></i> Planes
         </div>
         <div class="sb-section">Personas</div>
         <div class="sb-item" data-view="staff" onclick="showView(this)">
@@ -2693,6 +2701,56 @@ if ($perfil >= 2) {
             </div>
         </div><!-- /view-perfil -->
 
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- VIEW: PLANES                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="view" id="view-planes">
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Planes</h1>
+            <p>Creá y gestioná los planes de suscripción para tus clientes</p>
+        </div>
+        <div class="page-header-right">
+            <button class="btn btn-primary" onclick="planesAbrirCrear()">
+                <i class="fas fa-plus"></i> Nuevo plan
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="dt-toolbar">
+            <div class="dt-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="planSearch" placeholder="Buscar plan…" oninput="planFilter()">
+            </div>
+            <div class="dt-filter">
+                <button class="filter-btn active" data-planf="all" onclick="planSetFilter(this,'all')">Todos</button>
+                <button class="filter-btn" data-planf="1"   onclick="planSetFilter(this,'1')">Activos</button>
+                <button class="filter-btn" data-planf="0"   onclick="planSetFilter(this,'0')">Inactivos</button>
+            </div>
+        </div>
+        <div id="planTableWrap">
+            <table>
+                <thead><tr>
+                    <th>Plan</th>
+                    <th>Predio</th>
+                    <th>Precio</th>
+                    <th>Créditos</th>
+                    <th>Vigencia</th>
+                    <th>Estado</th>
+                    <th style="width:80px">Acciones</th>
+                </tr></thead>
+                <tbody id="planTbody">
+                    <tr><td colspan="7"><div class="empty-state">
+                        <div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div>
+                        <p>Cargando…</p>
+                    </div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div><!-- /view-planes -->
+
     </div><!-- /content -->
 </div><!-- /main -->
 
@@ -3236,7 +3294,7 @@ const VIEW_LABELS = {
     reportes:'Reportes',
     agenda:'Agenda', reservas:'Reservas', pagos:'Pagos', usuarios:'Usuarios',
     staff:'Mi Staff', duenos:'Clientes / Dueños', clientes:'Clientes',
-    perfil:'Mi perfil'
+    perfil:'Mi perfil', planes:'Planes'
 };
 const PERFIL = <?= $perfil ?>;
 
@@ -3253,6 +3311,7 @@ function showView(el) {
     if (name === 'reservas')  loadReservas();
     if (name === 'pagos')     loadPagosView();
     if (name === 'catalogos') loadCat(currentCat);
+    if (name === 'planes')    loadPlanes();
     if (window.innerWidth < 768) closeSidebar();
 }
 
@@ -9056,6 +9115,63 @@ function wizVerCliente() {
   </div>
 </div>
 <!-- /WIZARD -->
+
+<!-- ───────────────────────────────────────────────────────────────────── -->
+<!-- MODAL PLAN                                                             -->
+<!-- ───────────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalPlan">
+    <div class="modal" style="max-width:520px">
+        <div class="modal-head">
+            <div class="modal-head-icon b" style="background:rgba(255,149,0,.15);color:var(--orange)">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div>
+                <h3 id="mPlanTitle">Nuevo plan</h3>
+                <p id="mPlanSub">Completá los datos del plan de suscripción</p>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalPlan')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="mPlanId">
+            <div class="form-row">
+                <label class="form-label">Predio <span style="color:var(--red)">*</span></label>
+                <select class="form-select" id="mPlanComplejo">
+                    <option value="">Cargando predios…</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label class="form-label">Nombre del plan <span style="color:var(--red)">*</span></label>
+                <input type="text" class="form-input" id="mPlanNombre" placeholder="Ej: Plan Mensual, Abono Familiar…" maxlength="100">
+                <div class="form-error" id="mPlanNombreErr"></div>
+            </div>
+            <div class="form-row">
+                <label class="form-label">Descripción</label>
+                <textarea class="form-input" id="mPlanDesc" placeholder="Beneficios incluidos, condiciones…" rows="2" style="resize:vertical"></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Precio <span style="color:var(--red)">*</span></label>
+                    <input type="number" class="form-input" id="mPlanPrecio" placeholder="0" min="0" step="0.01">
+                </div>
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Créditos <span style="font-size:.7rem;color:var(--muted)">(0=∞)</span></label>
+                    <input type="number" class="form-input" id="mPlanCreditos" placeholder="0" min="0" step="1" value="0">
+                </div>
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Vigencia (días)</label>
+                    <input type="number" class="form-input" id="mPlanDuracion" placeholder="30" min="1" step="1" value="30">
+                </div>
+            </div>
+            <div id="mPlanErr" class="form-error" style="margin-top:10px"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalPlan')">Cancelar</button>
+            <button class="btn btn-primary" id="mPlanBtn" onclick="planesGuardar()">
+                <i class="fas fa-check"></i> Guardar plan
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- NOTIFICACIÓN RESERVAS PENDIENTES -->
 <div id="notif-pendientes" style="display:none;position:fixed;bottom:24px;right:24px;z-index:9999;
