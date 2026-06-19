@@ -1419,8 +1419,8 @@ if ($perfil >= 2) {
             <i class="fas fa-chart-bar"></i> Reportes
         </div>
         <div class="sb-section">Personas</div>
-        <div class="sb-item" data-view="staff" onclick="showView(this)">
-            <i class="fas fa-id-badge"></i> Usuarios
+        <div class="sb-item" data-view="usuarios" onclick="showView(this)">
+            <i class="fas fa-users"></i> Usuarios
             <?php if($kpi['usuarios_pend'] > 0): ?>
             <span class="sb-pill"><?= $kpi['usuarios_pend'] ?></span>
             <?php endif; ?>
@@ -6038,7 +6038,8 @@ function renderStaff(data) {
             <td>${estado}</td>
             <td>
                 <div class="row-actions">
-                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="staffAbrirEditar(${u.USUARIOS_ID})" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="staffAbrirEditar(${u.USUARIOS_ID})" title="Editar datos"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrPassAbrirDsh(${u.USUARIOS_ID},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}')" title="Resetear contraseña"><i class="fas fa-key"></i></button>
                     ${[3,4].includes(pid) ? `<button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="abrirAsignarCanchas(${u.USUARIOS_ID})" title="Asignar canchas"><i class="fas fa-futbol"></i></button>` : ''}
                     <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" id="stoggle-${u.USUARIOS_ID}" onclick="staffToggle(${u.USUARIOS_ID}, this)" title="${u.ACTIVO==1?'Desactivar':'Activar'}">
                         <i class="fas ${u.ACTIVO==1?'fa-toggle-on':'fa-toggle-off'}"></i>
