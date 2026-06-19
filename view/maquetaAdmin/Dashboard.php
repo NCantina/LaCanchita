@@ -6090,14 +6090,13 @@ function staffAbrirCrear() {
     document.getElementById('mStaffEmail').value   = '';
     document.getElementById('mStaffPass').value    = '';
 
-    // SA ve todos los perfiles, dueño solo encargado/empleado
+    // SA ve todos los perfiles excepto Dueño (solo desde Dev Panel), dueño solo encargado/empleado
     const perfilSel = document.getElementById('mStaffPerfil');
     if (PERFIL === 1) {
         perfilSel.innerHTML = `
             <option value="5">Cliente</option>
             <option value="4">Empleado</option>
             <option value="3" selected>Encargado</option>
-            <option value="2">Dueño</option>
             <option value="1">SuperAdmin</option>`;
     } else {
         perfilSel.innerHTML = `
@@ -6822,7 +6821,6 @@ async function turnoEliminar(id) {
                     <option value="5">Cliente</option>
                     <option value="4">Empleado</option>
                     <option value="3">Encargado</option>
-                    <option value="2">Dueño</option>
                     <option value="1">SuperAdmin</option>
                 </select>
             </div>
@@ -9303,6 +9301,10 @@ async function usrPassSubmitDsh() {
 
 // ── Cambiar perfil ────────────────────────────────────────────────────────
 async function usrPerfilAbrirDsh(id, nombre, perfilActual) {
+    if (perfilActual === 2) {
+        toast('El perfil Dueño solo puede modificarse desde el Panel Desarrollador.', 'err');
+        return;
+    }
     document.getElementById('usrPerfilIdDsh').value         = id;
     document.getElementById('usrPerfilSubDsh').textContent  = nombre;
     document.getElementById('usrPerfilSelDsh').value        = perfilActual;

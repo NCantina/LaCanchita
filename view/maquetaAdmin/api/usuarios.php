@@ -79,8 +79,8 @@ case 'crear_staff':
     if (!$apellido) resp(false,'Apellido obligatorio.');
     if (!$dni)      resp(false,'DNI obligatorio.');
     if (!$email || !filter_var($_POST['email']??'',FILTER_VALIDATE_EMAIL)) resp(false,'Email inválido.');
-    $perfilesPermitidos = is_superadmin() ? [1,2,3,4,5] : [3,4];
-    if (!in_array($perfilId,$perfilesPermitidos)) resp(false,'Perfil inválido.');
+    $perfilesPermitidos = is_superadmin() ? [1,3,4,5] : [3,4]; // perfil 2 (Dueño) solo desde Dev Panel
+    if (!in_array($perfilId,$perfilesPermitidos)) resp(false,'El perfil Dueño solo puede asignarse desde el Panel Desarrollador.');
     if (strlen($pass)<6) resp(false,'La contraseña debe tener al menos 6 caracteres.');
 
     // DUENO_ID: requerido solo para staff (3,4)
@@ -414,11 +414,13 @@ case 'cambiar_perfil':
     $perfilId = (int)($_POST['perfil_id']??0);
     $duenoId  = (int)($_POST['dueno_id']??0);
     if (!$id || !$perfilId) resp(false,'Datos incompletos.');
-    if (!in_array($perfilId,[1,2,3,4,5])) resp(false,'Perfil inválido.');
+    if ($perfilId === 2) resp(false,'El perfil Dueño solo puede asignarse desde el Panel Desarrollador.');
+    if (!in_array($perfilId,[1,3,4,5])) resp(false,'Perfil inválido.');
     if ($id===current_uid()) resp(false,'No podés cambiar tu propio perfil.');
     if (in_array($perfilId,[3,4]) && !$duenoId) resp(false,'El staff requiere un dueño asignado.');
-    if (!mysqli_fetch_assoc(mysqli_query($link,"SELECT USUARIOS_ID FROM usuarios WHERE USUARIOS_ID=$id")))
-        resp(false,'Usuario no encontrado.');
+    $u = mysqli_fetch_assoc(mysqli_query($link,"SELECT PERFIL_ID FROM usuarios WHERE USUARIOS_ID=$id"));
+    if (!$u) resp(false,'Usuario no encontrado.');
+    if ((int)$u['PERFIL_ID'] === 2) resp(false,'El perfil Dueño solo puede modificarse desde el Panel Desarrollador.');
     $duenoSQ = in_array($perfilId,[3,4]) ? (int)$duenoId : 'NULL';
     mysqli_query($link,"UPDATE usuarios SET PERFIL_ID=$perfilId,DUENO_ID=$duenoSQ WHERE USUARIOS_ID=$id");
     resp(true,'Perfil actualizado.');
