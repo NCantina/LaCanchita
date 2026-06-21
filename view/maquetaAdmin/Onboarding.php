@@ -109,15 +109,62 @@ $PWA_BASE = '../../';
   .pill:hover { border-color: rgba(76,217,100,.4); color: var(--txt); }
   .pill.selected { border-color: var(--green); background: rgba(76,217,100,.12); color: var(--green); font-weight: 600; }
 
-  /* ── Días de la semana ── */
-  .dias-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-  .dia-btn {
-    padding: 8px 0; border-radius: 8px; border: 1px solid var(--bdr);
-    background: var(--card2); color: var(--muted); font-size: 11px; font-weight: 600;
-    cursor: pointer; text-align: center; transition: all .15s; user-select: none;
+  /* ── Días de la semana (colored) ── */
+  .ob-dias-wrap { display: flex; gap: 7px; flex-wrap: wrap; }
+  .ob-dia-btn {
+    width: 38px; height: 38px; border-radius: 9px; border: 1px solid var(--bdr);
+    background: var(--card2); color: var(--muted); font-size: 10px; font-weight: 800;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .15s; user-select: none;
   }
-  .dia-btn:hover    { border-color: rgba(76,217,100,.4); color: var(--txt); }
-  .dia-btn.selected { border-color: var(--green); background: rgba(76,217,100,.12); color: var(--green); }
+
+  /* ── Mode tabs ── */
+  .ob-mode-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+  .ob-mode-tab {
+    flex: 1; padding: 10px 8px; border-radius: 10px; border: 1px solid var(--bdr);
+    background: var(--card2); color: var(--muted); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .15s; display: flex; align-items: center;
+    justify-content: center; gap: 6px;
+  }
+  .ob-mode-tab.active { border-color: var(--green); background: rgba(76,217,100,.1); color: var(--green); }
+
+  /* ── Slot rows ── */
+  .ob-slot-row { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .ob-slot-arrow { color: var(--muted); font-size: 14px; text-align: center; }
+  .ob-slot-rm { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--bdr); background: none; color: var(--muted); cursor: pointer; font-size: 12px; transition: all .15s; }
+  .ob-slot-rm:hover { border-color: rgba(231,76,60,.4); color: #e74c3c; }
+  .ob-add-slot-btn {
+    background: none; border: 1px dashed var(--bdr); color: var(--muted); border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; cursor: pointer; width: 100%; transition: all .15s; margin-top: 4px;
+  }
+  .ob-add-slot-btn:hover { border-color: rgba(76,217,100,.4); color: var(--green); }
+
+  /* ── Preview box ── */
+  .ob-preview {
+    background: rgba(76,217,100,.06); border: 1px solid rgba(76,217,100,.2);
+    border-radius: 10px; padding: 12px 14px; margin: 12px 0;
+  }
+  .ob-preview-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--green); margin-bottom: 8px; }
+
+  /* ── Franja cards (added list) ── */
+  .ob-franja-card {
+    background: var(--card2); border: 1px solid var(--bdr); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+    animation: fadeUp .2s ease;
+  }
+  .ob-franja-hora { text-align: center; min-width: 72px; flex-shrink: 0; }
+  .ob-franja-hora .hora-ini { font-size: 18px; font-weight: 800; line-height: 1; }
+  .ob-franja-hora .hora-arrow { font-size: 10px; color: var(--muted); margin: 2px 0; }
+  .ob-franja-hora .hora-fin { font-size: 16px; font-weight: 600; color: var(--muted); line-height: 1; }
+  .ob-franja-body { flex: 1; min-width: 0; }
+  .ob-franja-dias { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+  .ob-franja-precio { font-size: 17px; font-weight: 800; color: var(--green); }
+  .ob-franja-del { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--bdr); background: none; color: var(--muted); cursor: pointer; font-size: 12px; flex-shrink: 0; transition: all .15s; }
+  .ob-franja-del:hover { border-color: rgba(231,76,60,.4); color: #e74c3c; }
+
+  /* ── Franjas section header ── */
+  .ob-franjas-header { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .ob-franjas-header::after { content: ''; flex: 1; height: 1px; background: var(--bdr); }
 
   /* ── Buttons ── */
   .btn-primary {
@@ -166,14 +213,8 @@ $PWA_BASE = '../../';
   .done-link strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
   .done-link a { color: var(--green); text-decoration: none; }
 
-  /* ── Add more / list ── */
+  /* ── Add more / list (legacy, kept for other steps) ── */
   .added-list { margin-top: 12px; }
-  .added-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 12px; background: var(--card2); border-radius: 8px;
-    font-size: 13px; margin-bottom: 6px; color: var(--muted);
-  }
-  .added-item i { color: var(--green); }
 
   .divider { border: none; border-top: 1px solid var(--bdr); margin: 20px 0; }
 
@@ -285,45 +326,106 @@ $PWA_BASE = '../../';
 
 <!-- STEP 3: Horarios -->
 <div class="ob-card" id="step3" style="display:none">
-  <div class="ob-title">Configurá el primer horario</div>
-  <div class="ob-sub">Definí los días y horarios en que esta cancha está disponible para reservar.</div>
+  <div class="ob-title">Configurá los horarios</div>
+  <div class="ob-sub">Definí cuándo está disponible la cancha. Podés agregar múltiples franjas o generarlas automáticamente.</div>
   <div class="err-msg" id="err3"></div>
 
-  <div class="field">
-    <label>Días disponibles *</label>
-    <div class="dias-grid" id="dias-grid">
-      <div class="dia-btn selected" data-dia="1">Lun</div>
-      <div class="dia-btn selected" data-dia="2">Mar</div>
-      <div class="dia-btn selected" data-dia="3">Mié</div>
-      <div class="dia-btn selected" data-dia="4">Jue</div>
-      <div class="dia-btn selected" data-dia="5">Vie</div>
-      <div class="dia-btn" data-dia="6">Sáb</div>
-      <div class="dia-btn" data-dia="7">Dom</div>
-    </div>
+  <!-- Tabs de modo -->
+  <div class="ob-mode-tabs">
+    <button class="ob-mode-tab active" id="obTabManual" onclick="obSetMode('manual')">
+      <i class="fas fa-clock"></i> Franja individual
+    </button>
+    <button class="ob-mode-tab" id="obTabGenerar" onclick="obSetMode('generar')">
+      <i class="fas fa-magic"></i> Generar toda la semana
+    </button>
   </div>
 
-  <div class="field-row">
-    <div class="field" style="margin:0">
-      <label>Hora inicio *</label>
-      <input id="h-ini" type="time" value="08:00">
+  <!-- ─── Panel: franja individual ─── -->
+  <div id="obPanelManual">
+    <div class="field">
+      <label>Días disponibles *</label>
+      <div class="ob-dias-wrap" id="obDiasGrid"></div>
     </div>
-    <div class="field" style="margin:0">
-      <label>Hora fin *</label>
-      <input id="h-fin" type="time" value="09:00">
+
+    <div class="field">
+      <label>Horarios *</label>
+      <div id="obSlotsList"></div>
+      <button type="button" class="ob-add-slot-btn" onclick="obAddSlot()">
+        <i class="fas fa-plus"></i> Agregar otro horario
+      </button>
     </div>
+
+    <div class="field">
+      <label>Precio por turno ($) *</label>
+      <input id="ob-precio" type="number" min="0" step="100" placeholder="Ej: 5000"
+        oninput="obActualizarPreview()">
+    </div>
+
+    <div id="obPreviewManual" class="ob-preview" style="display:none">
+      <div class="ob-preview-label">Vista previa</div>
+      <div id="obPreviewHoras" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
+      <div id="obPreviewDias" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
+      <div id="obPreviewPrecio"></div>
+    </div>
+
+    <button class="btn-primary" id="btn-add-franja" onclick="obGuardarFranja(this)">
+      Agregar franja
+    </button>
   </div>
 
-  <div class="field">
-    <label>Precio por turno ($) *</label>
-    <input id="h-precio" type="number" min="0" step="100" placeholder="Ej: 5000">
+  <!-- ─── Panel: generador semanal ─── -->
+  <div id="obPanelGenerar" style="display:none">
+    <div class="field">
+      <label>Días disponibles *</label>
+      <div class="ob-dias-wrap" id="obGenDiasGrid"></div>
+    </div>
+
+    <div class="field-row">
+      <div class="field" style="margin:0">
+        <label>Apertura *</label>
+        <input id="obGenApertura" type="time" value="08:00" style="color-scheme:dark" oninput="obGenActualizarPreview()">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Cierre *</label>
+        <input id="obGenCierre" type="time" value="22:00" style="color-scheme:dark" oninput="obGenActualizarPreview()">
+      </div>
+    </div>
+
+    <div class="field-row" style="margin-top:12px">
+      <div class="field" style="margin:0">
+        <label>Duración turno *</label>
+        <select id="obGenDuracion" onchange="obGenActualizarPreview()">
+          <option value="30">30 min</option>
+          <option value="60" selected>60 min (1 hora)</option>
+          <option value="90">90 min</option>
+          <option value="120">120 min (2 hs)</option>
+        </select>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Precio por turno ($) *</label>
+        <input id="obGenPrecio" type="number" min="0" step="100" placeholder="Ej: 5000"
+          oninput="obGenActualizarPreview()">
+      </div>
+    </div>
+
+    <div id="obGenPreview" class="ob-preview" style="display:none">
+      <div class="ob-preview-label">Se crearán <strong id="obGenCount">0</strong> franjas horarias</div>
+      <div id="obGenSlots" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+    </div>
+
+    <button class="btn-primary" id="btn-gen-franjas" onclick="obGenerarSemana(this)">
+      <i class="fas fa-magic"></i> Generar franjas
+    </button>
   </div>
 
-  <!-- Lista de franjas agregadas en este paso -->
-  <div class="added-list" id="franjas-list"></div>
+  <!-- Franjas creadas -->
+  <div id="ob-franjas-list"></div>
 
-  <button class="btn-primary" id="btn-add-franja" onclick="guardarFranja(this)">Agregar franja</button>
-  <button class="btn-primary" id="btn-finish" onclick="finalizarOnboarding()" style="display:none;background:var(--card2);border:1px solid var(--green);color:var(--green)">Ir al panel →</button>
-  <button class="btn-back" onclick="goStep(2)">← Volver</button>
+  <button class="btn-primary" id="btn-finish" onclick="finalizarOnboarding()"
+    style="display:none;background:var(--card2);border:1px solid var(--green);color:var(--green);margin-top:16px">
+    <i class="fas fa-arrow-right"></i> Ir al panel →
+  </button>
+  <button class="btn-back" onclick="goStep(2)" style="margin-top:8px">← Volver</button>
   <button class="skip-link" onclick="skipOnboarding()">Configurar después</button>
 </div>
 
@@ -469,15 +571,107 @@ function selTipo(el) {
   document.getElementById('c-tipo').value = el.dataset.id;
 }
 
-// ── Días ─────────────────────────────────────────────────────────────────────
-document.addEventListener('click', function(e) {
-  if (e.target.classList.contains('dia-btn')) {
-    e.target.classList.toggle('selected');
-  }
-});
+// ── Constantes de días (igual que Dashboard) ─────────────────────────────────
+const OB_DIAS_COLOR = {1:'#3498db',2:'#2ecc71',3:'#9b59b6',4:'#e67e22',5:'#e74c3c',6:'#f39c12',7:'#1abc9c'};
+const OB_DIAS_CORTO = {1:'Lun',2:'Mar',3:'Mié',4:'Jue',5:'Vie',6:'Sáb',7:'Dom'};
 
-function getDiasSeleccionados() {
-  return Array.from(document.querySelectorAll('.dia-btn.selected')).map(b => parseInt(b.dataset.dia));
+// ── Estado step 3 ─────────────────────────────────────────────────────────────
+let obMode        = 'manual';
+let obDiasActivos = new Set([1,2,3,4,5]);
+let obSlots       = [{ ini: '08:00', fin: '09:00' }];
+let obGenDiasActivos = new Set([1,2,3,4,5]);
+let obFranjasCreadas = []; // [{id, ini, fin, dias, precio}]
+
+function obHexToRgb(hex) {
+  const m = hex.replace('#','').match(/.{2}/g);
+  return m ? m.map(x=>parseInt(x,16)).join(',') : '255,255,255';
+}
+
+// ── Tabs de modo ─────────────────────────────────────────────────────────────
+function obSetMode(mode) {
+  obMode = mode;
+  document.getElementById('obTabManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('obTabGenerar').classList.toggle('active', mode === 'generar');
+  document.getElementById('obPanelManual').style.display  = mode === 'manual'  ? '' : 'none';
+  document.getElementById('obPanelGenerar').style.display = mode === 'generar' ? '' : 'none';
+}
+
+// ── Selector de días (manual) ─────────────────────────────────────────────────
+function obRenderDias() {
+  const wrap = document.getElementById('obDiasGrid');
+  wrap.innerHTML = [1,2,3,4,5,6,7].map(d => {
+    const sel = obDiasActivos.has(d);
+    const color = OB_DIAS_COLOR[d];
+    return `<div onclick="obToggleDia(${d})" style="
+        width:40px;height:40px;border-radius:9px;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;
+        border:1px solid ${sel ? color : 'var(--bdr)'};
+        background:${sel ? `rgba(${obHexToRgb(color)},.15)` : 'var(--card2)'};
+        transition:all .15s;user-select:none">
+      <span style="font-size:10px;font-weight:800;color:${sel ? color : 'var(--muted)'}">${OB_DIAS_CORTO[d]}</span>
+    </div>`;
+  }).join('');
+  obActualizarPreview();
+}
+
+function obToggleDia(d) {
+  obDiasActivos.has(d) ? obDiasActivos.delete(d) : obDiasActivos.add(d);
+  obRenderDias();
+}
+
+// ── Slots de horario ──────────────────────────────────────────────────────────
+function obRenderSlots() {
+  document.getElementById('obSlotsList').innerHTML = obSlots.map((s, i) => `
+    <div class="ob-slot-row">
+      <input type="time" class="field input" value="${s.ini}" style="color-scheme:dark;padding:10px 12px;background:var(--card2);border:1px solid var(--bdr);border-radius:9px;color:var(--txt);font-size:14px;outline:none;width:100%"
+        oninput="obSlots[${i}].ini=this.value;obActualizarPreview()">
+      <span class="ob-slot-arrow">→</span>
+      <input type="time" class="field input" value="${s.fin}" style="color-scheme:dark;padding:10px 12px;background:var(--card2);border:1px solid var(--bdr);border-radius:9px;color:var(--txt);font-size:14px;outline:none;width:100%"
+        oninput="obSlots[${i}].fin=this.value;obActualizarPreview()">
+      ${obSlots.length > 1
+        ? `<button class="ob-slot-rm" onclick="obRemoveSlot(${i})"><i class="fas fa-times"></i></button>`
+        : `<div style="width:30px"></div>`}
+    </div>`
+  ).join('');
+  const addBtn = document.getElementById('obAddSlotBtn');
+  if (addBtn) addBtn.style.display = '';
+  obActualizarPreview();
+}
+
+function obAddSlot() {
+  const last = obSlots[obSlots.length - 1];
+  obSlots.push({ ini: last?.fin || '', fin: '' });
+  obRenderSlots();
+}
+
+function obRemoveSlot(i) {
+  if (obSlots.length <= 1) return;
+  obSlots.splice(i, 1);
+  obRenderSlots();
+}
+
+// ── Preview en tiempo real ────────────────────────────────────────────────────
+function obActualizarPreview() {
+  const valid  = obSlots.filter(s => s.ini && s.fin && s.fin > s.ini);
+  const precio = parseFloat(document.getElementById('ob-precio')?.value) || 0;
+  const prev   = document.getElementById('obPreviewManual');
+  if (!valid.length || !precio || !obDiasActivos.size) { prev.style.display='none'; return; }
+  prev.style.display = 'block';
+
+  document.getElementById('obPreviewHoras').innerHTML = valid.map(s =>
+    `<span style="padding:3px 10px;border-radius:7px;font-size:13px;font-weight:700;
+      background:rgba(52,152,219,.12);color:#3498db">${s.ini} → ${s.fin}</span>`
+  ).join('');
+
+  document.getElementById('obPreviewDias').innerHTML = [...obDiasActivos].sort().map(d =>
+    `<span style="padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;
+      background:rgba(${obHexToRgb(OB_DIAS_COLOR[d])},.15);color:${OB_DIAS_COLOR[d]}">
+      ${OB_DIAS_CORTO[d]}</span>`
+  ).join('');
+
+  document.getElementById('obPreviewPrecio').innerHTML =
+    `<span style="font-size:20px;font-weight:800;color:var(--green)">$${precio.toLocaleString('es-AR')}</span>
+     <span style="font-size:11px;color:var(--muted);margin-left:6px">/ turno</span>`;
 }
 
 // ── STEP 1: Guardar predio ────────────────────────────────────────────────────
@@ -524,49 +718,187 @@ async function guardarCancha(btn) {
   if (!j.ok) return showErr('err2', j.msg || 'Error al guardar la cancha.');
   S.canchaId = j.data?.id;
   goStep(3);
+  initStep3();
 }
 
-// ── STEP 3: Agregar franja ────────────────────────────────────────────────────
-async function guardarFranja(btn) {
-  const ini    = document.getElementById('h-ini').value;
-  const fin    = document.getElementById('h-fin').value;
-  const precio = parseFloat(document.getElementById('h-precio').value);
-  const dias   = getDiasSeleccionados();
+// ── STEP 3: Agregar franja individual ────────────────────────────────────────
+async function obGuardarFranja(btn) {
+  const valid  = obSlots.filter(s => s.ini && s.fin && s.fin > s.ini);
+  const precio = parseFloat(document.getElementById('ob-precio').value);
+  const dias   = [...obDiasActivos].sort();
 
-  if (!ini || !fin)    return showErr('err3', 'Ingresá hora de inicio y fin.');
-  if (fin <= ini)      return showErr('err3', 'La hora de fin debe ser mayor al inicio.');
-  if (!precio || precio <= 0) return showErr('err3', 'Ingresá un precio válido.');
-  if (!dias.length)    return showErr('err3', 'Seleccioná al menos un día.');
+  if (!valid.length)       return showErr('err3', 'Ingresá al menos un horario válido (inicio < fin).');
+  if (!precio || precio <= 0) return showErr('err3', 'Ingresá un precio válido mayor a 0.');
+  if (!dias.length)        return showErr('err3', 'Seleccioná al menos un día.');
 
   setLoading(btn, true);
-  const j = await apiFetch(API_HOR, {
-    action:      'crear',
-    cancha_id:   S.canchaId,
-    hora_inicio: ini,
-    hora_fin:    fin,
-    precio,
-    sena:        0,
-    dias:        JSON.stringify(dias),
-  });
+  let creadas = 0;
+  for (const slot of valid) {
+    const j = await apiFetch(API_HOR, {
+      action: 'crear', cancha_id: S.canchaId,
+      hora_inicio: slot.ini, hora_fin: slot.fin,
+      precio, sena: 0, dias: JSON.stringify(dias),
+    });
+    if (j.ok) {
+      obFranjasCreadas.push({ id: j.data?.id, ini: slot.ini, fin: slot.fin, dias, precio });
+      creadas++;
+    }
+  }
   setLoading(btn, false);
 
-  if (!j.ok) return showErr('err3', j.msg || 'Error al guardar el horario.');
+  if (!creadas) return showErr('err3', 'No se pudo guardar el horario. Intentá nuevamente.');
 
-  // Mostrar franja agregada
-  S.franjasCreadas++;
-  const diasNom = ['','Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-  const diasStr = dias.map(d => diasNom[d]).join(', ');
-  document.getElementById('franjas-list').innerHTML +=
-    `<div class="added-item"><i class="fas fa-check-circle"></i> ${ini}–${fin} · ${diasStr} · $${precio.toLocaleString('es-AR')}</div>`;
+  obRenderFranjasList();
 
-  // Limpiar para agregar otra
-  document.getElementById('h-ini').value   = fin; // siguiente empieza donde terminó
-  document.getElementById('h-fin').value   = '';
-  document.getElementById('h-precio').value = '';
-
-  // Mostrar botón "Ir al panel"
+  // Preparar para próxima franja: última hora fin como nueva inicio
+  const lastFin = valid[valid.length-1].fin;
+  obSlots = [{ ini: lastFin, fin: '' }];
+  document.getElementById('ob-precio').value = '';
+  obRenderSlots();
+  document.getElementById('obPreviewManual').style.display = 'none';
   document.getElementById('btn-finish').style.display = '';
-  btn.textContent = '+ Agregar otro horario';
+}
+
+// ── Generador de semana completa ──────────────────────────────────────────────
+function obGenRenderDias() {
+  const wrap = document.getElementById('obGenDiasGrid');
+  wrap.innerHTML = [1,2,3,4,5,6,7].map(d => {
+    const sel = obGenDiasActivos.has(d);
+    const color = OB_DIAS_COLOR[d];
+    return `<div onclick="obGenToggleDia(${d})" style="
+        width:40px;height:40px;border-radius:9px;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;
+        border:1px solid ${sel ? color : 'var(--bdr)'};
+        background:${sel ? `rgba(${obHexToRgb(color)},.15)` : 'var(--card2)'};
+        transition:all .15s;user-select:none">
+      <span style="font-size:10px;font-weight:800;color:${sel ? color : 'var(--muted)'}">${OB_DIAS_CORTO[d]}</span>
+    </div>`;
+  }).join('');
+  obGenActualizarPreview();
+}
+
+function obGenToggleDia(d) {
+  obGenDiasActivos.has(d) ? obGenDiasActivos.delete(d) : obGenDiasActivos.add(d);
+  obGenRenderDias();
+}
+
+function obGenCalcularSlots() {
+  const ap = document.getElementById('obGenApertura').value;
+  const ci = document.getElementById('obGenCierre').value;
+  const dur = parseInt(document.getElementById('obGenDuracion').value) || 60;
+  if (!ap || !ci) return [];
+  const [h1,m1] = ap.split(':').map(Number);
+  const [h2,m2] = ci.split(':').map(Number);
+  const start = h1*60+m1, end = h2*60+m2;
+  if (end <= start) return [];
+  const slots = [], pad = n => String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+  for (let t = start; t+dur <= end; t += dur) slots.push({ ini: pad(t), fin: pad(t+dur) });
+  return slots;
+}
+
+function obGenActualizarPreview() {
+  const slots  = obGenCalcularSlots();
+  const precio = parseFloat(document.getElementById('obGenPrecio').value) || 0;
+  const prev   = document.getElementById('obGenPreview');
+  if (!slots.length || !obGenDiasActivos.size) { prev.style.display='none'; return; }
+  prev.style.display = 'block';
+  document.getElementById('obGenCount').textContent = slots.length;
+  document.getElementById('obGenSlots').innerHTML = slots.map(s =>
+    `<span style="padding:4px 10px;border-radius:7px;font-size:11px;font-weight:700;
+      background:rgba(76,217,100,.08);border:1px solid rgba(76,217,100,.2);color:var(--green)">
+      ${s.ini}–${s.fin}${precio ? ` <span style="color:var(--muted);font-weight:400;font-size:10px">$${precio.toLocaleString('es-AR')}</span>` : ''}
+    </span>`
+  ).join('');
+}
+
+async function obGenerarSemana(btn) {
+  const slots  = obGenCalcularSlots();
+  const precio = parseFloat(document.getElementById('obGenPrecio').value) || 0;
+  const dias   = [...obGenDiasActivos].sort();
+
+  if (!dias.length)   return showErr('err3', 'Seleccioná al menos un día.');
+  if (!slots.length)  return showErr('err3', 'El rango de apertura/cierre no genera franjas. Verificá los horarios.');
+  if (precio <= 0)    return showErr('err3', 'Ingresá un precio válido mayor a 0.');
+
+  setLoading(btn, true);
+  let creadas = 0;
+  for (const slot of slots) {
+    const j = await apiFetch(API_HOR, {
+      action: 'crear', cancha_id: S.canchaId,
+      hora_inicio: slot.ini, hora_fin: slot.fin,
+      precio, sena: 0, dias: JSON.stringify(dias),
+    });
+    if (j.ok) {
+      obFranjasCreadas.push({ id: j.data?.id, ini: slot.ini, fin: slot.fin, dias, precio });
+      creadas++;
+    }
+  }
+  setLoading(btn, false);
+
+  if (!creadas) return showErr('err3', 'No se pudieron crear las franjas. Intentá nuevamente.');
+
+  obRenderFranjasList();
+  document.getElementById('obGenPreview').style.display = 'none';
+  document.getElementById('btn-finish').style.display = '';
+  // Volver al tab manual para posibles ajustes
+  obSetMode('manual');
+}
+
+// ── Render lista de franjas creadas ──────────────────────────────────────────
+function obRenderFranjasList() {
+  const list = document.getElementById('ob-franjas-list');
+  if (!obFranjasCreadas.length) { list.innerHTML = ''; return; }
+
+  list.innerHTML = `<div class="ob-franjas-header"><i class="fas fa-check-circle" style="color:var(--green)"></i> Franjas configuradas (${obFranjasCreadas.length})</div>` +
+    obFranjasCreadas.map((f, i) => {
+      const diasHtml = (f.dias||[]).map(d => {
+        const color = OB_DIAS_COLOR[d] || '#3498db';
+        return `<span style="padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700;
+          background:rgba(${obHexToRgb(color)},.15);color:${color}">${OB_DIAS_CORTO[d]||'?'}</span>`;
+      }).join('');
+      return `<div class="ob-franja-card">
+        <div class="ob-franja-hora">
+          <div class="hora-ini">${f.ini}</div>
+          <div class="hora-arrow">↓</div>
+          <div class="hora-fin">${f.fin}</div>
+        </div>
+        <div class="ob-franja-body">
+          <div class="ob-franja-dias">${diasHtml}</div>
+          <div class="ob-franja-precio">$${Number(f.precio).toLocaleString('es-AR')}</div>
+        </div>
+        <button class="ob-franja-del" title="Eliminar" onclick="obEliminarFranja(${i})">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>`;
+    }).join('');
+}
+
+async function obEliminarFranja(i) {
+  const f = obFranjasCreadas[i];
+  if (!f) return;
+  if (f.id) {
+    await apiFetch(API_HOR, { action: 'eliminar', franja_id: f.id });
+  }
+  obFranjasCreadas.splice(i, 1);
+  obRenderFranjasList();
+  if (!obFranjasCreadas.length) document.getElementById('btn-finish').style.display = 'none';
+}
+
+// ── Init step 3 (llamado al entrar al paso) ───────────────────────────────────
+function initStep3() {
+  obFranjasCreadas = [];
+  obDiasActivos    = new Set([1,2,3,4,5]);
+  obGenDiasActivos = new Set([1,2,3,4,5]);
+  obSlots          = [{ ini: '08:00', fin: '09:00' }];
+  obMode           = 'manual';
+  obSetMode('manual');
+  obRenderDias();
+  obRenderSlots();
+  obGenRenderDias();
+  obGenActualizarPreview();
+  obRenderFranjasList();
+  document.getElementById('btn-finish').style.display = 'none';
+  document.getElementById('err3').classList.remove('show');
 }
 
 async function finalizarOnboarding() {
