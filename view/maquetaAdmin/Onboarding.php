@@ -359,6 +359,11 @@ $PWA_BASE = '../../';
       <label>Precio por turno ($) *</label>
       <input id="ob-precio" type="number" min="0" step="100" placeholder="Ej: 5000"
         oninput="obActualizarPreview()">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;user-select:none">
+        <input type="checkbox" id="obMantenerPrecio" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer"
+          onchange="obActualizarPreview()">
+        <span style="font-size:12px;color:var(--muted)">Mantener este precio en la próxima franja</span>
+      </label>
     </div>
 
     <div id="obPreviewManual" class="ob-preview" style="display:none">
@@ -750,10 +755,22 @@ async function obGuardarFranja(btn) {
 
   obRenderFranjasList();
 
-  // Preparar para próxima franja: última hora fin como nueva inicio
-  const lastFin = valid[valid.length-1].fin;
-  obSlots = [{ ini: lastFin, fin: '' }];
-  document.getElementById('ob-precio').value = '';
+  // Auto-sugerir el siguiente horario: ini = último fin, fin = ini + misma duración
+  const lastSlot = valid[valid.length - 1];
+  const [lh1, lm1] = lastSlot.ini.split(':').map(Number);
+  const [lh2, lm2] = lastSlot.fin.split(':').map(Number);
+  const durMin    = (lh2 * 60 + lm2) - (lh1 * 60 + lm1);
+  const nextIniM  = lh2 * 60 + lm2;
+  const nextFinM  = nextIniM + durMin;
+  const pad       = n => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+  const nextFin   = nextFinM < 24 * 60 ? pad(nextFinM) : '';
+  obSlots = [{ ini: lastSlot.fin, fin: nextFin }];
+
+  // Mantener precio si el checkbox está marcado
+  if (!document.getElementById('obMantenerPrecio').checked) {
+    document.getElementById('ob-precio').value = '';
+  }
+
   obRenderSlots();
   document.getElementById('obPreviewManual').style.display = 'none';
   document.getElementById('btn-finish').style.display = '';
