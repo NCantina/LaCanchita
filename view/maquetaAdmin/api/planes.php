@@ -4,7 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';
 
-require_perfil(2);
+require_perfil(3); // dueño, encargado, empleado (y SA)
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
@@ -27,11 +27,53 @@ mysqli_query($link,
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
 );
 
+/**
+ * Filtro de complejos basado en dueño efectivo (no en asignación de canchas).
+ * Para encargados/empleados: ve todos los predios de su dueño.
+ * Para dueño: sus propios predios.
+ * Para SA sin contexto: todo (null).
+ * Para SA con contexto: predios del dueño impersonado.
+ */
+function planes_complejo_ids($link) {
+    $perfil = current_perfil();
+
+    // SuperAdmin en modo soporte
+    if ($perfil === 1) {
+        $as = admin_as_dueno_id();
+        if ($as === null) return null; // sin contexto: todo
+        $q = mysqli_query($link, "SELECT COMPLEJO_ID FROM complejo WHERE USUARIOS_ID = $as AND ACTIVO = 1");
+        $ids = [];
+        if ($q) { while ($r = mysqli_fetch_assoc($q)) $ids[] = (int)$r['COMPLEJO_ID']; }
+        return $ids;
+    }
+
+    // Dueño: sus propios complejos
+    if ($perfil === 2) {
+        $uid = current_uid();
+        $q = mysqli_query($link, "SELECT COMPLEJO_ID FROM complejo WHERE USUARIOS_ID = $uid AND ACTIVO = 1");
+        $ids = [];
+        if ($q) { while ($r = mysqli_fetch_assoc($q)) $ids[] = (int)$r['COMPLEJO_ID']; }
+        return $ids;
+    }
+
+    // Encargado / Empleado: todos los complejos de su dueño
+    if ($perfil === 3 || $perfil === 4) {
+        $duenoId = current_dueno_id($link);
+        if (!$duenoId) return [];
+        $q = mysqli_query($link, "SELECT COMPLEJO_ID FROM complejo WHERE USUARIOS_ID = $duenoId AND ACTIVO = 1");
+        $ids = [];
+        if ($q) { while ($r = mysqli_fetch_assoc($q)) $ids[] = (int)$r['COMPLEJO_ID']; }
+        return $ids;
+    }
+
+    return [];
+}
+
 switch($action) {
 
 // ── LISTAR ──────────────────────────────────────────────────────────────────
 case 'listar':
-    $ids   = tenant_complejo_ids($link);
+    $ids   = planes_complejo_ids($link);
     $where = tenant_where($ids, 'p.COMPLEJO_ID');
     $rows  = [];
     $q = mysqli_query($link,
@@ -60,7 +102,7 @@ case 'crear':
     if ($precio < 0)  resp(false, 'El precio no puede ser negativo.');
 
     // Verificar que el complejo pertenece al tenant
-    $ids = tenant_complejo_ids($link);
+    $ids = planes_complejo_ids($link);
     if ($ids !== null && !in_array($complejoId, (array)$ids)) resp(false, 'Sin acceso a ese predio.');
 
     mysqli_query($link,
@@ -81,10 +123,9 @@ case 'editar':
     if (!$id)     resp(false, 'ID inválido.');
     if (!$nombre) resp(false, 'El nombre del plan es obligatorio.');
 
-    // Verificar tenant
     $p = mysqli_fetch_assoc(mysqli_query($link, "SELECT COMPLEJO_ID FROM plan_predio WHERE PLAN_ID=$id"));
     if (!$p) resp(false, 'Plan no encontrado.');
-    $ids = tenant_complejo_ids($link);
+    $ids = planes_complejo_ids($link);
     if ($ids !== null && !in_array((int)$p['COMPLEJO_ID'], (array)$ids)) resp(false, 'Sin acceso.');
 
     mysqli_query($link,
@@ -100,15 +141,26 @@ case 'toggle':
     if (!$id) resp(false, 'ID inválido.');
     $p = mysqli_fetch_assoc(mysqli_query($link, "SELECT COMPLEJO_ID, ACTIVO FROM plan_predio WHERE PLAN_ID=$id"));
     if (!$p) resp(false, 'Plan no encontrado.');
-    $ids = tenant_complejo_ids($link);
+    $ids = planes_complejo_ids($link);
     if ($ids !== null && !in_array((int)$p['COMPLEJO_ID'], (array)$ids)) resp(false, 'Sin acceso.');
     $nuevo = $p['ACTIVO'] ? 0 : 1;
     mysqli_query($link, "UPDATE plan_predio SET ACTIVO=$nuevo WHERE PLAN_ID=$id");
     resp(true, $nuevo ? 'Plan activado.' : 'Plan desactivado.', ['activo' => $nuevo]);
 
+// ── ELIMINAR ─────────────────────────────────────────────────────────────────
+case 'eliminar':
+    $id = (int)($_POST['id'] ?? 0);
+    if (!$id) resp(false, 'ID inválido.');
+    $p = mysqli_fetch_assoc(mysqli_query($link, "SELECT COMPLEJO_ID FROM plan_predio WHERE PLAN_ID=$id"));
+    if (!$p) resp(false, 'Plan no encontrado.');
+    $ids = planes_complejo_ids($link);
+    if ($ids !== null && !in_array((int)$p['COMPLEJO_ID'], (array)$ids)) resp(false, 'Sin acceso.');
+    mysqli_query($link, "DELETE FROM plan_predio WHERE PLAN_ID=$id");
+    resp(true, 'Plan eliminado.');
+
 // ── LISTAR COMPLEJOS (para el selector del modal) ────────────────────────────
 case 'mis_complejos':
-    $ids   = tenant_complejo_ids($link);
+    $ids   = planes_complejo_ids($link);
     $where = tenant_where($ids, 'COMPLEJO_ID');
     $rows  = [];
     $q = mysqli_query($link, "SELECT COMPLEJO_ID, COMPLEJO_NOMBRE FROM complejo WHERE $where AND ACTIVO=1 ORDER BY COMPLEJO_NOMBRE");

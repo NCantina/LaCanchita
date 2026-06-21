@@ -595,6 +595,7 @@ if ($perfil >= 2) {
     .act-btn.edit:hover  { border-color: rgba(52,152,219,.4);  background: rgba(52,152,219,.1);  color: var(--blue); }
     .act-btn.toggle:hover.on { border-color: rgba(231,76,60,.4); background: rgba(231,76,60,.1); color: var(--red); }
     .act-btn.toggle:hover { border-color: rgba(76,217,100,.4); background: rgba(76,217,100,.1); color: var(--green); }
+    .act-btn.del:hover   { border-color: rgba(231,76,60,.4);  background: rgba(231,76,60,.1);  color: var(--red); }
 
     .empty-state {
         text-align: center; padding: 48px 20px;
@@ -1530,7 +1531,11 @@ if ($perfil >= 2) {
         <?php endif; ?>
 
         <?php if($perfil === 3 || $perfil === 4): ?>
-        <!-- ── Staff: solo operaciones ── -->
+        <!-- ── Staff: plataforma + operaciones ── -->
+        <div class="sb-section">Plataforma</div>
+        <div class="sb-item" data-view="planes" onclick="showView(this)">
+            <i class="fas fa-tags"></i> Planes
+        </div>
         <div class="sb-section">Operaciones</div>
         <div class="sb-item" data-view="reportes" onclick="showView(this)">
             <i class="fas fa-chart-bar"></i> Reportes
@@ -9530,6 +9535,9 @@ function renderPlanes() {
                         onclick="planToggle(${r.PLAN_ID},this)">
                         <i class="fas ${activo?'fa-toggle-on':'fa-toggle-off'}"></i>
                     </button>
+                    <button class="act-btn del" title="Eliminar" onclick="planEliminar(${r.PLAN_ID}, '${escHtml(r.PLAN_NOMBRE).replace(/'/g,'')}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </td>
         </tr>`;
@@ -9639,6 +9647,16 @@ async function planToggle(id, btn) {
     if (!json?.ok) { toast(json?.msg||'Error','err'); btn.innerHTML=orig; return; }
     toast(json.msg,'ok');
     await loadPlanes();
+}
+
+function planEliminar(id, nombre) {
+    confirmar('Eliminar plan', `¿Eliminar el plan <strong>${nombre}</strong>? Esta acción no se puede deshacer.`, async () => {
+        const fd = new FormData(); fd.append('action','eliminar'); fd.append('id', id);
+        const json = await fetch(PLAN_API,{method:'POST',body:fd}).then(r=>r.json()).catch(()=>null);
+        if (!json?.ok) { toast(json?.msg||'Error al eliminar','err'); return; }
+        toast(json.msg,'ok');
+        await loadPlanes();
+    });
 }
 </script>
 
