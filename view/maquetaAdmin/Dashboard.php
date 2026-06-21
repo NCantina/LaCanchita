@@ -3190,6 +3190,10 @@ if ($perfil >= 2) {
                         <input type="email" class="form-input" id="mCmpEmail" placeholder="contacto@complejo.com" maxlength="150">
                     </div>
                     <div class="form-row" style="margin:0">
+                        <label class="form-label">Instagram</label>
+                        <input type="text" class="form-input" id="mCmpInstagram" placeholder="@usuario o nombre de usuario" maxlength="150">
+                    </div>
+                    <div class="form-row" style="margin:0">
                         <label class="form-label">Provincia <span>*</span></label>
                         <select class="form-select" id="mCmpProv" onchange="geoOnChange('provincia','mCmpProv','mCmpPartido','mCmpLoc')">
                             <option value="">Seleccioná provincia…</option>
@@ -4826,6 +4830,7 @@ async function complejosAbrirEditar(id) {
     document.getElementById('mCmpDir').value    = d.COMPLEJO_DIRECCION;
     document.getElementById('mCmpTel').value    = d.COMPLEJO_TELEFONO||'';
     document.getElementById('mCmpEmail').value  = d.COMPLEJO_EMAIL||'';
+    document.getElementById('mCmpInstagram').value = d.COMPLEJO_INSTAGRAM||'';
     document.getElementById('mCmpDesc').value   = d.COMPLEJO_DESCRIPCION||'';
     document.getElementById('mCmpTipo').value   = d.TIPO_COMPLEJO_ID||'';
 
@@ -4853,6 +4858,7 @@ function resetCmpModal() {
     document.getElementById('mCmpDir').value    = '';
     document.getElementById('mCmpTel').value    = '';
     document.getElementById('mCmpEmail').value  = '';
+    document.getElementById('mCmpInstagram').value = '';
     document.getElementById('mCmpDesc').value   = '';
     document.getElementById('mCmpTipo').value   = '';
 
@@ -5076,6 +5082,7 @@ async function submitComplejo() {
     fd.append('direccion',      document.getElementById('mCmpDir').value.trim());
     fd.append('telefono',       document.getElementById('mCmpTel').value.trim());
     fd.append('email',          document.getElementById('mCmpEmail').value.trim());
+    fd.append('instagram',      document.getElementById('mCmpInstagram').value.trim());
     fd.append('descripcion',    document.getElementById('mCmpDesc').value.trim());
     fd.append('localidad_id',   document.getElementById('mCmpLoc').value);
     fd.append('tipo_complejo_id', document.getElementById('mCmpTipo').value);

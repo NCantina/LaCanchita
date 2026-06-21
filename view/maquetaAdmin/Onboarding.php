@@ -426,9 +426,9 @@ $PWA_BASE = '../../';
   <!-- Franjas creadas -->
   <div id="ob-franjas-list"></div>
 
-  <button class="btn-primary" id="btn-finish" onclick="finalizarOnboarding()"
+  <button class="btn-primary" id="btn-finish" onclick="finalizarOnboarding(this)"
     style="display:none;background:var(--card2);border:1px solid var(--green);color:var(--green);margin-top:16px">
-    <i class="fas fa-arrow-right"></i> Ir al panel →
+    <i class="fas fa-check-circle"></i> Guardar y finalizar
   </button>
   <button class="btn-back" onclick="goStep(2)" style="margin-top:8px">← Volver</button>
   <button class="skip-link" onclick="skipOnboarding()">Configurar después</button>
@@ -447,13 +447,11 @@ $PWA_BASE = '../../';
 </div>
 
 <script>
-const API_GEO     = 'api/geo.php';
-const API_COMP    = 'api/complejos.php';
-const API_CANCHA  = 'api/canchas.php';
-const API_HOR     = 'api/horarios.php';
-const API_CAT     = 'api/catalogo.php';
+const API_GEO = 'api/geo.php';
+const API_CAT = 'api/catalogo.php';
+const API_ONB = 'api/onboarding_completo.php';
 
-const S = { step: 1, complejoId: null, canchaId: null, franjasCreadas: 0 };
+const S = { step: 1, predioData: null, canchaData: null };
 
 // ── Utilidades ────────────────────────────────────────────────────────────────
 async function apiFetch(url, data) {
@@ -679,8 +677,8 @@ function obActualizarPreview() {
      <span style="font-size:11px;color:var(--muted);margin-left:6px">/ turno</span>`;
 }
 
-// ── STEP 1: Guardar predio ────────────────────────────────────────────────────
-async function guardarPredio(btn) {
+// ── STEP 1: Validar predio (sin API — se guarda al final) ─────────────────────
+function guardarPredio(btn) {
   const nombre = document.getElementById('f-nombre').value.trim();
   const dir    = document.getElementById('f-dir').value.trim();
   const locId  = document.getElementById('f-loc').value;
@@ -688,70 +686,41 @@ async function guardarPredio(btn) {
   if (!dir)     return showErr('err1', 'La dirección es obligatoria.');
   if (!locId)   return showErr('err1', 'Seleccioná provincia, partido y localidad.');
 
-  setLoading(btn, true);
-  const j = await apiFetch(API_COMP, {
-    action:      'crear',
+  S.predioData = {
     nombre,
-    direccion:   dir,
+    direccion:    dir,
     localidad_id: locId,
-    telefono:    document.getElementById('f-tel').value.trim(),
-    email:       document.getElementById('f-email').value.trim(),
-  });
-  setLoading(btn, false);
-
-  if (!j.ok) return showErr('err1', j.msg || 'Error al guardar el predio.');
-  S.complejoId = j.data?.id;
+    telefono:     document.getElementById('f-tel').value.trim(),
+    email:        document.getElementById('f-email').value.trim(),
+  };
   goStep(2);
 }
 
-// ── STEP 2: Guardar cancha ────────────────────────────────────────────────────
-async function guardarCancha(btn) {
+// ── STEP 2: Validar cancha (sin API — se guarda al final) ────────────────────
+function guardarCancha(btn) {
   const nombre  = document.getElementById('c-nombre').value.trim();
   const tipoId  = document.getElementById('c-tipo').value;
   if (!nombre) return showErr('err2', 'El nombre de la cancha es obligatorio.');
   if (!tipoId) return showErr('err2', 'Seleccioná el tipo de cancha.');
 
-  setLoading(btn, true);
-  const j = await apiFetch(API_CANCHA, {
-    action:        'crear',
-    nombre,
-    tipo_cancha_id: tipoId,
-    complejo_id:   S.complejoId,
-  });
-  setLoading(btn, false);
-
-  if (!j.ok) return showErr('err2', j.msg || 'Error al guardar la cancha.');
-  S.canchaId = j.data?.id;
+  S.canchaData = { nombre, tipo_cancha_id: tipoId };
   goStep(3);
   initStep3();
 }
 
-// ── STEP 3: Agregar franja individual ────────────────────────────────────────
-async function obGuardarFranja(btn) {
+// ── STEP 3: Agregar franja individual (local, sin API) ───────────────────────
+function obGuardarFranja(btn) {
   const valid  = obSlots.filter(s => s.ini && s.fin && s.fin > s.ini);
   const precio = parseFloat(document.getElementById('ob-precio').value);
   const dias   = [...obDiasActivos].sort();
 
-  if (!valid.length)       return showErr('err3', 'Ingresá al menos un horario válido (inicio < fin).');
+  if (!valid.length)          return showErr('err3', 'Ingresá al menos un horario válido (inicio < fin).');
   if (!precio || precio <= 0) return showErr('err3', 'Ingresá un precio válido mayor a 0.');
-  if (!dias.length)        return showErr('err3', 'Seleccioná al menos un día.');
+  if (!dias.length)           return showErr('err3', 'Seleccioná al menos un día.');
 
-  setLoading(btn, true);
-  let creadas = 0;
   for (const slot of valid) {
-    const j = await apiFetch(API_HOR, {
-      action: 'crear', cancha_id: S.canchaId,
-      hora_inicio: slot.ini, hora_fin: slot.fin,
-      precio, sena: 0, dias: JSON.stringify(dias),
-    });
-    if (j.ok) {
-      obFranjasCreadas.push({ id: j.data?.id, ini: slot.ini, fin: slot.fin, dias, precio });
-      creadas++;
-    }
+    obFranjasCreadas.push({ ini: slot.ini, fin: slot.fin, dias, precio });
   }
-  setLoading(btn, false);
-
-  if (!creadas) return showErr('err3', 'No se pudo guardar el horario. Intentá nuevamente.');
 
   obRenderFranjasList();
 
@@ -828,36 +797,22 @@ function obGenActualizarPreview() {
   ).join('');
 }
 
-async function obGenerarSemana(btn) {
+function obGenerarSemana(btn) {
   const slots  = obGenCalcularSlots();
   const precio = parseFloat(document.getElementById('obGenPrecio').value) || 0;
   const dias   = [...obGenDiasActivos].sort();
 
-  if (!dias.length)   return showErr('err3', 'Seleccioná al menos un día.');
-  if (!slots.length)  return showErr('err3', 'El rango de apertura/cierre no genera franjas. Verificá los horarios.');
-  if (precio <= 0)    return showErr('err3', 'Ingresá un precio válido mayor a 0.');
+  if (!dias.length)  return showErr('err3', 'Seleccioná al menos un día.');
+  if (!slots.length) return showErr('err3', 'El rango de apertura/cierre no genera franjas. Verificá los horarios.');
+  if (precio <= 0)   return showErr('err3', 'Ingresá un precio válido mayor a 0.');
 
-  setLoading(btn, true);
-  let creadas = 0;
   for (const slot of slots) {
-    const j = await apiFetch(API_HOR, {
-      action: 'crear', cancha_id: S.canchaId,
-      hora_inicio: slot.ini, hora_fin: slot.fin,
-      precio, sena: 0, dias: JSON.stringify(dias),
-    });
-    if (j.ok) {
-      obFranjasCreadas.push({ id: j.data?.id, ini: slot.ini, fin: slot.fin, dias, precio });
-      creadas++;
-    }
+    obFranjasCreadas.push({ ini: slot.ini, fin: slot.fin, dias, precio });
   }
-  setLoading(btn, false);
-
-  if (!creadas) return showErr('err3', 'No se pudieron crear las franjas. Intentá nuevamente.');
 
   obRenderFranjasList();
   document.getElementById('obGenPreview').style.display = 'none';
   document.getElementById('btn-finish').style.display = '';
-  // Volver al tab manual para posibles ajustes
   obSetMode('manual');
 }
 
@@ -890,12 +845,7 @@ function obRenderFranjasList() {
     }).join('');
 }
 
-async function obEliminarFranja(i) {
-  const f = obFranjasCreadas[i];
-  if (!f) return;
-  if (f.id) {
-    await apiFetch(API_HOR, { action: 'eliminar', franja_id: f.id });
-  }
+function obEliminarFranja(i) {
   obFranjasCreadas.splice(i, 1);
   obRenderFranjasList();
   if (!obFranjasCreadas.length) document.getElementById('btn-finish').style.display = 'none';
@@ -918,12 +868,35 @@ function initStep3() {
   document.getElementById('err3').classList.remove('show');
 }
 
-async function finalizarOnboarding() {
+async function finalizarOnboarding(btn) {
+  if (!S.predioData)  return showErr('err3', 'Faltan datos del predio. Volvé al paso 1.');
+  if (!S.canchaData)  return showErr('err3', 'Faltan datos de la cancha. Volvé al paso 2.');
+  if (!obFranjasCreadas.length) return showErr('err3', 'Debés agregar al menos una franja horaria.');
+
+  if (btn) setLoading(btn, true);
+
+  let j;
+  try {
+    const r = await fetch(API_ONB, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ predio: S.predioData, cancha: S.canchaData, franjas: obFranjasCreadas }),
+    });
+    j = await r.json();
+  } catch (e) {
+    if (btn) setLoading(btn, false);
+    return showErr('err3', 'Error de red. Revisá tu conexión e intentá nuevamente.');
+  }
+
+  if (btn) setLoading(btn, false);
+
+  if (!j.ok) return showErr('err3', j.msg || 'Error al guardar. Intentá nuevamente.');
+
+  // Éxito
   goStep('done');
-  // Armar link público
-  if (S.complejoId) {
-    const origin = location.origin;
-    const link   = `${origin}/predio.php?id=${S.complejoId}`;
+  const cid = j.data?.complejo_id;
+  if (cid) {
+    const link = `${location.origin}/predio.php?id=${cid}`;
     document.getElementById('done-link-a').href        = link;
     document.getElementById('done-link-a').textContent = link;
     document.getElementById('done-link-box').style.display = '';

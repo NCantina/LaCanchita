@@ -12,6 +12,9 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 function e($link,$v){ return mysqli_real_escape_string($link, trim($v??'')); }
 
+// Agregar columna Instagram si no existe
+mysqli_query($link, "ALTER TABLE complejo ADD COLUMN IF NOT EXISTS COMPLEJO_INSTAGRAM VARCHAR(150) NULL DEFAULT NULL AFTER COMPLEJO_EMAIL");
+
 switch($action) {
 
 // ── LISTAR ──────────────────────────────────────────────────────────────
@@ -24,6 +27,7 @@ case 'listar':
             c.COMPLEJO_DIRECCION,
             c.COMPLEJO_TELEFONO,
             c.COMPLEJO_EMAIL,
+            c.COMPLEJO_INSTAGRAM,
             c.COMPLEJO_DESCRIPCION,
             c.ACTIVO,
             tc.TIPO_COMPLEJO_NOMBRE,
@@ -84,6 +88,7 @@ case 'crear':
     $dir      = e($link,$_POST['direccion']??'');
     $tel      = e($link,$_POST['telefono']??'');
     $email    = e($link,$_POST['email']??'');
+    $ig       = e($link, ltrim($_POST['instagram']??'', '@'));
     $desc     = e($link,$_POST['descripcion']??'');
     $loc      = (int)($_POST['localidad_id']??0);
     $tipo     = ($_POST['tipo_complejo_id']??'') !== '' ? (int)$_POST['tipo_complejo_id'] : null;
@@ -112,10 +117,11 @@ case 'crear':
     mysqli_begin_transaction($link);
     try {
         $tipoSql = $tipo ? $tipo : 'NULL';
+        $igSql   = $ig ? "'$ig'" : 'NULL';
         mysqli_query($link,
             "INSERT INTO complejo (COMPLEJO_NOMBRE,COMPLEJO_DIRECCION,COMPLEJO_TELEFONO,COMPLEJO_EMAIL,
-             COMPLEJO_DESCRIPCION,LOCALIDAD_ID,TIPO_COMPLEJO_ID,USUARIOS_ID,ACTIVO)
-             VALUES ('$nombre','$dir','$tel','$email','$desc',$loc,$tipoSql,$ownerSql,1)"
+             COMPLEJO_INSTAGRAM,COMPLEJO_DESCRIPCION,LOCALIDAD_ID,TIPO_COMPLEJO_ID,USUARIOS_ID,ACTIVO)
+             VALUES ('$nombre','$dir','$tel','$email',$igSql,'$desc',$loc,$tipoSql,$ownerSql,1)"
         );
         $cid = mysqli_insert_id($link);
 
@@ -155,6 +161,7 @@ case 'editar':
     $dir      = e($link,$_POST['direccion']??'');
     $tel      = e($link,$_POST['telefono']??'');
     $email    = e($link,$_POST['email']??'');
+    $ig       = e($link, ltrim($_POST['instagram']??'', '@'));
     $desc     = e($link,$_POST['descripcion']??'');
     $loc      = (int)($_POST['localidad_id']??0);
     $tipo     = ($_POST['tipo_complejo_id']??'') !== '' ? (int)$_POST['tipo_complejo_id'] : null;
@@ -170,10 +177,12 @@ case 'editar':
     mysqli_begin_transaction($link);
     try {
         $tipoSql = $tipo ? $tipo : 'NULL';
+        $igSql   = $ig ? "'$ig'" : 'NULL';
         mysqli_query($link,
             "UPDATE complejo SET
              COMPLEJO_NOMBRE='$nombre', COMPLEJO_DIRECCION='$dir',
              COMPLEJO_TELEFONO='$tel', COMPLEJO_EMAIL='$email',
+             COMPLEJO_INSTAGRAM=$igSql,
              COMPLEJO_DESCRIPCION='$desc', LOCALIDAD_ID=$loc,
              TIPO_COMPLEJO_ID=$tipoSql
              WHERE COMPLEJO_ID=$id"

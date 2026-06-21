@@ -67,6 +67,7 @@ if (!empty($link)) {
     $stmt = mysqli_prepare($link,
         "SELECT co.COMPLEJO_ID, co.COMPLEJO_NOMBRE, co.COMPLEJO_DIRECCION,
                 co.COMPLEJO_TELEFONO, co.COMPLEJO_EMAIL, co.COMPLEJO_DESCRIPCION,
+                IFNULL(co.COMPLEJO_INSTAGRAM,'') AS COMPLEJO_INSTAGRAM,
                 l.LOCALIDAD_NOMBRE, par.PARTIDO_NOMBRE, prov.PROVINCIA_NOMBRE,
                 tc.TIPO_COMPLEJO_NOMBRE,
                 GROUP_CONCAT(DISTINCT tip.TIPO_CANCHA_NOMBRE ORDER BY tip.TIPO_CANCHA_NOMBRE SEPARATOR ',') AS ACTIVIDADES,
@@ -133,6 +134,9 @@ $loc         = implode(', ', array_filter([
     $predio['PARTIDO_NOMBRE'],
     $predio['PROVINCIA_NOMBRE'],
 ]));
+$instagram   = $predio['COMPLEJO_INSTAGRAM'] ?? '';
+$igHandle    = ltrim($instagram, '@');
+$igUrl       = $igHandle ? (str_contains($igHandle, 'instagram.com') ? 'https://' . ltrim($igHandle, 'https://') : 'https://instagram.com/' . rawurlencode($igHandle)) : '';
 $wsp         = preg_replace('/\D/', '', $tel);
 $mapsQuery   = urlencode(($dir ? $dir . ' ' : '') . $loc);
 
@@ -216,6 +220,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .hcta-wsp:hover{background:rgba(37,211,102,.18)}
 .hcta-tel{background:rgba(255,255,255,.07);border:1px solid var(--border2);color:var(--text)}
 .hcta-tel:hover{background:rgba(255,255,255,.12)}
+.hcta-ig{background:rgba(228,64,95,.1);border:1px solid rgba(228,64,95,.3);color:#e4405f}
+.hcta-ig:hover{background:rgba(228,64,95,.18)}
 
 /* ── STATS BAR ── */
 .stats-bar{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--s2)}
@@ -365,6 +371,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
             <?php if ($tel): ?>
             <a href="tel:<?= esc($tel) ?>" class="hcta hcta-tel">
                 <i class="fas fa-phone"></i> <?= esc($tel) ?>
+            </a>
+            <?php endif; ?>
+            <?php if ($igUrl): ?>
+            <a href="<?= esc($igUrl) ?>" target="_blank" rel="noopener" class="hcta hcta-ig">
+                <i class="fab fa-instagram"></i> Instagram
             </a>
             <?php endif; ?>
         </div>
