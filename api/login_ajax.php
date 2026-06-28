@@ -27,6 +27,9 @@ if ((int)$user['ACTIVO'] === 0) {
     echo json_encode(['ok'=>false,'msg'=>'Tu cuenta está pendiente de aprobación.']); exit;
 }
 
+// Evitar fijación de sesión: nuevo ID al elevar privilegios (login)
+session_regenerate_id(true);
+
 $_SESSION['usuario_id']       = $user['USUARIOS_ID'];
 $_SESSION['usuario_nombre']   = $user['USUARIOS_NOMBRE'];
 $_SESSION['usuario_apellido'] = $user['USUARIOS_APELLIDO'];

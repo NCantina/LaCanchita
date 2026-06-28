@@ -52,6 +52,7 @@ $newId = mysqli_insert_id($link);
 $user = mysqli_fetch_assoc(mysqli_query($link,
     "SELECT USUARIOS_ID,USUARIOS_NOMBRE,USUARIOS_APELLIDO,PERFIL_ID FROM usuarios WHERE USUARIOS_ID=$newId"
 ));
+session_regenerate_id(true); // evitar fijación de sesión al auto-loguear tras registro
 $_SESSION['usuario_id']       = $user['USUARIOS_ID'];
 $_SESSION['usuario_nombre']   = $user['USUARIOS_NOMBRE'];
 $_SESSION['usuario_apellido'] = $user['USUARIOS_APELLIDO'];

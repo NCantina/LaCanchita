@@ -78,6 +78,7 @@ $user  = mysqli_fetch_assoc(mysqli_query($link,
             u.PERFIL_ID, u.ACTIVO
      FROM usuarios u WHERE u.USUARIOS_ID=$newId"));
 
+session_regenerate_id(true); // evitar fijación de sesión al auto-loguear tras registro
 $_SESSION['usuario_id']       = $user['USUARIOS_ID'];
 $_SESSION['usuario_nombre']   = $user['USUARIOS_NOMBRE'];
 $_SESSION['usuario_apellido'] = $user['USUARIOS_APELLIDO'];
