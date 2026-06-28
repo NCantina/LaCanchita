@@ -1,0 +1,11 @@
+# Credenciales — nunca commitear con datos reales
+config/vapid.php
+config/mail.php
+
+# Dependencias
+vendor/
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log

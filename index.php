@@ -66,17 +66,21 @@ if (isset($link)) {
 
     // Predios miembros de la comunidad
     $prediosQuery = mysqli_query($link, "
-        SELECT co.COMPLEJO_ID, co.COMPLEJO_NOMBRE, co.COMPLEJO_DIRECCION,
+        SELECT co.COMPLEJO_ID, co.COMPLEJO_NOMBRE, co.COMPLEJO_DIRECCION, co.COMPLEJO_TELEFONO,
                l.LOCALIDAD_NOMBRE, p.PARTIDO_NOMBRE,
                COUNT(DISTINCT c.CANCHA_ID) AS TOTAL_CANCHAS,
                GROUP_CONCAT(DISTINCT tc.TIPO_CANCHA_NOMBRE ORDER BY tc.TIPO_CANCHA_NOMBRE SEPARATOR ',') AS DEPORTES,
-               MIN(fh.FRANJA_PRECIO) AS PRECIO_DESDE
+               MIN(fh.FRANJA_PRECIO) AS PRECIO_DESDE,
+               MIN(fh.FRANJA_HORA_INICIO) AS HORA_APERTURA,
+               MAX(fh.FRANJA_HORA_FIN) AS HORA_CIERRE,
+               GROUP_CONCAT(DISTINCT fd.DIA_ID ORDER BY fd.DIA_ID SEPARATOR ',') AS DIAS_ACTIVOS
         FROM complejo co
         LEFT JOIN localidad l ON l.LOCALIDAD_ID = co.LOCALIDAD_ID
         LEFT JOIN partido p ON p.PARTIDO_ID = l.PARTIDO_ID
         LEFT JOIN cancha c ON c.COMPLEJO_ID = co.COMPLEJO_ID AND c.ACTIVO = 1
         LEFT JOIN tipo_cancha tc ON tc.TIPO_CANCHA_ID = c.TIPO_CANCHA_ID
         LEFT JOIN franja_horaria fh ON fh.CANCHA_ID = c.CANCHA_ID AND fh.ACTIVO = 1
+        LEFT JOIN franja_dia fd ON fd.FRANJA_ID = fh.FRANJA_ID
         WHERE co.ACTIVO = 1
         GROUP BY co.COMPLEJO_ID
         ORDER BY TOTAL_CANCHAS DESC, co.COMPLEJO_NOMBRE ASC
@@ -118,6 +122,7 @@ function colorTipo($tipo) {
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
     <title>La Canchita — Reservá tu cancha online</title>
+    <?php $PWA_BASE = './'; require_once 'config/dist/script/php/pwa_head.php'; ?>
     <meta name="description" content="Reservá canchas de fútbol, pádel, tenis y más en segundos. La plataforma líder en Argentina.">
     <meta name="author" content="EFEGENE DesarrollosWeb">
     <link rel="shortcut icon" href="config/dist/img/loguito_lacanchita.WEBP" type="image/webp">
@@ -392,11 +397,38 @@ function colorTipo($tipo) {
             background: rgba(76,217,100,0.06);
         }
         .searcher-field select option { background: #1a1a1a; color: var(--text); }
-        .searcher-field input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            opacity: 0.4;
-            cursor: pointer;
+        .s-fecha-display {
+            width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+            color: var(--text); border-radius: 8px; padding: 10px 14px; font-size: 0.92rem;
+            font-family: inherit; cursor: pointer; text-align: left;
+            display: flex; align-items: center; gap: 6px;
+            transition: border-color 0.2s, background 0.2s;
         }
+        .s-fecha-display:hover, .s-fecha-display.open {
+            border-color: var(--green); background: rgba(76,217,100,0.06);
+        }
+        .s-cal-popup {
+            position: absolute; top: calc(100% + 6px); left: 0; z-index: 600;
+            background: #141414; border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            min-width: 280px; display: none;
+        }
+        .s-cal-popup.open { display: block; }
+        /* Calendario compartido */
+        .lc-cal { background: rgba(255,255,255,0.03); border-radius: 0; overflow: hidden; user-select: none; }
+        .lc-cal-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .lc-cal-title { font-size: 13px; font-weight: 700; color: #fff; text-transform: capitalize; }
+        .lc-cal-nav { background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; padding: 5px 9px; border-radius: 7px; font-size: 12px; transition: color 0.15s, background 0.15s; line-height: 1; }
+        .lc-cal-nav:hover:not(:disabled) { color: var(--green); background: rgba(76,217,100,0.08); }
+        .lc-cal-nav:disabled { opacity: 0.2; cursor: not-allowed; }
+        .lc-cal-week { display: grid; grid-template-columns: repeat(7,1fr); padding: 8px 10px 2px; gap: 2px; }
+        .lc-cal-week span { text-align: center; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.35); letter-spacing: 0.4px; }
+        .lc-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); padding: 4px 10px 10px; gap: 3px; }
+        .lc-cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid transparent; background: none; color: #fff; transition: all 0.12s; line-height: 1; padding: 0; }
+        .lc-cal-day:hover:not(:disabled) { background: rgba(76,217,100,0.08); border-color: rgba(76,217,100,0.25); color: var(--green); }
+        .lc-cal-day.today { border-color: rgba(76,217,100,0.5); color: var(--green); font-weight: 700; }
+        .lc-cal-day.selected { background: var(--green) !important; border-color: var(--green) !important; color: #000 !important; font-weight: 700; }
+        .lc-cal-day:disabled { opacity: 0.2; cursor: not-allowed; }
         .btn-search {
             width: 100%;
             padding: 11px 20px;
@@ -698,63 +730,95 @@ function colorTipo($tipo) {
         }
         .predios-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 20px;
         }
         .predio-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 22px 20px;
-            display: flex; flex-direction: column; gap: 12px;
+            background: var(--s2);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 18px;
+            overflow: hidden;
+            display: flex; flex-direction: column;
             transition: border-color .25s, transform .25s, box-shadow .25s;
             animation: fadeUp .5s ease both;
         }
         .predio-card:hover {
-            border-color: rgba(76,217,100,0.35);
-            transform: translateY(-4px);
-            box-shadow: 0 10px 30px rgba(76,217,100,0.08);
+            border-color: rgba(76,217,100,0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 14px 40px rgba(76,217,100,0.1);
         }
-        .predio-card-top {
+        .predio-card-header {
+            padding: 20px 20px 16px;
             display: flex; align-items: flex-start; gap: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
         .predio-avatar {
-            width: 50px; height: 50px; border-radius: 12px; flex-shrink: 0;
-            background: rgba(76,217,100,0.12); border: 1.5px solid rgba(76,217,100,0.25);
+            width: 48px; height: 48px; border-radius: 13px; flex-shrink: 0;
+            background: linear-gradient(135deg, rgba(76,217,100,0.18), rgba(76,217,100,0.06));
+            border: 1.5px solid rgba(76,217,100,0.28);
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; font-weight: 800; color: var(--green);
+            font-size: 1.4rem; font-weight: 900; color: var(--green);
         }
-        .predio-info-name { font-size: 0.97rem; font-weight: 800; margin-bottom: 3px; }
-        .predio-info-loc {
-            font-size: 0.78rem; color: var(--text-muted);
-            display: flex; align-items: center; gap: 5px;
+        .predio-header-info { min-width: 0; flex: 1; }
+        .predio-info-name {
+            font-size: 0.95rem; font-weight: 800; color: #fff;
+            margin-bottom: 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .predio-deportes {
-            display: flex; flex-wrap: wrap; gap: 5px;
+        .predio-info-row {
+            font-size: 0.73rem; color: rgba(255,255,255,0.45);
+            display: flex; align-items: flex-start; gap: 5px; line-height: 1.35;
+            margin-bottom: 3px;
         }
+        .predio-info-row:last-child { margin-bottom: 0; }
+        .predio-info-row i { margin-top: 1px; flex-shrink: 0; }
+        .predio-info-row span {
+            overflow: hidden; text-overflow: ellipsis;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        }
+        .predio-card-body {
+            padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; flex: 1;
+        }
+        .predio-deportes { display: flex; flex-wrap: wrap; gap: 5px; }
         .predio-deporte-tag {
-            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-            padding: 2px 8px; border-radius: 10px;
-            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-            color: rgba(255,255,255,0.55);
+            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+            padding: 3px 9px; border-radius: 8px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+            color: rgba(255,255,255,0.5);
+        }
+        .predio-schedule { display: flex; flex-direction: column; gap: 8px; }
+        .predio-horario {
+            font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.75);
+            display: flex; align-items: center; gap: 7px;
+        }
+        .predio-dias-row { display: flex; flex-wrap: wrap; gap: 4px; }
+        .predio-dia-chip {
+            font-size: 0.6rem; font-weight: 800; text-transform: uppercase;
+            width: 28px; height: 22px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+            color: rgba(255,255,255,0.2); letter-spacing: 0;
+        }
+        .predio-dia-chip.activo {
+            background: rgba(76,217,100,0.12); border-color: rgba(76,217,100,0.35);
+            color: rgba(76,217,100,0.95);
         }
         .predio-footer {
             display: flex; align-items: center; justify-content: space-between;
-            padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 13px 20px;
+            background: rgba(0,0,0,0.15);
+            border-top: 1px solid rgba(255,255,255,0.05);
         }
-        .predio-canchas {
-            font-size: 0.78rem; color: var(--text-muted);
-        }
-        .predio-canchas strong { color: var(--green); }
-        .predio-precio {
-            font-size: 0.8rem; color: var(--green); font-weight: 700;
-        }
+        .predio-canchas { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+        .predio-canchas strong { color: var(--green); font-size: 0.88rem; }
+        .predio-precio { font-size: 0.82rem; color: var(--green); font-weight: 800; }
         .predio-miembro-badge {
             display: inline-flex; align-items: center; gap: 5px;
-            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-            letter-spacing: .05em; padding: 2px 8px; border-radius: 10px;
-            background: rgba(76,217,100,0.1); border: 1px solid rgba(76,217,100,0.25);
-            color: rgba(76,217,100,0.8);
+            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .05em; padding: 3px 9px; border-radius: 8px;
+            background: rgba(76,217,100,0.08); border: 1px solid rgba(76,217,100,0.2);
+            color: rgba(76,217,100,0.75);
         }
         @media (max-width: 600px) {
             .resultados-grid { grid-template-columns: 1fr; }
@@ -1169,6 +1233,37 @@ function colorTipo($tipo) {
             .predio-card { padding: 16px; }
             .step-card { padding: 22px 14px; }
         }
+
+        /* ── MODAL AUTH: FLOATING LABELS + WIZARD ── */
+        .r-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .r-field { position: relative; margin-bottom: 13px; }
+        .r-field input { width: 100%; padding: 18px 40px 5px 14px; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.12); border-radius: 12px; color: #fff; font-size: .92rem; transition: border-color .25s, background .25s, box-shadow .25s; outline: none; -webkit-appearance: none; }
+        .r-field input:focus { border-color: #4cd964; background: rgba(76,217,100,.05); box-shadow: 0 0 0 3px rgba(76,217,100,.1); }
+        .r-field input.r-err { border-color: rgba(231,76,60,.7) !important; }
+        .r-field input:focus + label, .r-field input:not(:placeholder-shown) + label { transform: translateY(-9px) scale(.76); color: #4cd964; }
+        .r-field label { position: absolute; left: 14px; top: 13px; color: rgba(255,255,255,.4); font-size: .9rem; pointer-events: none; transition: transform .2s, color .2s; transform-origin: left top; }
+        .r-field .r-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.3); font-size: .82rem; background: none; border: none; cursor: pointer; padding: 4px; transition: color .2s; }
+        .r-field .r-icon:hover { color: #4cd964; }
+        .r-strength-bar { height: 3px; border-radius: 3px; background: rgba(255,255,255,.1); margin: -8px 0 6px; overflow: hidden; }
+        .r-strength-fill { height: 100%; width: 0; border-radius: 3px; transition: width .3s, background .3s; }
+        .r-strength-text { font-size: 11px; color: rgba(255,255,255,.35); display: block; margin-bottom: 12px; }
+        .r-hint { font-size: 11px; color: rgba(255,255,255,.3); margin: -8px 0 10px 4px; }
+        .rm-steps { display: flex; align-items: center; margin-bottom: 20px; }
+        .rm-step { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+        .rm-step-circle { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.35); transition: all .3s; }
+        .rm-step.rm-active .rm-step-circle { border-color: #4cd964; color: #4cd964; background: rgba(76,217,100,.1); }
+        .rm-step.rm-done .rm-step-circle { border-color: #4cd964; background: #4cd964; color: #000; }
+        .rm-step-label { font-size: 10px; color: rgba(255,255,255,.3); white-space: nowrap; }
+        .rm-step.rm-active .rm-step-label, .rm-step.rm-done .rm-step-label { color: rgba(255,255,255,.55); }
+        .rm-step-line { flex: 1; height: 1px; background: rgba(255,255,255,.12); margin-bottom: 14px; transition: background .3s; }
+        .rm-step-line.rm-done { background: #4cd964; }
+        .rm-panel { display: none; }
+        .rm-panel.rm-active { display: block; animation: fadeUp .22s ease; }
+        .rm-btn-row { display: flex; gap: 8px; margin-top: 8px; }
+        .rm-btn-next { flex: 1; padding: 13px; background: linear-gradient(135deg,#4cd964,#34c759); border: none; border-radius: 11px; color: #000; font-weight: 800; font-size: .92rem; cursor: pointer; transition: opacity .15s; display: flex; align-items: center; justify-content: center; gap: 7px; }
+        .rm-btn-next:hover { opacity: .88; }
+        .rm-btn-back { padding: 13px 16px; background: rgba(255,255,255,.07); border: 1.5px solid rgba(255,255,255,.12); border-radius: 11px; color: rgba(255,255,255,.6); cursor: pointer; font-size: .88rem; transition: all .2s; }
+        .rm-btn-back:hover { background: rgba(255,255,255,.12); color: #fff; }
     </style>
 </head>
 <body>
@@ -1281,9 +1376,16 @@ function colorTipo($tipo) {
                     <option value="">Seleccioná partido</option>
                 </select>
             </div>
-            <div class="searcher-field">
-                <label for="s-fecha"><i class="fas fa-calendar"></i> &nbsp;Fecha</label>
-                <input type="date" id="s-fecha" name="fecha" value="<?= date('Y-m-d') ?>">
+            <div class="searcher-field" style="position:relative">
+                <label><i class="fas fa-calendar"></i> &nbsp;Fecha</label>
+                <input type="hidden" id="s-fecha" name="fecha" value="<?= date('Y-m-d') ?>">
+                <button type="button" id="s-fecha-btn" onclick="toggleCalSearch(event)" class="s-fecha-display">
+                    <span id="s-fecha-label"><?= date('d/m/Y') ?></span>
+                    <i class="fas fa-chevron-down" style="font-size:10px;opacity:0.4;margin-left:auto"></i>
+                </button>
+                <div id="s-cal-popup" class="s-cal-popup">
+                    <div id="s-cal-container"></div>
+                </div>
             </div>
             <div class="searcher-field">
                 <label for="s-horario"><i class="fas fa-clock"></i> &nbsp;Horario</label>
@@ -1318,81 +1420,16 @@ function colorTipo($tipo) {
 </div>
 
 <!-- ============ STATS BAR ============ -->
+<?php if ($totalPredios || $totalCanchas || $reservasMes || $totalCiudades): ?>
 <div class="stats-bar">
     <div class="stats-inner">
-        <div class="stat-item anim">
-            <div class="stat-number"><?= $totalPredios ?></div>
-            <div class="stat-label">Predios activos</div>
-        </div>
-        <div class="stat-item anim" style="transition-delay:.08s">
-            <div class="stat-number"><?= $totalCanchas ?></div>
-            <div class="stat-label">Canchas disponibles</div>
-        </div>
-        <div class="stat-item anim" style="transition-delay:.16s">
-            <div class="stat-number"><?= $reservasMes ?></div>
-            <div class="stat-label">Reservas este mes</div>
-        </div>
-        <div class="stat-item anim" style="transition-delay:.24s">
-            <div class="stat-number"><?= $totalCiudades ?></div>
-            <div class="stat-label">Ciudades</div>
-        </div>
+        <?php if ($totalPredios): ?><div class="stat-item anim"><div class="stat-number"><?= $totalPredios ?></div><div class="stat-label">Predios activos</div></div><?php endif; ?>
+        <?php if ($totalCanchas): ?><div class="stat-item anim" style="transition-delay:.08s"><div class="stat-number"><?= $totalCanchas ?></div><div class="stat-label">Canchas disponibles</div></div><?php endif; ?>
+        <?php if ($reservasMes): ?><div class="stat-item anim" style="transition-delay:.16s"><div class="stat-number"><?= $reservasMes ?></div><div class="stat-label">Reservas este mes</div></div><?php endif; ?>
+        <?php if ($totalCiudades): ?><div class="stat-item anim" style="transition-delay:.24s"><div class="stat-number"><?= $totalCiudades ?></div><div class="stat-label">Ciudades</div></div><?php endif; ?>
     </div>
 </div>
-
-<!-- ============ COMUNIDAD LA CANCHITA ============ -->
-<section id="comunidad">
-    <div class="container">
-        <div class="section-header anim">
-            <span class="section-eyebrow"><i class="fas fa-shield-alt"></i> &nbsp;Miembros verificados</span>
-            <h2 class="section-title">La comunidad <span style="color:var(--green)">La Canchita</span></h2>
-            <p class="section-sub">Estos son los predios que confían en nuestra plataforma. Reservá online al instante.</p>
-        </div>
-        <?php if (empty($prediosMiembros)): ?>
-        <div class="empty-state anim">
-            <i class="fas fa-building"></i>
-            <p>Próximamente los primeros predios miembros</p>
-        </div>
-        <?php else: ?>
-        <div class="predios-grid">
-            <?php foreach ($prediosMiembros as $i => $pr):
-                $inicial = strtoupper(mb_substr($pr['COMPLEJO_NOMBRE'], 0, 1));
-                $deportes = array_filter(array_map('trim', explode(',', $pr['DEPORTES'] ?? '')));
-            ?>
-            <div class="predio-card anim" style="transition-delay:<?= $i * 0.07 ?>s">
-                <div class="predio-card-top">
-                    <div class="predio-avatar"><?= htmlspecialchars($inicial) ?></div>
-                    <div>
-                        <div class="predio-info-name"><?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?></div>
-                        <div class="predio-info-loc">
-                            <i class="fas fa-map-marker-alt" style="color:var(--green);font-size:10px"></i>
-                            <?= htmlspecialchars($pr['PARTIDO_NOMBRE'] ?: ($pr['LOCALIDAD_NOMBRE'] ?: '')) ?>
-                        </div>
-                    </div>
-                </div>
-                <?php if (!empty($deportes)): ?>
-                <div class="predio-deportes">
-                    <?php foreach (array_slice($deportes, 0, 4) as $dep): ?>
-                    <span class="predio-deporte-tag"><?= htmlspecialchars($dep) ?></span>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-                <div class="predio-footer">
-                    <div class="predio-canchas">
-                        <strong><?= (int)$pr['TOTAL_CANCHAS'] ?></strong> <?= $pr['TOTAL_CANCHAS'] == 1 ? 'cancha' : 'canchas' ?>
-                    </div>
-                    <?php if (!empty($pr['PRECIO_DESDE'])): ?>
-                    <div class="predio-precio">desde $<?= number_format($pr['PRECIO_DESDE'], 0, ',', '.') ?>/h</div>
-                    <?php else: ?>
-                    <span class="predio-miembro-badge"><i class="fas fa-check-circle"></i> Miembro</span>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
-    </div>
-</section>
-
+<?php endif; ?>
 
 <!-- ============ PUBLICIDAD ============ -->
 <section id="publicidad">
@@ -1423,16 +1460,21 @@ function colorTipo($tipo) {
                     </a>
                 </div>
             </div>
-            <!-- Slot 2 disponible -->
-            <div class="ad-card anim" style="transition-delay:.1s">
-                <div class="ad-icon">
-                    <i class="fas fa-star"></i>
+            <!-- Slot 2 — Ejemplo ficticio -->
+            <div class="ad-card anim" style="transition-delay:.1s;border-color:rgba(52,152,219,0.25);background:rgba(52,152,219,0.04)">
+                <div style="width:90px;height:90px;border-radius:16px;overflow:hidden;background:rgba(52,152,219,0.1);border:1px solid rgba(52,152,219,0.2);display:flex;align-items:center;justify-content:center;font-size:2.2rem;">
+                    🥤
                 </div>
-                <h3>Tu publicidad aquí</h3>
-                <p>Slot #2 disponible — llegá a toda la comunidad deportiva de La Canchita</p>
-                <a href="mailto:efegene@domain.com?subject=Publicidad%20La%20Canchita" class="btn-ad">
-                    <i class="fas fa-envelope"></i> &nbsp;Contactanos
-                </a>
+                <h3 style="color:#fff;font-size:1.3rem;letter-spacing:-.01em">HidraMax</h3>
+                <p style="opacity:.85">Bebidas isotónicas para deportistas. Recuperá energía antes, durante y después del partido.</p>
+                <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+                    <a href="#" class="btn-ad" style="border-color:#3498db;color:#3498db;display:flex;align-items:center;justify-content:center;gap:7px">
+                        <i class="fab fa-instagram"></i> @hidramax.ar
+                    </a>
+                    <a href="#" class="btn-ad" style="border-color:#25d366;color:#25d366;display:flex;align-items:center;justify-content:center;gap:7px">
+                        <i class="fab fa-whatsapp"></i> Pedí tu muestra
+                    </a>
+                </div>
             </div>
             <!-- Slot 3 disponible -->
             <div class="ad-card anim" style="transition-delay:.2s">
@@ -1446,6 +1488,87 @@ function colorTipo($tipo) {
                 </a>
             </div>
         </div>
+    </div>
+</section>
+
+<!-- ============ COMUNIDAD LA CANCHITA ============ -->
+<section id="comunidad">
+    <div class="container">
+        <div class="section-header anim">
+            <span class="section-eyebrow"><i class="fas fa-shield-alt"></i> &nbsp;Miembros verificados</span>
+            <h2 class="section-title">La comunidad <span style="color:var(--green)">La Canchita</span></h2>
+            <p class="section-sub">Estos son los predios que confían en nuestra plataforma. Reservá online al instante.</p>
+        </div>
+        <?php if (empty($prediosMiembros)): ?>
+        <div class="empty-state anim">
+            <i class="fas fa-building"></i>
+            <p>Próximamente los primeros predios miembros</p>
+        </div>
+        <?php else: ?>
+        <div class="predios-grid">
+            <?php foreach ($prediosMiembros as $i => $pr):
+                $inicial = strtoupper(mb_substr($pr['COMPLEJO_NOMBRE'], 0, 1));
+                $deportes = array_filter(array_map('trim', explode(',', $pr['DEPORTES'] ?? '')));
+            ?>
+            <?php
+            $horaAp = $pr['HORA_APERTURA'] ? substr($pr['HORA_APERTURA'],0,5) : null;
+            $horaCi = $pr['HORA_CIERRE']   ? substr($pr['HORA_CIERRE'],0,5)   : null;
+            $diasActivos = $pr['DIAS_ACTIVOS'] ? array_flip(explode(',', $pr['DIAS_ACTIVOS'])) : [];
+            $diasNombres = ['','L','M','X','J','V','S','D'];
+            ?>
+            <div class="predio-card anim" style="transition-delay:<?= $i * 0.07 ?>s">
+                <div class="predio-card-header">
+                    <div class="predio-avatar"><?= htmlspecialchars($inicial) ?></div>
+                    <div class="predio-header-info">
+                        <div class="predio-info-name" title="<?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?>"><?= htmlspecialchars($pr['COMPLEJO_NOMBRE']) ?></div>
+                        <div class="predio-info-row">
+                            <i class="fas fa-map-marker-alt" style="color:var(--green);font-size:9px;margin-top:2px"></i>
+                            <span><?= htmlspecialchars($pr['COMPLEJO_DIRECCION'] ?: ($pr['PARTIDO_NOMBRE'] ?: ($pr['LOCALIDAD_NOMBRE'] ?: '—'))) ?></span>
+                        </div>
+                        <?php if (!empty($pr['COMPLEJO_TELEFONO'])): ?>
+                        <div class="predio-info-row">
+                            <i class="fas fa-phone" style="color:var(--green);font-size:9px;margin-top:2px"></i>
+                            <span><?= htmlspecialchars($pr['COMPLEJO_TELEFONO']) ?></span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="predio-card-body">
+                    <?php if (!empty($deportes)): ?>
+                    <div class="predio-deportes">
+                        <?php foreach (array_slice($deportes, 0, 4) as $dep): ?>
+                        <span class="predio-deporte-tag"><?= htmlspecialchars($dep) ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($horaAp && $horaCi): ?>
+                    <div class="predio-schedule">
+                        <div class="predio-horario">
+                            <i class="fas fa-clock" style="color:var(--green);font-size:11px"></i>
+                            <?= htmlspecialchars($horaAp) ?> – <?= htmlspecialchars($horaCi) ?>
+                        </div>
+                        <div class="predio-dias-row">
+                            <?php for ($d = 1; $d <= 7; $d++): ?>
+                            <span class="predio-dia-chip<?= isset($diasActivos[(string)$d]) ? ' activo' : '' ?>"><?= $diasNombres[$d] ?></span>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <div class="predio-footer">
+                    <div class="predio-canchas">
+                        <strong><?= (int)$pr['TOTAL_CANCHAS'] ?></strong> <?= $pr['TOTAL_CANCHAS'] == 1 ? 'cancha' : 'canchas' ?>
+                    </div>
+                    <?php if (!empty($pr['PRECIO_DESDE'])): ?>
+                    <div class="predio-precio">desde $<?= number_format($pr['PRECIO_DESDE'], 0, ',', '.') ?>/h</div>
+                    <?php else: ?>
+                    <span class="predio-miembro-badge"><i class="fas fa-check-circle"></i> Miembro</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -1787,7 +1910,7 @@ function handleSearch(e) {
                         <div class="res-name">${escHtml(c.CANCHA_NOMBRE)}</div>
                         <div class="res-complejo">
                             <i class="fas fa-building" style="color:${color};font-size:11px"></i>
-                            ${escHtml(c.COMPLEJO_NOMBRE)}
+                            <a href="predio.php?id=${c.COMPLEJO_ID}" style="color:inherit;text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color=''">${escHtml(c.COMPLEJO_NOMBRE)}</a>
                             ${c.LOCALIDAD_NOMBRE ? ' &mdash; ' + escHtml(c.LOCALIDAD_NOMBRE) : ''}
                         </div>
                         <div class="res-slots">${slotsHtml}</div>
@@ -1817,11 +1940,100 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 animEls.forEach(el => observer.observe(el));
 
-// Default date input to today
-const fechaInput = document.getElementById('s-fecha');
-if (fechaInput && !fechaInput.value) {
-    fechaInput.value = new Date().toISOString().split('T')[0];
+// ── CALENDARIO VISUAL ──────────────────────────────────────────────────────
+class CalendarioLC {
+    constructor(containerId, onSelect) {
+        this.el       = document.getElementById(containerId);
+        this.onSelect = onSelect;
+        this._today   = new Date(); this._today.setHours(0,0,0,0);
+        this.selected = new Date(this._today);
+        this.current  = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        this._render();
+    }
+    setDate(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        this.selected = d;
+        this.current  = new Date(d.getFullYear(), d.getMonth(), 1);
+        this._render();
+    }
+    prevMonth() {
+        const floor = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        if (this.current <= floor) return;
+        this.current.setMonth(this.current.getMonth() - 1);
+        this._render();
+    }
+    nextMonth() {
+        this.current.setMonth(this.current.getMonth() + 1);
+        this._render();
+    }
+    pick(y, m, d) {
+        const date = new Date(y, m, d);
+        if (date < this._today) return;
+        this.selected = date;
+        const yyyy = date.getFullYear();
+        const mm   = String(date.getMonth() + 1).padStart(2, '0');
+        const dd   = String(date.getDate()).padStart(2, '0');
+        this._render();
+        this.onSelect(`${yyyy}-${mm}-${dd}`);
+    }
+    _render() {
+        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const DIA_L = ['L','M','X','J','V','S','D'];
+        const y = this.current.getFullYear(), m = this.current.getMonth();
+        const offset  = (new Date(y, m, 1).getDay() + 6) % 7;
+        const daysInM = new Date(y, m + 1, 0).getDate();
+        const todayMs = this._today.getTime();
+        const selMs   = this.selected ? this.selected.getTime() : -1;
+        const floor   = new Date(this._today.getFullYear(), this._today.getMonth(), 1);
+        const canPrev = this.current > floor;
+        let cells = '<span></span>'.repeat(offset);
+        for (let d = 1; d <= daysInM; d++) {
+            const ms   = new Date(y, m, d).getTime();
+            const past = ms < todayMs;
+            const cls  = ['lc-cal-day', ms===todayMs?'today':'', ms===selMs?'selected':''].filter(Boolean).join(' ');
+            const act  = past ? 'disabled' : `onclick="window._lcCalSearch.pick(${y},${m},${d})"`;
+            cells += `<button class="${cls}" ${act}>${d}</button>`;
+        }
+        this.el.innerHTML = `
+<div class="lc-cal">
+  <div class="lc-cal-head">
+    <button class="lc-cal-nav" onclick="window._lcCalSearch.prevMonth()" ${canPrev?'':'disabled'}><i class="fas fa-chevron-left"></i></button>
+    <span class="lc-cal-title">${MESES[m]} ${y}</span>
+    <button class="lc-cal-nav" onclick="window._lcCalSearch.nextMonth()"><i class="fas fa-chevron-right"></i></button>
+  </div>
+  <div class="lc-cal-week">${DIA_L.map(d=>`<span>${d}</span>`).join('')}</div>
+  <div class="lc-cal-grid">${cells}</div>
+</div>`;
+    }
 }
+
+let _lcCalSearch = null;
+function toggleCalSearch(e) {
+    if (e) e.stopPropagation();
+    const popup = document.getElementById('s-cal-popup');
+    const btn   = document.getElementById('s-fecha-btn');
+    const open  = popup.classList.toggle('open');
+    btn.classList.toggle('open', open);
+    if (open && !_lcCalSearch) {
+        _lcCalSearch = new CalendarioLC('s-cal-container', function(fecha) {
+            document.getElementById('s-fecha').value = fecha;
+            const [y,m,d] = fecha.split('-');
+            document.getElementById('s-fecha-label').textContent = `${d}/${m}/${y}`;
+            document.getElementById('s-cal-popup').classList.remove('open');
+            document.getElementById('s-fecha-btn').classList.remove('open');
+        });
+        window._lcCalSearch = _lcCalSearch;
+    }
+}
+document.addEventListener('click', function(e) {
+    const popup = document.getElementById('s-cal-popup');
+    const btn   = document.getElementById('s-fecha-btn');
+    if (popup && !popup.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+        popup.classList.remove('open');
+        btn.classList.remove('open');
+    }
+});
+// ── FIN CALENDARIO ──────────────────────────────────────────────────────────
 
 // Pre-cargar partidos de la provincia pre-seleccionada y seleccionar La Plata
 (function() {
@@ -1882,36 +2094,55 @@ if (fechaInput && !fechaInput.value) {
                 <a href="login.php" style="text-align:center;font-size:.8rem;color:rgba(255,255,255,.35);text-decoration:none">¿Olvidaste tu contraseña?</a>
             </div>
         </div>
-        <!-- Register form -->
-        <div id="pane-reg" style="display:none;padding:28px;max-height:80vh;overflow-y:auto">
-            <p style="font-size:.85rem;color:rgba(255,255,255,.45);margin-bottom:20px">Creá tu cuenta gratis en segundos</p>
-            <div id="reg-err" style="display:none;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px 14px;font-size:.83rem;color:#e74c3c;margin-bottom:16px"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <?php
-                $rFields = [
-                    ['r-nombre','text','Nombre','Juan','col:span 1'],
-                    ['r-apellido','text','Apellido','García','col:span 1'],
-                    ['r-dni','text','DNI','12345678','col:span 1'],
-                    ['r-tel','tel','Teléfono','221-000-0000','col:span 1'],
-                    ['r-email','email','Email','juan@email.com','col:span 2'],
-                    ['r-pass','password','Contraseña','••••••••','col:span 2'],
-                    ['r-pass2','password','Repetir contraseña','••••••••','col:span 2'],
-                ];
-                foreach ($rFields as $f):
-                    $span = $f[4] === 'col:span 2' ? 'grid-column:1/-1;' : '';
-                ?>
-                <div style="<?= $span ?>display:flex;flex-direction:column;gap:5px">
-                    <label style="font-size:.72rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em"><?= $f[2] ?></label>
-                    <input id="<?= $f[0] ?>" type="<?= $f[1] ?>" placeholder="<?= $f[3] ?>"
-                        style="padding:11px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:.88rem;outline:none;transition:border-color .2s"
-                        onfocus="this.style.borderColor='rgba(76,217,100,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'">
-                </div>
-                <?php endforeach; ?>
+        <!-- Register form — wizard 3 pasos -->
+        <div id="pane-reg" style="display:none;padding:22px 28px 28px;max-height:82vh;overflow-y:auto">
+            <div id="reg-err" style="display:none;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px 14px;font-size:.83rem;color:#e74c3c;margin-bottom:14px"></div>
+            <div class="rm-steps">
+                <div class="rm-step rm-active" id="rm-s1"><div class="rm-step-circle" id="rm-sc1">1</div><div class="rm-step-label">Personal</div></div>
+                <div class="rm-step-line" id="rm-line1"></div>
+                <div class="rm-step" id="rm-s2"><div class="rm-step-circle" id="rm-sc2">2</div><div class="rm-step-label">Contacto</div></div>
+                <div class="rm-step-line" id="rm-line2"></div>
+                <div class="rm-step" id="rm-s3"><div class="rm-step-circle" id="rm-sc3">3</div><div class="rm-step-label">Acceso</div></div>
             </div>
-            <button onclick="doRegister()" id="btn-reg"
-                style="margin-top:16px;width:100%;padding:13px;background:var(--green);color:#000;border:none;border-radius:10px;font-weight:800;font-size:.95rem;cursor:pointer;transition:background .2s">
-                Crear cuenta y reservar
-            </button>
+            <!-- Paso 1 -->
+            <div class="rm-panel rm-active" id="rm-panel1">
+                <div class="r-row-2">
+                    <div class="r-field"><input type="text" id="r-nombre" placeholder=" " autocomplete="given-name"><label>Nombre</label><i class="fas fa-user r-icon"></i></div>
+                    <div class="r-field"><input type="text" id="r-apellido" placeholder=" " autocomplete="family-name"><label>Apellido</label><i class="fas fa-user r-icon"></i></div>
+                </div>
+                <div class="r-field"><input type="text" id="r-dni" placeholder=" " inputmode="numeric" maxlength="8"><label>DNI</label><i class="fas fa-id-card r-icon"></i></div>
+                <p class="r-hint">Solo números, sin puntos.</p>
+                <div class="rm-btn-row"><button type="button" class="rm-btn-next" onclick="rmGoStep(2)">Continuar <i class="fas fa-arrow-right"></i></button></div>
+            </div>
+            <!-- Paso 2 -->
+            <div class="rm-panel" id="rm-panel2">
+                <div class="r-field"><input type="email" id="r-email" placeholder=" " autocomplete="email"><label>Email</label><i class="fas fa-envelope r-icon"></i></div>
+                <div class="r-field"><input type="tel" id="r-tel" placeholder=" " inputmode="numeric" autocomplete="tel"><label>Teléfono</label><i class="fas fa-phone r-icon"></i></div>
+                <p class="r-hint">Con código de área, sin 0 ni 15.</p>
+                <div class="rm-btn-row">
+                    <button type="button" class="rm-btn-back" onclick="rmGoStep(1)"><i class="fas fa-arrow-left"></i></button>
+                    <button type="button" class="rm-btn-next" onclick="rmGoStep(3)">Continuar <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+            <!-- Paso 3 -->
+            <div class="rm-panel" id="rm-panel3">
+                <div class="r-field">
+                    <input type="password" id="r-pass" placeholder=" " autocomplete="new-password" oninput="rStrength(this.value)">
+                    <label>Contraseña</label>
+                    <button type="button" class="r-icon" onclick="rTogglePass('r-pass','r-eye1')"><i id="r-eye1" class="fas fa-eye"></i></button>
+                </div>
+                <div class="r-strength-bar"><div class="r-strength-fill" id="r-sf"></div></div>
+                <span class="r-strength-text" id="r-st">Mínimo 6 caracteres</span>
+                <div class="r-field">
+                    <input type="password" id="r-pass2" placeholder=" " autocomplete="new-password">
+                    <label>Repetir contraseña</label>
+                    <button type="button" class="r-icon" onclick="rTogglePass('r-pass2','r-eye2')"><i id="r-eye2" class="fas fa-eye"></i></button>
+                </div>
+                <div class="rm-btn-row">
+                    <button type="button" class="rm-btn-back" onclick="rmGoStep(2)"><i class="fas fa-arrow-left"></i></button>
+                    <button onclick="doRegister()" id="btn-reg" class="rm-btn-next"><i class="fas fa-user-plus"></i> Crear cuenta y reservar</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -2053,6 +2284,7 @@ function authTab(t) {
     const isLogin = t === 'login';
     document.getElementById('pane-login').style.display = isLogin ? 'block' : 'none';
     document.getElementById('pane-reg').style.display   = isLogin ? 'none' : 'block';
+    if (!isLogin) rmReset();
     document.getElementById('tab-login').style.borderBottomColor = isLogin ? 'var(--green)' : 'transparent';
     document.getElementById('tab-login').style.color = isLogin ? '#fff' : 'rgba(255,255,255,.45)';
     document.getElementById('tab-reg').style.borderBottomColor  = isLogin ? 'transparent' : 'var(--green)';
@@ -2061,12 +2293,96 @@ function authTab(t) {
     document.getElementById('reg-err').style.display  = 'none';
 }
 
-function closeAuthModal() { closeModal(document.getElementById('modal-auth')); }
+function closeAuthModal() { closeModal(document.getElementById('modal-auth')); rmReset(); }
 
 function setLoading(btnId, loading, txt) {
     const b = document.getElementById(btnId);
     b.disabled = loading;
     b.textContent = loading ? '...' : txt;
+}
+
+// ── WIZARD REGISTRO ──────────────────────────────────────────────────────────
+let _rmStep = 1;
+function rmReset() {
+    _rmStep = 1;
+    [1,2,3].forEach(i => {
+        document.getElementById('rm-panel'+i).classList.toggle('rm-active', i===1);
+        const s = document.getElementById('rm-s'+i);
+        s.classList.toggle('rm-active', i===1);
+        s.classList.remove('rm-done');
+        document.getElementById('rm-sc'+i).textContent = i;
+    });
+    document.getElementById('rm-line1').classList.remove('rm-done');
+    document.getElementById('rm-line2').classList.remove('rm-done');
+    document.getElementById('reg-err').style.display = 'none';
+}
+function rmGoStep(n) {
+    if (n > _rmStep && !rmValidate(_rmStep)) return;
+    document.getElementById('rm-panel'+_rmStep).classList.remove('rm-active');
+    document.getElementById('rm-s'+_rmStep).classList.remove('rm-active');
+    if (n > _rmStep) document.getElementById('rm-s'+_rmStep).classList.add('rm-done');
+    _rmStep = n;
+    document.getElementById('rm-panel'+n).classList.add('rm-active');
+    document.getElementById('rm-s'+n).classList.add('rm-active');
+    document.getElementById('rm-s'+n).classList.remove('rm-done');
+    document.getElementById('rm-line1').classList.toggle('rm-done', _rmStep >= 2);
+    document.getElementById('rm-line2').classList.toggle('rm-done', _rmStep >= 3);
+    for (let i = 1; i < n; i++) {
+        document.getElementById('rm-s'+i).classList.add('rm-done');
+        document.getElementById('rm-s'+i).classList.remove('rm-active');
+        document.getElementById('rm-sc'+i).innerHTML = '<i class="fas fa-check"></i>';
+    }
+    document.getElementById('rm-sc'+n).textContent = n;
+}
+function rmValidate(step) {
+    if (step === 1) {
+        if (!document.getElementById('r-nombre').value.trim())   { rmShake('r-nombre');   return false; }
+        if (!document.getElementById('r-apellido').value.trim()) { rmShake('r-apellido'); return false; }
+        const dni = document.getElementById('r-dni').value.trim();
+        if (!dni || !/^\d{7,8}$/.test(dni)) { rmShake('r-dni'); return false; }
+    }
+    if (step === 2) {
+        const email = document.getElementById('r-email').value.trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { rmShake('r-email'); return false; }
+        if (!document.getElementById('r-tel').value.trim()) { rmShake('r-tel'); return false; }
+    }
+    return true;
+}
+function rmShake(id) {
+    const el = document.getElementById(id);
+    el.classList.add('r-err');
+    el.animate([{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:280});
+    el.addEventListener('input', () => el.classList.remove('r-err'), {once:true});
+}
+function rTogglePass(inputId, iconId) {
+    const inp=document.getElementById(inputId), ico=document.getElementById(iconId);
+    const v=inp.type==='text'; inp.type=v?'password':'text'; ico.className=v?'fas fa-eye':'fas fa-eye-slash';
+}
+function rStrength(val) {
+    let s=0;
+    if(val.length>=6) s++; if(val.length>=10) s++;
+    if(/[A-Z]/.test(val)) s++; if(/[0-9]/.test(val)) s++; if(/[^A-Za-z0-9]/.test(val)) s++;
+    const fill=document.getElementById('r-sf'), text=document.getElementById('r-st');
+    const pcts=['0%','25%','50%','75%','100%'], colors=['#ff4455','#ff9500','#ffcc00','#4cd964','#34c759'];
+    fill.style.width=pcts[s]||'0%'; fill.style.background=colors[s-1]||'#ff4455';
+    text.textContent=val.length===0?'Mínimo 6 caracteres':(['','Muy débil','Débil','Buena','Fuerte','Muy fuerte'][s]||'');
+    text.style.color=val.length===0?'rgba(255,255,255,.35)':(colors[s-1]||'rgba(255,255,255,.35)');
+}
+
+function updateNavAfterLogin(nombre) {
+    const ini = (nombre || '?').charAt(0).toUpperCase();
+    const panelUrl = 'view/maquetaCliente/LaCanchitaCliente.php';
+    const desktopEl = document.querySelector('.nav-actions');
+    if (desktopEl) {
+        desktopEl.innerHTML = `<a href="${panelUrl}" class="btn-ghost" style="display:flex;align-items:center;gap:8px;">
+            <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#4cd964,#34c759);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:#000;flex-shrink:0">${ini}</span>
+            Mi panel
+        </a>`;
+    }
+    const mobEl = document.querySelector('#navMobile .mob-actions');
+    if (mobEl) {
+        mobEl.innerHTML = `<a href="${panelUrl}" class="btn-ghost" style="flex:1;text-align:center;padding:10px 0;border-radius:10px;font-weight:600;font-size:.9rem;color:rgba(255,255,255,.85)">Mi panel</a>`;
+    }
 }
 
 async function doLogin() {
@@ -2081,6 +2397,7 @@ async function doLogin() {
         const d = await r.json();
         if (!d.ok) { errEl.textContent=d.msg; errEl.style.display='block'; return; }
         _loggedIn = true;
+        updateNavAfterLogin(d.nombre || user);
         closeAuthModal();
         abrirModalReserva();
     } catch(e) {
@@ -2091,29 +2408,31 @@ async function doLogin() {
 }
 
 async function doRegister() {
-    const errEl = document.getElementById('reg-err');
-    errEl.style.display = 'none';
+    const errEl = document.getElementById('reg-err'); errEl.style.display = 'none';
+    const pass = document.getElementById('r-pass').value, pass2 = document.getElementById('r-pass2').value;
+    if (!pass || pass.length < 6) { errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; errEl.style.display='block'; return; }
+    if (pass !== pass2) { errEl.textContent='Las contraseñas no coinciden.'; errEl.style.display='block'; return; }
     const body = {
         nombre:   document.getElementById('r-nombre').value.trim(),
         apellido: document.getElementById('r-apellido').value.trim(),
         dni:      document.getElementById('r-dni').value.trim(),
         telefono: document.getElementById('r-tel').value.trim(),
         email:    document.getElementById('r-email').value.trim(),
-        password: document.getElementById('r-pass').value,
-        password2:document.getElementById('r-pass2').value,
+        password: pass, password2: pass2,
     };
-    setLoading('btn-reg', true, 'Registrando...');
+    const btn = document.getElementById('btn-reg'); btn.disabled=true; btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Registrando...';
     try {
         const r = await fetch('api/register_ajax.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
         const d = await r.json();
         if (!d.ok) { errEl.textContent=d.msg; errEl.style.display='block'; return; }
         _loggedIn = true;
+        updateNavAfterLogin(d.nombre);
         closeAuthModal();
         abrirModalReserva();
     } catch(e) {
         errEl.textContent='Error de conexión.'; errEl.style.display='block';
     } finally {
-        setLoading('btn-reg', false, 'Crear cuenta y reservar');
+        btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Crear cuenta y reservar';
     }
 }
 

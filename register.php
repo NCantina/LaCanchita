@@ -15,8 +15,10 @@ unset($_SESSION['registro_error'], $_SESSION['registro_data']);
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        html { overflow-x: hidden; }
         body {
             min-height: 100vh;
+            overflow-x: hidden;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: #0a0a0a;
             display: flex;
@@ -27,6 +29,7 @@ unset($_SESSION['registro_error'], $_SESSION['registro_data']);
         .bg {
             position: fixed;
             inset: 0;
+            overflow: hidden;
             background: url('config/dist/img/ESTADIO.webp') center/cover no-repeat;
             transform: scale(1.05);
             animation: bgZoom 20s ease-in-out infinite alternate;
@@ -298,7 +301,7 @@ unset($_SESSION['registro_error'], $_SESSION['registro_data']);
             </div>
         <?php endif; ?>
 
-        <form action="procesar_registro.php" method="post" id="regForm">
+        <form action="procesar_registro.php" method="post" id="regForm" novalidate>
 
             <!-- Paso 1: Datos personales -->
             <div class="step-panel active" id="panel1">
@@ -510,16 +513,15 @@ unset($_SESSION['registro_error'], $_SESSION['registro_data']);
 
     // Loading en submit
     document.getElementById('regForm').addEventListener('submit', function(e) {
+        e.preventDefault();
         const pass  = document.getElementById('password').value;
         const pass2 = document.getElementById('password2').value;
-        if (pass !== pass2) {
-            e.preventDefault();
-            shake('password2');
-            return;
-        }
+        if (!pass || pass.length < 6) { shake('password');  return; }
+        if (pass !== pass2)           { shake('password2'); return; }
         const btn = document.getElementById('submitBtn');
         btn.classList.add('loading');
         document.getElementById('btnText').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+        this.submit();
     });
 
     // Si hay error del servidor, ir al paso correcto

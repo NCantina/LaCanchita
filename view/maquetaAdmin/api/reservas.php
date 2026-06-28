@@ -6,7 +6,7 @@ require_once '../../../config/dist/script/php/tenancy.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-function resp($ok, $msg, $data = null) { echo json_encode(['ok' => $ok, 'msg' => $msg, 'data' => $data]); exit; }
+function resp($ok, $msg, $data = null) { echo json_encode(['ok' => $ok, 'msg' => $msg, 'data' => $data], JSON_UNESCAPED_UNICODE); exit; }
 function e($link, $v) { return mysqli_real_escape_string($link, trim($v ?? '')); }
 
 // Verificar sesión mínima (sin requerir perfil)
@@ -485,11 +485,42 @@ case 'cancelar':
     if ((int)$res['USUARIOS_ID'] !== $uid) resp(false, 'No tenés permiso para cancelar esta reserva.');
     if ($res['RESERVA_ESTADO'] !== 'pendiente') resp(false, 'Solo podés cancelar reservas en estado pendiente.');
 
+    // Obtener datos para el email antes de cancelar
+    $cancelData = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO, u.USUARIOS_EMAIL,
+                ca.CANCHA_NOMBRE, co.COMPLEJO_NOMBRE,
+                r.RESERVA_FECHA, r.RESERVA_HORA_INICIO, r.RESERVA_HORA_FIN, r.RESERVA_PRECIO
+         FROM reserva r
+         JOIN usuarios u  ON u.USUARIOS_ID = r.USUARIOS_ID
+         JOIN cancha ca   ON ca.CANCHA_ID  = r.CANCHA_ID
+         JOIN complejo co ON co.COMPLEJO_ID = ca.COMPLEJO_ID
+         WHERE r.RESERVA_ID=$reserva_id LIMIT 1"
+    ));
+
     $stmt = mysqli_prepare($link,
         "UPDATE reserva SET RESERVA_ESTADO='cancelada', ACTIVO=0 WHERE RESERVA_ID=?"
     );
     mysqli_stmt_bind_param($stmt, 'i', $reserva_id);
     mysqli_stmt_execute($stmt);
+
+    if ($cancelData) {
+        require_once __DIR__ . '/../../../config/dist/script/php/mailer.php';
+        require_once __DIR__ . '/../../../config/dist/script/php/push_notify.php';
+        $cancelNotif = [
+            'nombre'     => $cancelData['USUARIOS_NOMBRE'],
+            'apellido'   => $cancelData['USUARIOS_APELLIDO'],
+            'email'      => $cancelData['USUARIOS_EMAIL'],
+            'cancha'     => $cancelData['CANCHA_NOMBRE'],
+            'complejo'   => $cancelData['COMPLEJO_NOMBRE'],
+            'fecha'      => $cancelData['RESERVA_FECHA'],
+            'hora_ini'   => $cancelData['RESERVA_HORA_INICIO'],
+            'hora_fin'   => $cancelData['RESERVA_HORA_FIN'],
+            'precio'     => $cancelData['RESERVA_PRECIO'],
+            'reserva_id' => $reserva_id,
+        ];
+        enviarEmailReserva('cancelada', $cancelNotif);
+        enviarPushReserva($uid, 'cancelada', $cancelNotif);
+    }
 
     resp(true, 'Reserva cancelada.', null);
 
@@ -588,9 +619,9 @@ case 'confirmar':
     mysqli_stmt_bind_param($stmt, 'i', $reserva_id);
     mysqli_stmt_execute($stmt);
 
-    // Traer datos para notificación WhatsApp
+    // Traer datos para notificación WhatsApp + email
     $notif = mysqli_fetch_assoc(mysqli_query($link,
-        "SELECT u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO, u.USUARIOS_TELEFONO,
+        "SELECT u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO, u.USUARIOS_TELEFONO, u.USUARIOS_EMAIL,
                 ca.CANCHA_NOMBRE, co.COMPLEJO_NOMBRE, co.COMPLEJO_TELEFONO,
                 r.RESERVA_FECHA, r.RESERVA_HORA_INICIO, r.RESERVA_HORA_FIN, r.RESERVA_PRECIO
          FROM reserva r
@@ -599,6 +630,25 @@ case 'confirmar':
          JOIN complejo co ON co.COMPLEJO_ID = ca.COMPLEJO_ID
          WHERE r.RESERVA_ID = $reserva_id LIMIT 1"
     ));
+
+    if ($notif) {
+        require_once __DIR__ . '/../../../config/dist/script/php/mailer.php';
+        require_once __DIR__ . '/../../../config/dist/script/php/push_notify.php';
+        $notifData = [
+            'nombre'     => $notif['USUARIOS_NOMBRE'],
+            'apellido'   => $notif['USUARIOS_APELLIDO'],
+            'email'      => $notif['USUARIOS_EMAIL'],
+            'cancha'     => $notif['CANCHA_NOMBRE'],
+            'complejo'   => $notif['COMPLEJO_NOMBRE'],
+            'fecha'      => $notif['RESERVA_FECHA'],
+            'hora_ini'   => $notif['RESERVA_HORA_INICIO'],
+            'hora_fin'   => $notif['RESERVA_HORA_FIN'],
+            'precio'     => $notif['RESERVA_PRECIO'],
+            'reserva_id' => $reserva_id,
+        ];
+        enviarEmailReserva('confirmada', $notifData);
+        enviarPushReserva((int)$res['USUARIOS_ID'], 'confirmada', $notifData);
+    }
 
     resp(true, 'Reserva confirmada.', $notif ? [
         'cliente_nombre' => $notif['USUARIOS_NOMBRE'] . ' ' . $notif['USUARIOS_APELLIDO'],
@@ -622,11 +672,42 @@ case 'rechazar':
 
     if ($res['RESERVA_ESTADO'] === 'cancelada') resp(false, 'La reserva ya está cancelada.');
 
+    // Datos para email antes de cancelar
+    $rechazarData = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO, u.USUARIOS_EMAIL,
+                ca.CANCHA_NOMBRE, co.COMPLEJO_NOMBRE,
+                r.RESERVA_FECHA, r.RESERVA_HORA_INICIO, r.RESERVA_HORA_FIN, r.RESERVA_PRECIO
+         FROM reserva r
+         JOIN usuarios u  ON u.USUARIOS_ID = r.USUARIOS_ID
+         JOIN cancha ca   ON ca.CANCHA_ID  = r.CANCHA_ID
+         JOIN complejo co ON co.COMPLEJO_ID = ca.COMPLEJO_ID
+         WHERE r.RESERVA_ID=$reserva_id LIMIT 1"
+    ));
+
     $stmt = mysqli_prepare($link,
         "UPDATE reserva SET RESERVA_ESTADO='cancelada', ACTIVO=0 WHERE RESERVA_ID=?"
     );
     mysqli_stmt_bind_param($stmt, 'i', $reserva_id);
     mysqli_stmt_execute($stmt);
+
+    if ($rechazarData) {
+        require_once __DIR__ . '/../../../config/dist/script/php/mailer.php';
+        require_once __DIR__ . '/../../../config/dist/script/php/push_notify.php';
+        $rechazarNotif = [
+            'nombre'     => $rechazarData['USUARIOS_NOMBRE'],
+            'apellido'   => $rechazarData['USUARIOS_APELLIDO'],
+            'email'      => $rechazarData['USUARIOS_EMAIL'],
+            'cancha'     => $rechazarData['CANCHA_NOMBRE'],
+            'complejo'   => $rechazarData['COMPLEJO_NOMBRE'],
+            'fecha'      => $rechazarData['RESERVA_FECHA'],
+            'hora_ini'   => $rechazarData['RESERVA_HORA_INICIO'],
+            'hora_fin'   => $rechazarData['RESERVA_HORA_FIN'],
+            'precio'     => $rechazarData['RESERVA_PRECIO'],
+            'reserva_id' => $reserva_id,
+        ];
+        enviarEmailReserva('cancelada', $rechazarNotif);
+        enviarPushReserva((int)$res['USUARIOS_ID'], 'cancelada', $rechazarNotif);
+    }
 
     resp(true, 'Reserva rechazada y cancelada.', null);
 

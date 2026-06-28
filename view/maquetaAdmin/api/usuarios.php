@@ -7,15 +7,15 @@ require_once '../../../config/dist/script/php/tenancy.php';
 require_perfil(2);
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
-function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data]); exit; }
+function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 function e($link,$v){ return mysqli_real_escape_string($link,trim($v??'')); }
 
 switch($action) {
 
-// ── LISTAR STAFF (dueño: su staff; superadmin: todo) ────────────────────
+// ── LISTAR STAFF (dueño: su staff; superadmin: todos los usuarios) ──────
 case 'listar_staff':
     if (is_superadmin()) {
-        $where = "u.PERFIL_ID IN (3,4)";
+        $where = "1=1";
     } else {
         $duenoId = current_uid();
         $where   = "u.PERFIL_ID IN (3,4) AND u.DUENO_ID=$duenoId";
@@ -79,21 +79,28 @@ case 'crear_staff':
     if (!$apellido) resp(false,'Apellido obligatorio.');
     if (!$dni)      resp(false,'DNI obligatorio.');
     if (!$email || !filter_var($_POST['email']??'',FILTER_VALIDATE_EMAIL)) resp(false,'Email inválido.');
-    if (!in_array($perfilId,[3,4])) resp(false,'Perfil inválido.');
+    $perfilesPermitidos = is_superadmin() ? [3,4,5] : [3,4]; // perfil 1 (SA) y 2 (Dueño) solo desde Dev Panel
+    if (!in_array($perfilId,$perfilesPermitidos)) resp(false,'El perfil Dueño solo puede asignarse desde el Panel Desarrollador.');
     if (strlen($pass)<6) resp(false,'La contraseña debe tener al menos 6 caracteres.');
 
-    $duenoId = is_dueno() ? current_uid() : ((int)($_POST['dueno_id']??0) ?: null);
-    if (!$duenoId) resp(false,'Debe asignarse un dueño.');
+    // DUENO_ID: requerido solo para staff (3,4)
+    if (in_array($perfilId,[3,4])) {
+        $duenoId = is_dueno() ? current_uid() : ((int)($_POST['dueno_id']??0) ?: null);
+        if (!$duenoId) resp(false,'Debe asignarse un dueño.');
+    } else {
+        $duenoId = null;
+    }
 
     if (mysqli_fetch_assoc(mysqli_query($link,
         "SELECT USUARIOS_ID FROM usuarios WHERE USUARIOS_EMAIL='$email' OR USUARIOS_DNI='$dni'")))
         resp(false,'Ya existe un usuario con ese email o DNI.');
 
-    $hash = e($link,password_hash($pass,PASSWORD_DEFAULT));
+    $hash    = e($link,password_hash($pass,PASSWORD_DEFAULT));
+    $duenoSQ = $duenoId ? (int)$duenoId : 'NULL';
     mysqli_query($link,
         "INSERT INTO usuarios (USUARIOS_NOMBRE,USUARIOS_APELLIDO,USUARIOS_DNI,USUARIOS_EMAIL,
          USUARIOS_TELEFONO,USUARIOS_PASSWORD,PERFIL_ID,DUENO_ID,ACTIVO)
-         VALUES ('$nombre','$apellido','$dni','$email','$tel','$hash',$perfilId,$duenoId,1)"
+         VALUES ('$nombre','$apellido','$dni','$email','$tel','$hash',$perfilId,$duenoSQ,1)"
     );
     resp(true,'Staff creado correctamente.',['id'=>mysqli_insert_id($link)]);
 
@@ -350,6 +357,73 @@ case 'rechazar':
     mysqli_query($link,"DELETE FROM usuarios WHERE USUARIOS_ID=$id AND ACTIVO=0");
     if (!mysqli_affected_rows($link)) resp(false,'No encontrado.');
     resp(true,'Cuenta eliminada.');
+
+// ── LISTAR PAGINADO (solo SA) ────────────────────────────────────────────
+case 'listar':
+    if (!is_superadmin()) resp(false,'Sin permisos.');
+    $page    = max(1,(int)($_GET['page']??1));
+    $perPage = 20;
+    $offset  = ($page-1)*$perPage;
+    $q       = e($link,$_GET['q']??'');
+    $perfil  = (int)($_GET['perfil_id']??0);
+    $activo  = $_GET['activo']??'';
+
+    $where = ['1=1'];
+    if ($q) $where[] = "(u.USUARIOS_NOMBRE LIKE '%$q%' OR u.USUARIOS_APELLIDO LIKE '%$q%'
+                         OR u.USUARIOS_EMAIL LIKE '%$q%' OR u.USUARIOS_DNI LIKE '%$q%'
+                         OR u.USUARIOS_TELEFONO LIKE '%$q%')";
+    if ($perfil) $where[] = "u.PERFIL_ID=$perfil";
+    if ($activo !== '') $where[] = "u.ACTIVO=".(int)$activo;
+    $w = implode(' AND ', $where);
+
+    $total = (int)(mysqli_fetch_assoc(mysqli_query($link,"SELECT COUNT(*) AS n FROM usuarios u WHERE $w"))['n'] ?? 0);
+    $rows  = [];
+    $qr    = mysqli_query($link,"
+        SELECT u.USUARIOS_ID, u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO,
+               u.USUARIOS_EMAIL, u.USUARIOS_TELEFONO, u.USUARIOS_DNI,
+               u.PERFIL_ID, u.ACTIVO, u.DUENO_ID, p.PERFIL_NOMBRE,
+               CONCAT(du.USUARIOS_NOMBRE,' ',du.USUARIOS_APELLIDO) AS DUENO_FULL,
+               (SELECT COUNT(*) FROM complejo c WHERE c.USUARIOS_ID=u.USUARIOS_ID AND c.ACTIVO=1) AS TOTAL_PREDIOS
+        FROM usuarios u
+        JOIN perfil p ON p.PERFIL_ID=u.PERFIL_ID
+        LEFT JOIN usuarios du ON du.USUARIOS_ID=u.DUENO_ID
+        WHERE $w
+        ORDER BY u.USUARIOS_ID DESC
+        LIMIT $perPage OFFSET $offset
+    ");
+    while ($r=mysqli_fetch_assoc($qr)) $rows[]=$r;
+    resp(true,'',['users'=>$rows,'total'=>$total,'page'=>$page,'pages'=>max(1,(int)ceil($total/$perPage))]);
+
+// ── RESET PASSWORD (solo SA) ─────────────────────────────────────────────
+case 'reset_password':
+    if (!is_superadmin()) resp(false,'Sin permisos.');
+    $id   = (int)($_POST['id']??0);
+    $pass = $_POST['password']??'';
+    if (!$id) resp(false,'ID inválido.');
+    if (strlen($pass)<6) resp(false,'Mínimo 6 caracteres.');
+    if (!mysqli_fetch_assoc(mysqli_query($link,"SELECT USUARIOS_ID FROM usuarios WHERE USUARIOS_ID=$id")))
+        resp(false,'Usuario no encontrado.');
+    $hash = e($link,password_hash($pass,PASSWORD_DEFAULT));
+    mysqli_query($link,"UPDATE usuarios SET USUARIOS_PASSWORD='$hash' WHERE USUARIOS_ID=$id");
+    resp(true,'Contraseña actualizada.');
+
+// ── CAMBIAR PERFIL (solo SA) ─────────────────────────────────────────────
+case 'cambiar_perfil':
+    if (!is_superadmin()) resp(false,'Sin permisos.');
+    $id       = (int)($_POST['id']??0);
+    $perfilId = (int)($_POST['perfil_id']??0);
+    $duenoId  = (int)($_POST['dueno_id']??0);
+    if (!$id || !$perfilId) resp(false,'Datos incompletos.');
+    if (in_array($perfilId,[1,2])) resp(false,'Los perfiles SuperAdmin y Dueño solo pueden asignarse desde el Panel Desarrollador.');
+    if (!in_array($perfilId,[3,4,5])) resp(false,'Perfil inválido.');
+    if ($id===current_uid()) resp(false,'No podés cambiar tu propio perfil.');
+    if (in_array($perfilId,[3,4]) && !$duenoId) resp(false,'El staff requiere un dueño asignado.');
+    $u = mysqli_fetch_assoc(mysqli_query($link,"SELECT PERFIL_ID FROM usuarios WHERE USUARIOS_ID=$id"));
+    if (!$u) resp(false,'Usuario no encontrado.');
+    if ((int)$u['PERFIL_ID'] === 2) resp(false,'El perfil Dueño solo puede modificarse desde el Panel Desarrollador.');
+    $duenoSQ = in_array($perfilId,[3,4]) ? (int)$duenoId : 'NULL';
+    mysqli_query($link,"UPDATE usuarios SET PERFIL_ID=$perfilId,DUENO_ID=$duenoSQ WHERE USUARIOS_ID=$id");
+    resp(true,'Perfil actualizado.');
 
 default:
     resp(false,'Acción no reconocida.');

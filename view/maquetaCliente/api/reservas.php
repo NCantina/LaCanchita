@@ -3,8 +3,13 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 
-function resp($ok,$msg,$data=null){echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data]);exit;}
+function resp($ok,$msg,$data=null){
+    $j=json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data],JSON_UNESCAPED_UNICODE);
+    if($j===false)$j=json_encode(['ok'=>false,'msg'=>'Error interno.','data'=>null]);
+    echo $j;exit;
+}
 function e($l,$v){return mysqli_real_escape_string($l,$v);}
+function qfetch($link,$sql){$r=mysqli_query($link,$sql);return($r&&$r!==true)?mysqli_fetch_assoc($r):null;}
 
 if (!isset($_SESSION['usuario_id'])) resp(false,'Sesión no iniciada.');
 $uid = (int)$_SESSION['usuario_id'];
@@ -19,8 +24,8 @@ if ($action === 'disponibilidad') {
     if (!$cancha_id || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) resp(false,'Parámetros inválidos.');
 
     $eFecha = e($link, $fecha);
-    $diaRow = mysqli_fetch_assoc(mysqli_query($link,"SELECT MOD(DAYOFWEEK('$eFecha')-2+7,7)+1 AS DIA_ID"));
-    $diaId  = (int)$diaRow['DIA_ID'];
+    $diaRow = qfetch($link,"SELECT MOD(DAYOFWEEK('$eFecha')-2+7,7)+1 AS DIA_ID");
+    $diaId  = (int)($diaRow['DIA_ID'] ?? 0);
 
     $res = mysqli_query($link,"
         SELECT fh.FRANJA_ID, fh.FRANJA_HORA_INICIO, fh.FRANJA_HORA_FIN, fh.FRANJA_PRECIO, fh.FRANJA_SENA
@@ -38,16 +43,16 @@ if ($action === 'disponibilidad') {
         $hFin  = $f['FRANJA_HORA_FIN'];
 
         // Verificar reserva
-        $ocup = mysqli_fetch_assoc(mysqli_query($link,
+        $ocup = qfetch($link,
             "SELECT RESERVA_ID FROM reserva
              WHERE CANCHA_ID=$cancha_id AND FRANJA_ID=$fid
                AND RESERVA_FECHA='$eFecha'
                AND RESERVA_ESTADO IN ('pendiente','confirmada')
                AND ACTIVO=1 LIMIT 1"
-        ));
+        );
 
         // Verificar turno fijo
-        $tf = !$ocup ? mysqli_fetch_assoc(mysqli_query($link,
+        $tf = !$ocup ? qfetch($link,
             "SELECT 1 FROM turno_fijo
              WHERE CANCHA_ID=$cancha_id AND TURNO_FIJO_DIA=$diaId
                AND TURNO_FIJO_HORA_INICIO='".e($link,$hIni)."'
@@ -55,19 +60,19 @@ if ($action === 'disponibilidad') {
                AND TURNO_FIJO_FECHA_DESDE<='$eFecha'
                AND (TURNO_FIJO_FECHA_HASTA IS NULL OR TURNO_FIJO_FECHA_HASTA>='$eFecha')
              LIMIT 1"
-        )) : null;
+        ) : null;
 
         // Verificar cierre
-        $compRow = mysqli_fetch_assoc(mysqli_query($link,"SELECT COMPLEJO_ID FROM cancha WHERE CANCHA_ID=$cancha_id LIMIT 1"));
+        $compRow = qfetch($link,"SELECT COMPLEJO_ID FROM cancha WHERE CANCHA_ID=$cancha_id LIMIT 1");
         $cmpId   = (int)($compRow['COMPLEJO_ID']??0);
-        $cierre  = (!$ocup && !$tf) ? mysqli_fetch_assoc(mysqli_query($link,
+        $cierre  = (!$ocup && !$tf) ? qfetch($link,
             "SELECT 1 FROM cierre_cancha
              WHERE ACTIVO=1
                AND (CANCHA_ID=$cancha_id OR (CANCHA_ID IS NULL AND COMPLEJO_ID=$cmpId))
                AND CIERRE_FECHA_DESDE<='$eFecha' AND CIERRE_FECHA_HASTA>='$eFecha'
                AND (CIERRE_HORA_DESDE IS NULL OR (CIERRE_HORA_DESDE<'".e($link,$hFin)."' AND CIERRE_HORA_HASTA>'".e($link,$hIni)."'))
              LIMIT 1"
-        )) : null;
+        ) : null;
 
         $disponible = !$ocup && !$tf && !$cierre;
         $motivo = $ocup ? 'reservado' : ($tf ? 'turno fijo' : ($cierre ? 'cerrado' : ''));
@@ -90,24 +95,24 @@ if ($action === 'crear') {
         resp(false,'No podés reservar fechas pasadas.');
 
     $eFecha = e($link,$fecha);
-    $franja = mysqli_fetch_assoc(mysqli_query($link,
+    $franja = qfetch($link,
         "SELECT fh.*, c.COMPLEJO_ID FROM franja_horaria fh
          JOIN cancha c ON c.CANCHA_ID=fh.CANCHA_ID
          WHERE fh.FRANJA_ID=$franja_id AND fh.CANCHA_ID=$cancha_id AND fh.ACTIVO=1 LIMIT 1"
-    ));
+    );
     if (!$franja) resp(false,'Franja no válida.');
 
-    $diaRow    = mysqli_fetch_assoc(mysqli_query($link,"SELECT MOD(DAYOFWEEK('$eFecha')-2+7,7)+1 AS DIA_ID"));
-    $diaId     = (int)$diaRow['DIA_ID'];
+    $diaRow    = qfetch($link,"SELECT MOD(DAYOFWEEK('$eFecha')-2+7,7)+1 AS DIA_ID");
+    $diaId     = (int)($diaRow['DIA_ID'] ?? 0);
     $cmpId     = (int)$franja['COMPLEJO_ID'];
     $hIni      = $franja['FRANJA_HORA_INICIO'];
     $hFin      = $franja['FRANJA_HORA_FIN'];
     $precio    = (float)$franja['FRANJA_PRECIO'];
     $sena      = (float)$franja['FRANJA_SENA'];
 
-    $diaOk = mysqli_fetch_assoc(mysqli_query($link,
+    $diaOk = qfetch($link,
         "SELECT 1 FROM franja_dia WHERE FRANJA_ID=$franja_id AND DIA_ID=$diaId LIMIT 1"
-    ));
+    );
     if (!$diaOk) resp(false,'La franja no aplica para ese día.');
 
     mysqli_begin_transaction($link);
@@ -121,24 +126,24 @@ if ($action === 'crear') {
     );
     if (mysqli_num_rows($lock) > 0) { mysqli_rollback($link); resp(false,'Este turno ya fue reservado.'); }
 
-    $tf = mysqli_fetch_assoc(mysqli_query($link,
+    $tf = qfetch($link,
         "SELECT 1 FROM turno_fijo
          WHERE CANCHA_ID=$cancha_id AND TURNO_FIJO_DIA=$diaId
            AND TURNO_FIJO_HORA_INICIO='".e($link,$hIni)."' AND ACTIVO=1
            AND TURNO_FIJO_FECHA_DESDE<='$eFecha'
            AND (TURNO_FIJO_FECHA_HASTA IS NULL OR TURNO_FIJO_FECHA_HASTA>='$eFecha')
          LIMIT 1"
-    ));
+    );
     if ($tf) { mysqli_rollback($link); resp(false,'Este turno es fijo y no está disponible.'); }
 
-    $cierre = mysqli_fetch_assoc(mysqli_query($link,
+    $cierre = qfetch($link,
         "SELECT 1 FROM cierre_cancha
          WHERE ACTIVO=1
            AND (CANCHA_ID=$cancha_id OR (CANCHA_ID IS NULL AND COMPLEJO_ID=$cmpId))
            AND CIERRE_FECHA_DESDE<='$eFecha' AND CIERRE_FECHA_HASTA>='$eFecha'
            AND (CIERRE_HORA_DESDE IS NULL OR (CIERRE_HORA_DESDE<'".e($link,$hFin)."' AND CIERRE_HORA_HASTA>'".e($link,$hIni)."'))
          LIMIT 1"
-    ));
+    );
     if ($cierre) { mysqli_rollback($link); resp(false,'El complejo está cerrado en ese horario.'); }
 
     $stmt = mysqli_prepare($link,

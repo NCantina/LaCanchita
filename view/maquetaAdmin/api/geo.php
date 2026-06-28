@@ -7,8 +7,10 @@ if (!isset($_SESSION['usuario_perfil'])) {
     http_response_code(403); echo json_encode(['ok'=>false,'msg'=>'Sin sesión.']); exit;
 }
 
+mysqli_query($link, "SET NAMES 'utf8mb4'");
+
 $action = $_GET['action'] ?? '';
-function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data]); exit; }
+function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 
 switch($action) {
 

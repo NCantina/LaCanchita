@@ -14,6 +14,15 @@ if ((int)$_SESSION['usuario_perfil'] >= 5) {
 $nombre = $_SESSION['usuario_nombre'] ?? 'Admin';
 $perfil = (int)($_SESSION['usuario_perfil'] ?? 1);
 $uid    = (int)($_SESSION['usuario_id']    ?? 0);
+
+// Onboarding: dueño nuevo sin complejos → wizard de configuración inicial
+if ($perfil === 2 && empty($_SESSION['onboarding_skip']) && !isset($_GET['skip_onboarding'])) {
+    $nComp = (int)(mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT COUNT(*) AS n FROM complejo WHERE USUARIOS_ID=$uid AND ACTIVO=1"
+    ))['n'] ?? 0);
+    if ($nComp === 0) { header('Location: Onboarding.php'); exit; }
+}
+if (isset($_GET['skip_onboarding'])) $_SESSION['onboarding_skip'] = true;
 $hora   = (int)date('H');
 $saludo = $hora < 12 ? 'Buenos días' : ($hora < 19 ? 'Buenas tardes' : 'Buenas noches');
 
@@ -186,6 +195,7 @@ if ($perfil >= 2) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Panel Admin · La Canchita</title>
+    <?php $PWA_BASE = '../../'; require_once '../../config/dist/script/php/pwa_head.php'; ?>
     <link rel="shortcut icon" href="../../config/dist/img/loguito_lacanchita.WEBP" type="image/webp">
     <link rel="stylesheet" href="../../config/pluggins/vendor/fontawesome-free/css/all.min.css">
     <style>
@@ -585,6 +595,7 @@ if ($perfil >= 2) {
     .act-btn.edit:hover  { border-color: rgba(52,152,219,.4);  background: rgba(52,152,219,.1);  color: var(--blue); }
     .act-btn.toggle:hover.on { border-color: rgba(231,76,60,.4); background: rgba(231,76,60,.1); color: var(--red); }
     .act-btn.toggle:hover { border-color: rgba(76,217,100,.4); background: rgba(76,217,100,.1); color: var(--green); }
+    .act-btn.del:hover   { border-color: rgba(231,76,60,.4);  background: rgba(231,76,60,.1);  color: var(--red); }
 
     .empty-state {
         text-align: center; padding: 48px 20px;
@@ -780,6 +791,26 @@ if ($perfil >= 2) {
     .wiz-franja-row .fr-time { font-weight: 700; color: var(--text); }
     .wiz-franja-row .fr-price { color: var(--green); font-weight: 700; }
     .wiz-franja-row .fr-dias  { color: var(--muted); flex: 1; }
+
+    .fr-slot-row {
+        display: grid; grid-template-columns: 1fr 18px 1fr 28px;
+        gap: 6px; align-items: center; margin-bottom: 7px;
+    }
+    .fr-slot-arrow { color: var(--muted); font-size: 14px; text-align: center; }
+    .fr-rm-btn {
+        width: 28px; height: 36px; border-radius: 7px; border: 1px solid var(--border);
+        background: var(--s1); color: var(--muted); cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; transition: all .15s; flex-shrink: 0;
+    }
+    .fr-rm-btn:hover { border-color: rgba(255,69,58,.4); color: #ff453a; background: rgba(255,69,58,.06); }
+
+    .gen-preset-btn {
+        padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+        background: var(--s1); color: var(--muted); font-size: 10px; font-weight: 700;
+        cursor: pointer; transition: all .15s;
+    }
+    .gen-preset-btn:hover { color: var(--text); border-color: rgba(255,255,255,.25); }
 
     .wiz-done-icon {
         width: 80px; height: 80px; border-radius: 50%;
@@ -1389,8 +1420,8 @@ if ($perfil >= 2) {
             <i class="fas fa-chart-bar"></i> Reportes
         </div>
         <div class="sb-section">Personas</div>
-        <div class="sb-item" data-view="staff" onclick="showView(this)">
-            <i class="fas fa-id-badge"></i> Usuarios
+        <div class="sb-item" data-view="usuarios" onclick="showView(this)">
+            <i class="fas fa-users"></i> Usuarios
             <?php if($kpi['usuarios_pend'] > 0): ?>
             <span class="sb-pill"><?= $kpi['usuarios_pend'] ?></span>
             <?php endif; ?>
@@ -1440,6 +1471,10 @@ if ($perfil >= 2) {
         <div class="sb-item" data-view="pagos" onclick="showView(this)">
             <i class="fas fa-dollar-sign"></i> Cobros
         </div>
+        <div class="sb-section">Plataforma</div>
+        <div class="sb-item" data-view="planes" onclick="showView(this)">
+            <i class="fas fa-tags"></i> Tipos de plan
+        </div>
         <div class="sb-section">Personas</div>
         <div class="sb-item" data-view="staff" onclick="showView(this)">
             <i class="fas fa-id-badge"></i> Staff del cliente
@@ -1481,6 +1516,10 @@ if ($perfil >= 2) {
         <div class="sb-item" data-view="pagos" onclick="showView(this)">
             <i class="fas fa-dollar-sign"></i> Cobros
         </div>
+        <div class="sb-section">Plataforma</div>
+        <div class="sb-item" data-view="planes" onclick="showView(this)">
+            <i class="fas fa-tags"></i> Tipos de plan
+        </div>
         <div class="sb-section">Personas</div>
         <div class="sb-item" data-view="staff" onclick="showView(this)">
             <i class="fas fa-id-badge"></i> Mi Staff
@@ -1492,7 +1531,11 @@ if ($perfil >= 2) {
         <?php endif; ?>
 
         <?php if($perfil === 3 || $perfil === 4): ?>
-        <!-- ── Staff: solo operaciones ── -->
+        <!-- ── Staff: plataforma + operaciones ── -->
+        <div class="sb-section">Plataforma</div>
+        <div class="sb-item" data-view="planes" onclick="showView(this)">
+            <i class="fas fa-tags"></i> Tipos de plan
+        </div>
         <div class="sb-section">Operaciones</div>
         <div class="sb-item" data-view="reportes" onclick="showView(this)">
             <i class="fas fa-chart-bar"></i> Reportes
@@ -1517,6 +1560,11 @@ if ($perfil >= 2) {
         <a href="../maquetaCliente/LaCanchitaCliente.php" class="sb-footer-link client">
             <i class="fas fa-arrow-left"></i> Ver panel cliente
         </a>
+        <?php if ($perfil === 1): ?>
+        <a href="../maquetaSuperAdmin/PanelDesarrollador.php" class="sb-footer-link" style="color:#9b59b6;border-color:rgba(155,89,182,.2);background:rgba(155,89,182,.06)">
+            <i class="fas fa-code"></i> Panel desarrollador
+        </a>
+        <?php endif; ?>
         <a href="../../logout.php" class="sb-footer-link logout">
             <i class="fas fa-sign-out-alt"></i> Cerrar sesión
         </a>
@@ -1916,10 +1964,62 @@ if ($perfil >= 2) {
              VIEW: USUARIOS
         ══════════════════════════════ -->
         <div class="view" id="view-usuarios">
+        <?php if ($perfil === 1): ?>
+            <!-- ── SA: gestión completa de usuarios ── -->
             <div class="page-header">
                 <div class="page-header-left">
                     <h1>Usuarios</h1>
-                    <p>Gestioná cuentas y aprobaciones</p>
+                    <p>Todos los usuarios del sistema</p>
+                </div>
+                <div class="page-header-right">
+                    <button class="btn btn-primary" onclick="staffAbrirCrear()"><i class="fas fa-plus"></i> Nuevo usuario</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="dt-toolbar">
+                    <div class="dt-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="usrDshQ" placeholder="Nombre, email, DNI..." oninput="usrDshDebounce()">
+                    </div>
+                    <div class="dt-filter">
+                        <select class="form-select" id="usrDshPerfil" onchange="usrDshCargar(1)" style="font-size:.8rem;padding:5px 10px;min-width:140px">
+                            <option value="">Todos los perfiles</option>
+                            <option value="1">SuperAdmin</option>
+                            <option value="2">Dueño</option>
+                            <option value="3">Encargado</option>
+                            <option value="4">Empleado</option>
+                            <option value="5">Cliente</option>
+                        </select>
+                        <select class="form-select" id="usrDshActivo" onchange="usrDshCargar(1)" style="font-size:.8rem;padding:5px 10px;min-width:110px">
+                            <option value="">Todos</option>
+                            <option value="1">Activos</option>
+                            <option value="0">Inactivos</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="usrDshTableWrap">
+                    <table>
+                        <thead><tr>
+                            <th>Usuario</th>
+                            <th>Email / Teléfono</th>
+                            <th>Perfil</th>
+                            <th>Ref.</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr></thead>
+                        <tbody id="usrDshTbody">
+                            <tr><td colspan="6"><div class="empty-state"><div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div><p>Cargando...</p></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="usrDshPag" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)"></div>
+            </div>
+        <?php else: ?>
+            <!-- ── Dueño: pendientes de aprobación ── -->
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1>Usuarios</h1>
+                    <p>Cuentas pendientes de aprobación</p>
                 </div>
             </div>
             <div class="card">
@@ -1937,11 +2037,7 @@ if ($perfil >= 2) {
                 <?php else: ?>
                     <table>
                         <thead><tr>
-                            <th>Usuario</th>
-                            <th>DNI</th>
-                            <th>Teléfono</th>
-                            <th>Perfil</th>
-                            <th>Acciones</th>
+                            <th>Usuario</th><th>DNI</th><th>Teléfono</th><th>Perfil</th><th>Acciones</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($pendientes as $u): ?>
@@ -1955,17 +2051,13 @@ if ($perfil >= 2) {
                                     </div>
                                 </div>
                             </td>
-                            <td style="color:var(--muted); font-family:monospace"><?= htmlspecialchars($u['USUARIOS_DNI']) ?></td>
+                            <td style="color:var(--muted);font-family:monospace"><?= htmlspecialchars($u['USUARIOS_DNI']) ?></td>
                             <td style="color:var(--muted)"><?= htmlspecialchars($u['USUARIOS_TELEFONO'] ?? '—') ?></td>
                             <td><span class="badge pending"><?= htmlspecialchars($u['PERFIL_NOMBRE']) ?></span></td>
                             <td>
                                 <div class="row-actions">
-                                    <button class="btn btn-approve btn-sm" onclick="aprobarUsuario(<?= $u['USUARIOS_ID'] ?>, this)">
-                                        <i class="fas fa-check"></i> Aprobar
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick="rechazarUsuario(<?= $u['USUARIOS_ID'] ?>, this)">
-                                        <i class="fas fa-ban"></i> Rechazar
-                                    </button>
+                                    <button class="btn btn-approve btn-sm" onclick="aprobarUsuario(<?= $u['USUARIOS_ID'] ?>, this)"><i class="fas fa-check"></i> Aprobar</button>
+                                    <button class="btn btn-danger btn-sm"  onclick="rechazarUsuario(<?= $u['USUARIOS_ID'] ?>, this)"><i class="fas fa-ban"></i> Rechazar</button>
                                 </div>
                             </td>
                         </tr>
@@ -1975,6 +2067,7 @@ if ($perfil >= 2) {
                 <?php endif; ?>
                 </div>
             </div>
+        <?php endif; ?>
         </div><!-- /view-usuarios -->
 
 
@@ -2613,6 +2706,55 @@ if ($perfil >= 2) {
             </div>
         </div><!-- /view-perfil -->
 
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- VIEW: PLANES                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="view" id="view-planes">
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Tipos de plan</h1>
+            <p>Definí las suscripciones de cada predio: nombre, precio y período de cobro</p>
+        </div>
+        <div class="page-header-right">
+            <button class="btn btn-primary" onclick="planesAbrirCrear()">
+                <i class="fas fa-plus"></i> Nuevo tipo de plan
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="dt-toolbar">
+            <div class="dt-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="planSearch" placeholder="Buscar tipo de plan…" oninput="planFilter()">
+            </div>
+            <div class="dt-filter">
+                <button class="filter-btn active" data-planf="all" onclick="planSetFilter(this,'all')">Todos</button>
+                <button class="filter-btn" data-planf="1"   onclick="planSetFilter(this,'1')">Activos</button>
+                <button class="filter-btn" data-planf="0"   onclick="planSetFilter(this,'0')">Inactivos</button>
+            </div>
+        </div>
+        <div id="planTableWrap">
+            <table>
+                <thead><tr>
+                    <th>Tipo de plan</th>
+                    <th>Predio</th>
+                    <th>Precio</th>
+                    <th>Período</th>
+                    <th>Estado</th>
+                    <th style="width:80px">Acciones</th>
+                </tr></thead>
+                <tbody id="planTbody">
+                    <tr><td colspan="6"><div class="empty-state">
+                        <div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div>
+                        <p>Cargando…</p>
+                    </div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div><!-- /view-planes -->
+
     </div><!-- /content -->
 </div><!-- /main -->
 
@@ -2673,22 +2815,18 @@ if ($perfil >= 2) {
                 <div class="form-error" id="mFrDiasErr"></div>
             </div>
 
-            <!-- Horario -->
-            <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-bottom:16px">
-                <div class="form-row" style="margin:0">
-                    <label class="form-label">Hora inicio <span>*</span></label>
-                    <input type="time" class="form-input" id="mFrInicio" style="color-scheme:dark"
-                        onchange="frActualizarResumen()">
-                    <div class="form-error" id="mFrInicioErr"></div>
+            <!-- Horarios dinámicos -->
+            <div class="form-row">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                    <label class="form-label" style="margin:0">Horarios <span>*</span></label>
+                    <button type="button" id="mFrAddBtn" onclick="frAddSlot()"
+                        style="font-size:11px;font-weight:700;color:var(--blue);background:none;
+                        border:none;cursor:pointer;padding:2px 0;display:flex;align-items:center;gap:4px">
+                        <i class="fas fa-plus-circle"></i> Agregar horario
+                    </button>
                 </div>
-                <div style="text-align:center;color:var(--muted);font-size:18px;font-weight:300;
-                    padding-bottom:10px;align-self:center">→</div>
-                <div class="form-row" style="margin:0">
-                    <label class="form-label">Hora fin <span>*</span></label>
-                    <input type="time" class="form-input" id="mFrFin" style="color-scheme:dark"
-                        onchange="frActualizarResumen()">
-                    <div class="form-error" id="mFrFinErr"></div>
-                </div>
+                <div id="mFrSlotsList"></div>
+                <div class="form-error" id="mFrSlotsErr"></div>
             </div>
 
             <!-- Precios -->
@@ -2738,6 +2876,108 @@ if ($perfil >= 2) {
             <button class="btn btn-primary" id="mFrSubmit" onclick="submitFranja()"
                 style="background:linear-gradient(135deg,var(--blue),#2980b9)">
                 <i class="fas fa-check"></i> <span id="mFrSubmitTxt">Crear franja</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ MODAL GENERAR HORARIOS ═══════════ -->
+<div class="modal-overlay" id="modalGenerar">
+    <div class="modal" style="max-width:500px">
+        <div class="modal-head">
+            <div class="modal-head-icon" style="background:rgba(76,217,100,.12);color:var(--green)">
+                <i class="fas fa-magic"></i>
+            </div>
+            <div>
+                <h3>Generador de horarios</h3>
+                <p id="mGenSub">Creá todos los turnos de la semana de una vez</p>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalGenerar')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <!-- Días -->
+            <div class="form-row">
+                <label class="form-label">Días <span>*</span></label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px" id="mGenDias"></div>
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                    <button type="button" onclick="genSetDias([1,2,3,4,5])" class="gen-preset-btn">Lun-Vie</button>
+                    <button type="button" onclick="genSetDias([6,7])" class="gen-preset-btn">Sáb-Dom</button>
+                    <button type="button" onclick="genSetDias([1,2,3,4,5,6,7])" class="gen-preset-btn">Todos</button>
+                    <button type="button" onclick="genSetDias([])" class="gen-preset-btn">Limpiar</button>
+                </div>
+                <div class="form-error" id="mGenDiasErr"></div>
+            </div>
+
+            <!-- Apertura / Cierre -->
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-bottom:16px">
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Apertura <span>*</span></label>
+                    <input type="time" class="form-input" id="mGenApertura" style="color-scheme:dark"
+                        onchange="genActualizarPreview()">
+                    <div class="form-error" id="mGenAperturaErr"></div>
+                </div>
+                <div style="text-align:center;color:var(--muted);font-size:18px;font-weight:300;
+                    padding-bottom:10px;align-self:center">→</div>
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Cierre <span>*</span></label>
+                    <input type="time" class="form-input" id="mGenCierre" style="color-scheme:dark"
+                        onchange="genActualizarPreview()">
+                    <div class="form-error" id="mGenCierreErr"></div>
+                </div>
+            </div>
+
+            <!-- Duración y precio -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Duración del turno <span>*</span></label>
+                    <select class="form-input" id="mGenDuracion" onchange="genActualizarPreview()">
+                        <option value="30">30 minutos</option>
+                        <option value="60" selected>1 hora</option>
+                        <option value="90">1 hora 30 min</option>
+                        <option value="120">2 horas</option>
+                    </select>
+                </div>
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Precio por turno <span>*</span></label>
+                    <div style="position:relative">
+                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+                            color:var(--muted);font-weight:700;font-size:13px">$</span>
+                        <input type="number" class="form-input" id="mGenPrecio"
+                            placeholder="0" min="0" step="100"
+                            style="padding-left:26px" oninput="genActualizarPreview()">
+                    </div>
+                    <div class="form-error" id="mGenPrecioErr"></div>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom:16px">
+                <label class="form-label">Seña mínima (opcional)</label>
+                <div style="position:relative">
+                    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+                        color:var(--muted);font-weight:700;font-size:13px">$</span>
+                    <input type="number" class="form-input" id="mGenSena"
+                        placeholder="0" min="0" step="100" style="padding-left:26px">
+                </div>
+                <div class="form-hint">0 = sin seña</div>
+            </div>
+
+            <!-- Preview -->
+            <div id="mGenPreview" style="display:none">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+                    letter-spacing:.5px;margin-bottom:8px">
+                    Vista previa — <span id="mGenCount">0</span> franjas a crear
+                </div>
+                <div id="mGenSlots" style="display:flex;flex-wrap:wrap;gap:5px;max-height:130px;
+                    overflow-y:auto;padding:10px;border-radius:10px;
+                    background:var(--s1);border:1px solid var(--border)">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalGenerar')">Cancelar</button>
+            <button class="btn btn-primary" id="mGenSubmit" onclick="submitGenerar()"
+                style="background:linear-gradient(135deg,var(--green),#34c759);color:#000">
+                <i class="fas fa-magic"></i> <span id="mGenSubmitTxt">Generar horarios</span>
             </button>
         </div>
     </div>
@@ -2949,6 +3189,10 @@ if ($perfil >= 2) {
                         <input type="email" class="form-input" id="mCmpEmail" placeholder="contacto@complejo.com" maxlength="150">
                     </div>
                     <div class="form-row" style="margin:0">
+                        <label class="form-label">Instagram</label>
+                        <input type="text" class="form-input" id="mCmpInstagram" placeholder="@usuario o nombre de usuario" maxlength="150">
+                    </div>
+                    <div class="form-row" style="margin:0">
                         <label class="form-label">Provincia <span>*</span></label>
                         <select class="form-select" id="mCmpProv" onchange="geoOnChange('provincia','mCmpProv','mCmpPartido','mCmpLoc')">
                             <option value="">Seleccioná provincia…</option>
@@ -3058,7 +3302,7 @@ const VIEW_LABELS = {
     reportes:'Reportes',
     agenda:'Agenda', reservas:'Reservas', pagos:'Pagos', usuarios:'Usuarios',
     staff:'Mi Staff', duenos:'Clientes / Dueños', clientes:'Clientes',
-    perfil:'Mi perfil'
+    perfil:'Mi perfil', planes:'Tipos de plan'
 };
 const PERFIL = <?= $perfil ?>;
 
@@ -3075,6 +3319,7 @@ function showView(el) {
     if (name === 'reservas')  loadReservas();
     if (name === 'pagos')     loadPagosView();
     if (name === 'catalogos') loadCat(currentCat);
+    if (name === 'planes')    loadPlanes();
     if (window.innerWidth < 768) closeSidebar();
 }
 
@@ -3594,19 +3839,29 @@ function renderFranjas(cid, nombre, franjas) {
                 </div>
                 <div><h3>${escHtml(nombre)}</h3><p>Sin franjas configuradas aún</p></div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="horAbrirCrear()"
-                style="background:linear-gradient(135deg,var(--blue),#2980b9)">
-                <i class="fas fa-plus"></i> Nueva franja
-            </button>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost btn-sm" onclick="horAbrirGenerar()">
+                    <i class="fas fa-magic"></i> Generar semana
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="horAbrirCrear()"
+                    style="background:linear-gradient(135deg,var(--blue),#2980b9)">
+                    <i class="fas fa-plus"></i> Nueva franja
+                </button>
+            </div>
         </div>
         <div class="empty-state" style="padding:52px 20px">
             <div class="es-icon" style="font-size:22px;width:52px;height:52px"><i class="fas fa-clock"></i></div>
             <h4>Sin franjas horarias</h4>
             <p>Esta cancha no tiene horarios configurados.</p>
-            <button class="btn btn-primary btn-sm" style="margin-top:14px;background:linear-gradient(135deg,var(--blue),#2980b9)"
-                onclick="horAbrirCrear()">
-                <i class="fas fa-plus"></i> Crear primera franja
-            </button>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-sm" onclick="horAbrirGenerar()">
+                    <i class="fas fa-magic"></i> Generar semana
+                </button>
+                <button class="btn btn-primary btn-sm" style="background:linear-gradient(135deg,var(--blue),#2980b9)"
+                    onclick="horAbrirCrear()">
+                    <i class="fas fa-plus"></i> Crear primera franja
+                </button>
+            </div>
         </div>
     </div>`;
 
@@ -3625,7 +3880,10 @@ function renderFranjas(cid, nombre, franjas) {
                         <p>${activas.length} franja${activas.length!=1?'s':''} activa${activas.length!=1?'s':''}</p>
                     </div>
                 </div>
-                <div class="card-actions">
+                <div class="card-actions" style="display:flex;gap:8px">
+                    <button class="btn btn-ghost btn-sm" onclick="horAbrirGenerar()">
+                        <i class="fas fa-magic"></i> Generar semana
+                    </button>
                     <button class="btn btn-primary btn-sm"
                         onclick="horAbrirCrear()"
                         style="background:linear-gradient(135deg,var(--blue),#2980b9)">
@@ -3657,29 +3915,66 @@ function hexToRgb(hex) {
 }
 
 // ─── Modal franja ──────────────────────────────
+let frSlots = []; // [{ini:'', fin:''}]
+
+function frRenderSlots() {
+    const wrap  = document.getElementById('mFrSlotsList');
+    const isEdt = !!document.getElementById('mFrId').value;
+    wrap.innerHTML = frSlots.map((s, i) => `
+        <div class="fr-slot-row">
+            <input type="time" class="form-input" value="${escHtml(s.ini)}" style="color-scheme:dark"
+                oninput="frSlots[${i}].ini=this.value;frActualizarResumen()">
+            <span class="fr-slot-arrow">→</span>
+            <input type="time" class="form-input" value="${escHtml(s.fin)}" style="color-scheme:dark"
+                oninput="frSlots[${i}].fin=this.value;frActualizarResumen()">
+            ${(!isEdt && frSlots.length > 1)
+                ? `<button type="button" class="fr-rm-btn" onclick="frRemoveSlot(${i})"><i class="fas fa-times"></i></button>`
+                : `<div></div>`}
+        </div>`
+    ).join('');
+    const addBtn = document.getElementById('mFrAddBtn');
+    if (addBtn) addBtn.style.display = isEdt ? 'none' : '';
+    const txt = document.getElementById('mFrSubmitTxt');
+    if (txt && !isEdt) txt.textContent = frSlots.length > 1 ? `Crear ${frSlots.length} franjas` : 'Crear franja';
+    frActualizarResumen();
+}
+
+function frAddSlot() {
+    const last = frSlots[frSlots.length - 1];
+    frSlots.push({ ini: last?.fin || '', fin: '' });
+    frRenderSlots();
+    const inputs = document.querySelectorAll('#mFrSlotsList input[type="time"]');
+    const newIdx = (frSlots.length - 1) * 2;
+    if (inputs[newIdx]) setTimeout(()=>inputs[newIdx].focus(), 40);
+}
+
+function frRemoveSlot(i) {
+    if (frSlots.length <= 1) return;
+    frSlots.splice(i, 1);
+    frRenderSlots();
+}
+
 function horAbrirCrear() {
     if (!horCanchaId) { toast('Seleccioná una cancha primero.','err'); return; }
-    document.getElementById('mFrId').value = '';
-    document.getElementById('mFrCanchaId').value = horCanchaId;
+    document.getElementById('mFrId').value        = '';
+    document.getElementById('mFrCanchaId').value  = horCanchaId;
     document.getElementById('mFrTitle').textContent = 'Nueva franja horaria';
     document.getElementById('mFrSub').textContent   = escHtml(horCanchaNom);
-    document.getElementById('mFrInicio').value = '';
-    document.getElementById('mFrFin').value    = '';
     document.getElementById('mFrPrecio').value = '';
     document.getElementById('mFrSena').value   = '';
-    document.getElementById('mFrSubmitTxt').textContent = 'Crear franja';
     document.getElementById('mFrResumen').style.display = 'none';
-    ['mFrDiasErr','mFrInicioErr','mFrFinErr','mFrPrecioErr'].forEach(id=>{
+    ['mFrDiasErr','mFrSlotsErr','mFrPrecioErr'].forEach(id=>{
         const el=document.getElementById(id); if(el) el.style.display='none';
     });
     frDiasActivos = new Set();
     frRenderDias();
+    frSlots = [{ ini:'', fin:'' }];
+    frRenderSlots();
     document.getElementById('modalFranja').classList.add('show');
-    setTimeout(()=>document.getElementById('mFrInicio').focus(),150);
+    setTimeout(()=>{ const f=document.querySelector('#mFrSlotsList input[type="time"]'); if(f) f.focus(); },150);
 }
 
 async function horAbrirEditar(fid) {
-    // Buscar la franja en los datos ya cargados
     const res  = await fetch(`${HOR_API}?action=franjas&cancha_id=${horCanchaId}`);
     const json = await res.json();
     if (!json.ok) { toast(json.msg,'err'); return; }
@@ -3690,17 +3985,16 @@ async function horAbrirEditar(fid) {
     document.getElementById('mFrCanchaId').value  = horCanchaId;
     document.getElementById('mFrTitle').textContent = 'Editar franja horaria';
     document.getElementById('mFrSub').textContent   = escHtml(horCanchaNom);
-    document.getElementById('mFrInicio').value = f.FRANJA_HORA_INICIO.slice(0,5);
-    document.getElementById('mFrFin').value    = f.FRANJA_HORA_FIN.slice(0,5);
     document.getElementById('mFrPrecio').value = f.FRANJA_PRECIO;
     document.getElementById('mFrSena').value   = f.FRANJA_SENA||'';
     document.getElementById('mFrSubmitTxt').textContent = 'Guardar cambios';
-    ['mFrDiasErr','mFrInicioErr','mFrFinErr','mFrPrecioErr'].forEach(id=>{
+    ['mFrDiasErr','mFrSlotsErr','mFrPrecioErr'].forEach(id=>{
         const el=document.getElementById(id); if(el) el.style.display='none';
     });
     frDiasActivos = new Set((f.DIAS||[]).map(Number));
     frRenderDias();
-    frActualizarResumen();
+    frSlots = [{ ini: f.FRANJA_HORA_INICIO.slice(0,5), fin: f.FRANJA_HORA_FIN.slice(0,5) }];
+    frRenderSlots();
     document.getElementById('modalFranja').classList.add('show');
 }
 
@@ -3733,16 +4027,19 @@ function frSetDias(arr) {
 }
 
 function frActualizarResumen() {
-    const ini    = document.getElementById('mFrInicio').value;
-    const fin    = document.getElementById('mFrFin').value;
+    const valid  = (frSlots||[]).filter(s=>s.ini && s.fin && s.fin > s.ini);
     const precio = parseFloat(document.getElementById('mFrPrecio').value)||0;
     const sena   = parseFloat(document.getElementById('mFrSena').value)||0;
     const res    = document.getElementById('mFrResumen');
 
-    if (!ini || !fin || !precio || !frDiasActivos.size) { res.style.display='none'; return; }
+    if (!valid.length || !precio || !frDiasActivos.size) { res.style.display='none'; return; }
     res.style.display='block';
 
-    document.getElementById('mFrResHoras').textContent  = `${ini} → ${fin}`;
+    document.getElementById('mFrResHoras').innerHTML = valid.length === 1
+        ? `<span style="font-size:18px;font-weight:800;color:var(--blue)">${valid[0].ini} → ${valid[0].fin}</span>`
+        : valid.map(s=>`<span style="padding:2px 8px;border-radius:6px;font-size:13px;font-weight:700;
+            background:rgba(52,152,219,.12);color:var(--blue);margin-right:4px;margin-bottom:4px;display:inline-block">
+            ${s.ini}–${s.fin}</span>`).join('');
     document.getElementById('mFrResPrecio').textContent = `$${precio.toLocaleString('es-AR')}`;
     document.getElementById('mFrResSena').textContent   = sena>0 ? `Seña: $${sena.toLocaleString('es-AR')}` : 'Sin seña';
 
@@ -3756,49 +4053,73 @@ function frActualizarResumen() {
 }
 
 async function submitFranja() {
-    // Validaciones
     let ok = true;
-    const checks = [
-        [()=>!document.getElementById('mFrInicio').value,  'mFrInicioErr','Hora de inicio requerida.'],
-        [()=>!document.getElementById('mFrFin').value,     'mFrFinErr',   'Hora de fin requerida.'],
-        [()=>!document.getElementById('mFrPrecio').value||parseFloat(document.getElementById('mFrPrecio').value)<=0,
-            'mFrPrecioErr','El precio debe ser mayor a 0.'],
-    ];
-    checks.forEach(([cond,eId,msg])=>{
-        const err=document.getElementById(eId);
-        if(cond()){ err.textContent=msg; err.style.display='block'; ok=false; }
-        else { err.style.display='none'; }
-    });
+
+    // Validar días
     if (!frDiasActivos.size) {
-        const err=document.getElementById('mFrDiasErr');
-        err.textContent='Seleccioná al menos un día.'; err.style.display='block'; ok=false;
+        const e=document.getElementById('mFrDiasErr'); e.textContent='Seleccioná al menos un día.'; e.style.display='block'; ok=false;
     } else { document.getElementById('mFrDiasErr').style.display='none'; }
+
+    // Validar slots
+    const validSlots = (frSlots||[]).filter(s=>s.ini && s.fin);
+    const slotsErr = document.getElementById('mFrSlotsErr');
+    if (!validSlots.length) {
+        slotsErr.textContent='Completá al menos un horario.'; slotsErr.style.display='block'; ok=false;
+    } else {
+        const badSlot = validSlots.find(s=>s.fin<=s.ini);
+        if (badSlot) { slotsErr.textContent=`El horario ${badSlot.ini} → ${badSlot.fin} es inválido (fin debe ser posterior al inicio).`; slotsErr.style.display='block'; ok=false; }
+        else slotsErr.style.display='none';
+    }
+
+    // Validar precio
+    const precio = parseFloat(document.getElementById('mFrPrecio').value)||0;
+    const precioErr = document.getElementById('mFrPrecioErr');
+    if (precio<=0) { precioErr.textContent='El precio debe ser mayor a 0.'; precioErr.style.display='block'; ok=false; }
+    else precioErr.style.display='none';
+
     if (!ok) return;
 
-    const btn = document.getElementById('mFrSubmit');
+    const btn  = document.getElementById('mFrSubmit');
+    const fid  = document.getElementById('mFrId').value;
+    const sena = document.getElementById('mFrSena').value||0;
+    const dias = JSON.stringify([...frDiasActivos]);
+    const cid  = document.getElementById('mFrCanchaId').value;
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Guardando…';
 
-    const fid = document.getElementById('mFrId').value;
-    const fd  = new FormData();
-    fd.append('action',     fid?'editar':'crear');
-    fd.append('cancha_id',  document.getElementById('mFrCanchaId').value);
-    fd.append('hora_inicio',document.getElementById('mFrInicio').value);
-    fd.append('hora_fin',   document.getElementById('mFrFin').value);
-    fd.append('precio',     document.getElementById('mFrPrecio').value);
-    fd.append('sena',       document.getElementById('mFrSena').value||0);
-    fd.append('dias',       JSON.stringify([...frDiasActivos]));
-    if (fid) { fd.append('franja_id', fid); }
-
     try {
-        const res  = await fetch(HOR_API,{method:'POST',body:fd});
-        const json = await res.json();
-        if(json.ok){
-            toast(json.msg,'ok');
-            closeModal('modalFranja');
-            horLoadFranjas(horCanchaId, horCanchaNom);
-            horLoadCanchas(); // actualiza el contador de franjas
+        if (fid) {
+            // Editar franja existente (siempre un solo slot)
+            const fd = new FormData();
+            fd.append('action','editar'); fd.append('franja_id',fid); fd.append('cancha_id',cid);
+            fd.append('hora_inicio',frSlots[0].ini); fd.append('hora_fin',frSlots[0].fin);
+            fd.append('precio',precio); fd.append('sena',sena); fd.append('dias',dias);
+            const res = await fetch(HOR_API,{method:'POST',body:fd});
+            const json = await res.json();
+            if (json.ok) { toast(json.msg,'ok'); closeModal('modalFranja'); horLoadFranjas(horCanchaId,horCanchaNom); horLoadCanchas(); }
+            else toast(json.msg,'err');
         } else {
-            toast(json.msg,'err');
+            // Crear: una franja por slot
+            let creadas=0, errores=[];
+            for (const slot of validSlots) {
+                const fd = new FormData();
+                fd.append('action','crear'); fd.append('cancha_id',cid);
+                fd.append('hora_inicio',slot.ini); fd.append('hora_fin',slot.fin);
+                fd.append('precio',precio); fd.append('sena',sena); fd.append('dias',dias);
+                try {
+                    const r = await fetch(HOR_API,{method:'POST',body:fd});
+                    const j = await r.json();
+                    j.ok ? creadas++ : errores.push(`${slot.ini}–${slot.fin}: ${j.msg}`);
+                } catch(e) { errores.push(`${slot.ini}–${slot.fin}: error de red`); }
+            }
+            if (creadas > 0) {
+                closeModal('modalFranja');
+                horLoadFranjas(horCanchaId,horCanchaNom);
+                horLoadCanchas();
+                if (errores.length) toast(`${creadas} creada${creadas!=1?'s':''}, ${errores.length} con error (superposición).`,'err');
+                else toast(`✓ ${creadas} franja${creadas!=1?'s':''} creada${creadas!=1?'s':''}  correctamente.`,'ok');
+            } else {
+                toast(errores[0]||'No se pudieron crear las franjas.','err');
+            }
         }
     } catch(e){ toast('Error de red.','err'); }
     finally {
@@ -3818,6 +4139,130 @@ async function horToggle(fid, btn) {
         else toast(json.msg,'err');
     }catch(e){toast('Error de red.','err');}
     finally{btn.disabled=false;}
+}
+
+// ─── Generador de horarios ──────────────────────
+let genDiasActivos = new Set([1,2,3,4,5]);
+
+function horAbrirGenerar() {
+    if (!horCanchaId) { toast('Seleccioná una cancha primero.','err'); return; }
+    document.getElementById('mGenSub').textContent = escHtml(horCanchaNom);
+    document.getElementById('mGenApertura').value = '';
+    document.getElementById('mGenCierre').value   = '';
+    document.getElementById('mGenPrecio').value   = '';
+    document.getElementById('mGenSena').value     = '';
+    document.getElementById('mGenDuracion').value = '60';
+    document.getElementById('mGenPreview').style.display = 'none';
+    ['mGenDiasErr','mGenAperturaErr','mGenCierreErr','mGenPrecioErr'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.style.display='none';
+    });
+    genDiasActivos = new Set([1,2,3,4,5]);
+    genRenderDias();
+    document.getElementById('modalGenerar').classList.add('show');
+    setTimeout(()=>document.getElementById('mGenApertura').focus(),150);
+}
+
+function genRenderDias() {
+    const wrap = document.getElementById('mGenDias');
+    wrap.innerHTML = [1,2,3,4,5,6,7].map(d => {
+        const sel   = genDiasActivos.has(d);
+        const color = DIAS_COLOR[d];
+        return `<div onclick="genToggleDia(${d})"
+            style="width:38px;height:38px;border-radius:9px;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+            border:1px solid ${sel?color:'var(--border)'};
+            background:${sel?`rgba(${hexToRgb(color)},.15)`:'var(--s1)'};
+            transition:all .15s;user-select:none">
+            <span style="font-size:10px;font-weight:800;color:${sel?color:'var(--muted)'}">${DIAS_CORTO[d]}</span>
+        </div>`;
+    }).join('');
+    genActualizarPreview();
+}
+
+function genToggleDia(d) {
+    genDiasActivos.has(d) ? genDiasActivos.delete(d) : genDiasActivos.add(d);
+    genRenderDias();
+}
+
+function genSetDias(arr) {
+    genDiasActivos = new Set(arr);
+    genRenderDias();
+}
+
+function genCalcularSlots() {
+    const apertura = document.getElementById('mGenApertura').value;
+    const cierre   = document.getElementById('mGenCierre').value;
+    const dur      = parseInt(document.getElementById('mGenDuracion').value) || 60;
+    if (!apertura || !cierre) return [];
+    const [h1,m1] = apertura.split(':').map(Number);
+    const [h2,m2] = cierre.split(':').map(Number);
+    const start = h1*60+m1, end = h2*60+m2;
+    if (end <= start) return [];
+    const slots = [], pad = n => String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+    for (let t = start; t+dur <= end; t += dur) slots.push({ ini: pad(t), fin: pad(t+dur) });
+    return slots;
+}
+
+function genActualizarPreview() {
+    const slots   = genCalcularSlots();
+    const precio  = parseFloat(document.getElementById('mGenPrecio').value)||0;
+    const prevEl  = document.getElementById('mGenPreview');
+    if (!slots.length || !genDiasActivos.size) { prevEl.style.display='none'; return; }
+    prevEl.style.display = 'block';
+    document.getElementById('mGenCount').textContent = slots.length;
+    document.getElementById('mGenSlots').innerHTML = slots.map(s =>
+        `<span style="padding:4px 10px;border-radius:7px;font-size:12px;font-weight:700;
+            background:rgba(76,217,100,.08);border:1px solid rgba(76,217,100,.2);color:var(--green)">
+            ${s.ini}–${s.fin}${precio?` <span style="color:var(--muted);font-weight:400;font-size:10px">$${precio.toLocaleString('es-AR')}</span>`:''}
+        </span>`
+    ).join('');
+}
+
+async function submitGenerar() {
+    let ok = true;
+    if (!genDiasActivos.size) {
+        const e=document.getElementById('mGenDiasErr'); e.textContent='Seleccioná al menos un día.'; e.style.display='block'; ok=false;
+    } else { document.getElementById('mGenDiasErr').style.display='none'; }
+    const apertura = document.getElementById('mGenApertura').value;
+    const cierre   = document.getElementById('mGenCierre').value;
+    const precio   = parseFloat(document.getElementById('mGenPrecio').value)||0;
+    if (!apertura) { const e=document.getElementById('mGenAperturaErr'); e.textContent='Requerida.'; e.style.display='block'; ok=false; } else document.getElementById('mGenAperturaErr').style.display='none';
+    if (!cierre)   { const e=document.getElementById('mGenCierreErr');   e.textContent='Requerida.'; e.style.display='block'; ok=false; } else document.getElementById('mGenCierreErr').style.display='none';
+    if (precio<=0) { const e=document.getElementById('mGenPrecioErr');  e.textContent='Ingresá un precio mayor a 0.'; e.style.display='block'; ok=false; } else document.getElementById('mGenPrecioErr').style.display='none';
+    const slots = genCalcularSlots();
+    if (!slots.length) { toast('El rango no genera franjas. Revisá apertura y cierre.','err'); return; }
+    if (!ok) return;
+
+    const btn = document.getElementById('mGenSubmit');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creando…';
+
+    const sena = parseFloat(document.getElementById('mGenSena').value)||0;
+    const dias = JSON.stringify([...genDiasActivos]);
+    let creadas=0, errores=[];
+
+    for (const slot of slots) {
+        const fd = new FormData();
+        fd.append('action','crear'); fd.append('cancha_id',horCanchaId);
+        fd.append('hora_inicio',slot.ini); fd.append('hora_fin',slot.fin);
+        fd.append('precio',precio); fd.append('sena',sena); fd.append('dias',dias);
+        try {
+            const res  = await fetch(HOR_API,{method:'POST',body:fd});
+            const json = await res.json();
+            json.ok ? creadas++ : errores.push(`${slot.ini}-${slot.fin}: ${json.msg}`);
+        } catch(e) { errores.push(`${slot.ini}-${slot.fin}: error de red`); }
+    }
+
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-magic"></i> <span id="mGenSubmitTxt">Generar horarios</span>';
+
+    if (creadas > 0) {
+        closeModal('modalGenerar');
+        horLoadFranjas(horCanchaId, horCanchaNom);
+        horLoadCanchas();
+        if (errores.length) toast(`${creadas} franja${creadas!=1?'s':''} creada${creadas!=1?'s':''}, ${errores.length} omitida${errores.length!=1?'s':''}  (superposición).`,'err');
+        else toast(`✓ ${creadas} franja${creadas!=1?'s':''} creada${creadas!=1?'s':''} correctamente.`,'ok');
+    } else {
+        toast(errores[0] || 'No se pudieron crear las franjas.','err');
+    }
 }
 
 // ═══════════════════════════════════════════════
@@ -4384,6 +4829,7 @@ async function complejosAbrirEditar(id) {
     document.getElementById('mCmpDir').value    = d.COMPLEJO_DIRECCION;
     document.getElementById('mCmpTel').value    = d.COMPLEJO_TELEFONO||'';
     document.getElementById('mCmpEmail').value  = d.COMPLEJO_EMAIL||'';
+    document.getElementById('mCmpInstagram').value = d.COMPLEJO_INSTAGRAM||'';
     document.getElementById('mCmpDesc').value   = d.COMPLEJO_DESCRIPCION||'';
     document.getElementById('mCmpTipo').value   = d.TIPO_COMPLEJO_ID||'';
 
@@ -4411,6 +4857,7 @@ function resetCmpModal() {
     document.getElementById('mCmpDir').value    = '';
     document.getElementById('mCmpTel').value    = '';
     document.getElementById('mCmpEmail').value  = '';
+    document.getElementById('mCmpInstagram').value = '';
     document.getElementById('mCmpDesc').value   = '';
     document.getElementById('mCmpTipo').value   = '';
 
@@ -4634,6 +5081,7 @@ async function submitComplejo() {
     fd.append('direccion',      document.getElementById('mCmpDir').value.trim());
     fd.append('telefono',       document.getElementById('mCmpTel').value.trim());
     fd.append('email',          document.getElementById('mCmpEmail').value.trim());
+    fd.append('instagram',      document.getElementById('mCmpInstagram').value.trim());
     fd.append('descripcion',    document.getElementById('mCmpDesc').value.trim());
     fd.append('localidad_id',   document.getElementById('mCmpLoc').value);
     fd.append('tipo_complejo_id', document.getElementById('mCmpTipo').value);
@@ -5159,6 +5607,7 @@ showView = function(el) {
     if (name === 'cierres')   loadCierres();
     if (name === 'turnos')    loadTurnos();
     if (name === 'staff')     loadStaff();
+    if (name === 'usuarios' && PERFIL === 1) usrDshCargar(1);
     if (name === 'duenos')    loadDuenos();
     if (name === 'agenda') {
         document.getElementById('agendaFechaInput').value = agendaFechaStr(agendaFecha);
@@ -5615,22 +6064,34 @@ async function loadStaff() {
     }
 }
 
+const PERFIL_BADGE = {
+    1: '<span class="badge" style="background:rgba(191,90,242,.15);color:#bf5af2">SuperAdmin</span>',
+    2: '<span class="badge" style="background:rgba(255,149,0,.15);color:var(--orange)">Dueño</span>',
+    3: '<span class="badge" style="background:rgba(52,152,219,.15);color:var(--blue)">Encargado</span>',
+    4: '<span class="badge" style="background:rgba(255,149,0,.15);color:var(--orange)">Empleado</span>',
+    5: '<span class="badge" style="background:rgba(76,217,100,.12);color:var(--green)">Cliente</span>',
+};
+
 function renderStaff(data) {
     const body = document.getElementById('staff-body');
     if (!data || !data.length) {
-        body.innerHTML = '<div class="empty-state"><div class="es-icon"><i class="fas fa-id-badge"></i></div><h4>Sin staff</h4><p>No hay encargados ni empleados registrados.</p></div>';
+        body.innerHTML = '<div class="empty-state"><div class="es-icon"><i class="fas fa-id-badge"></i></div><h4>Sin usuarios</h4><p>No hay usuarios registrados.</p></div>';
         return;
     }
     const rows = data.map(u => {
-        const perfilLabel = u.PERFIL_ID == 3
-            ? '<span class="badge" style="background:rgba(52,152,219,.18);color:var(--blue)">Encargado</span>'
-            : '<span class="badge" style="background:rgba(255,149,0,.18);color:var(--orange)">Empleado</span>';
-        const estado = u.ACTIVO == 1
+        const pid     = parseInt(u.PERFIL_ID);
+        const badge   = PERFIL_BADGE[pid] || `<span class="badge">${esc(u.PERFIL_NOMBRE)}</span>`;
+        const estado  = u.ACTIVO == 1
             ? '<span class="badge active">Activo</span>'
             : '<span class="badge pending">Inactivo</span>';
-        const canchas = u.CANCHAS_ASIGNADAS
-            ? `<span style="color:var(--muted);font-size:11px">${u.CANCHAS_ASIGNADAS}</span>`
-            : '<span style="color:var(--muted);font-size:11px">Sin asignar</span>';
+        const canchas = [3,4].includes(pid)
+            ? (u.CANCHAS_ASIGNADAS
+                ? `<span style="color:var(--muted);font-size:11px">${u.CANCHAS_ASIGNADAS} cancha${u.CANCHAS_ASIGNADAS>1?'s':''}</span>`
+                : '<span style="color:var(--muted);font-size:11px">Sin asignar</span>')
+            : '—';
+        const duenoInfo = (u.DUENO_NOMBRE)
+            ? `<div style="font-size:11px;color:var(--muted)">Dueño: ${esc(u.DUENO_NOMBRE+' '+u.DUENO_APELLIDO)}</div>`
+            : '';
         return `<tr id="staff-row-${u.USUARIOS_ID}">
             <td>
                 <div class="user-cell">
@@ -5638,16 +6099,18 @@ function renderStaff(data) {
                     <div>
                         <div class="user-name">${esc(u.USUARIOS_NOMBRE+' '+u.USUARIOS_APELLIDO)}</div>
                         <div class="user-email">${esc(u.USUARIOS_EMAIL)}</div>
+                        ${duenoInfo}
                     </div>
                 </div>
             </td>
-            <td>${perfilLabel}</td>
+            <td>${badge}</td>
             <td>${canchas}</td>
             <td>${estado}</td>
             <td>
                 <div class="row-actions">
-                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="staffAbrirEditar(${u.USUARIOS_ID})" title="Editar"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="abrirAsignarCanchas(${u.USUARIOS_ID})" title="Asignar canchas"><i class="fas fa-futbol"></i></button>
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="staffAbrirEditar(${u.USUARIOS_ID})" title="Editar datos"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrPassAbrirDsh(${u.USUARIOS_ID},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}')" title="Resetear contraseña"><i class="fas fa-key"></i></button>
+                    ${[3,4].includes(pid) ? `<button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="abrirAsignarCanchas(${u.USUARIOS_ID})" title="Asignar canchas"><i class="fas fa-futbol"></i></button>` : ''}
                     <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" id="stoggle-${u.USUARIOS_ID}" onclick="staffToggle(${u.USUARIOS_ID}, this)" title="${u.ACTIVO==1?'Desactivar':'Activar'}">
                         <i class="fas ${u.ACTIVO==1?'fa-toggle-on':'fa-toggle-off'}"></i>
                     </button>
@@ -5657,7 +6120,7 @@ function renderStaff(data) {
     }).join('');
     body.innerHTML = `<table>
         <thead><tr>
-            <th>Nombre</th><th>Perfil</th><th>Canchas asignadas</th><th>Estado</th><th>Acciones</th>
+            <th>Nombre</th><th>Perfil</th><th>Canchas</th><th>Estado</th><th>Acciones</th>
         </tr></thead>
         <tbody>${rows}</tbody>
     </table>`;
@@ -5680,6 +6143,14 @@ async function staffToggle(id, btn) {
 
 let _staffData = [];
 
+function staffPerfilChange() {
+    const pid = parseInt(document.getElementById('mStaffPerfil').value);
+    const duenoRow = document.getElementById('mStaffDuenoRow');
+    if (PERFIL === 1) {
+        duenoRow.style.display = [3,4].includes(pid) ? '' : 'none';
+    }
+}
+
 function staffAbrirCrear() {
     document.getElementById('mStaffId').value      = '';
     document.getElementById('mStaffNombre').value  = '';
@@ -5688,6 +6159,19 @@ function staffAbrirCrear() {
     document.getElementById('mStaffTel').value     = '';
     document.getElementById('mStaffEmail').value   = '';
     document.getElementById('mStaffPass').value    = '';
+
+    // SA ve todos los perfiles excepto Dueño (solo desde Dev Panel), dueño solo encargado/empleado
+    const perfilSel = document.getElementById('mStaffPerfil');
+    if (PERFIL === 1) {
+        perfilSel.innerHTML = `
+            <option value="5">Cliente</option>
+            <option value="4">Empleado</option>
+            <option value="3" selected>Encargado</option>`;
+    } else {
+        perfilSel.innerHTML = `
+            <option value="3" selected>Encargado</option>
+            <option value="4">Empleado</option>`;
+    }
     document.getElementById('mStaffPerfil').value  = '3';
     document.getElementById('mStaffTitle').textContent = 'Nuevo integrante';
     document.getElementById('mStaffPassLabel').textContent = '*';
@@ -5695,14 +6179,9 @@ function staffAbrirCrear() {
     ['mStaffNombreErr','mStaffApellidoErr','mStaffEmailErr','mStaffPassErr','mStaffDuenoErr'].forEach(id => {
         const el = document.getElementById(id); if(el) el.textContent = '';
     });
-    // Superadmin: mostrar selector de dueño y poblar
-    const duenoRow = document.getElementById('mStaffDuenoRow');
-    if (PERFIL === 1) {
-        duenoRow.style.display = '';
-        poblarSelectDuenos('mStaffDueno');
-    } else {
-        duenoRow.style.display = 'none';
-    }
+    // SA: mostrar/ocultar dueño según perfil seleccionado
+    if (PERFIL === 1) poblarSelectDuenos('mStaffDueno');
+    staffPerfilChange();
     openModal('modalStaff');
 }
 
@@ -6337,7 +6816,7 @@ async function turnoEliminar(id) {
                 </div>
                 <div class="form-row" style="margin:0">
                     <label class="form-label">Perfil <span>*</span></label>
-                    <select class="form-select" id="mStaffPerfil">
+                    <select class="form-select" id="mStaffPerfil" onchange="staffPerfilChange()">
                         <option value="3">Encargado</option>
                         <option value="4">Empleado</option>
                     </select>
@@ -6360,6 +6839,68 @@ async function turnoEliminar(id) {
         <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)">
             <button class="btn" style="background:var(--s1);border:1px solid var(--border)" onclick="closeModal('modalStaff')">Cancelar</button>
             <button class="btn btn-primary" onclick="submitStaff()"><i class="fas fa-save"></i> Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════
+     MODAL: RESET PASSWORD (SA)
+══════════════════════════════ -->
+<div class="modal-overlay" id="modalUsrPass">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-head">
+            <div class="modal-head-icon" style="background:rgba(255,149,0,.15)"><i class="fas fa-key" style="color:var(--orange)"></i></div>
+            <div><h3>Resetear contraseña</h3><p id="usrPassSubDsh">Usuario seleccionado</p></div>
+            <button class="modal-close" onclick="closeModal('modalUsrPass')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="padding:20px">
+            <input type="hidden" id="usrPassIdDsh">
+            <div class="form-row">
+                <label class="form-label">Nueva contraseña *</label>
+                <input type="password" class="form-input" id="usrPassNewDsh" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+            </div>
+            <div class="form-row">
+                <label class="form-label">Confirmar contraseña *</label>
+                <input type="password" class="form-input" id="usrPassConfDsh" placeholder="Repetir contraseña">
+            </div>
+            <div class="form-error" id="usrPassErrDsh"></div>
+        </div>
+        <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)">
+            <button class="btn" style="background:var(--s1);border:1px solid var(--border)" onclick="closeModal('modalUsrPass')">Cancelar</button>
+            <button class="btn btn-primary" onclick="usrPassSubmitDsh()"><i class="fas fa-key"></i> Actualizar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════
+     MODAL: CAMBIAR PERFIL (SA)
+══════════════════════════════ -->
+<div class="modal-overlay" id="modalUsrPerfilDsh">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-head">
+            <div class="modal-head-icon b"><i class="fas fa-user-tag"></i></div>
+            <div><h3>Cambiar perfil</h3><p id="usrPerfilSubDsh">Usuario seleccionado</p></div>
+            <button class="modal-close" onclick="closeModal('modalUsrPerfilDsh')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="padding:20px">
+            <input type="hidden" id="usrPerfilIdDsh">
+            <div class="form-row">
+                <label class="form-label">Nuevo perfil *</label>
+                <select class="form-select" id="usrPerfilSelDsh" onchange="usrPerfilDshChange()">
+                    <option value="5">Cliente</option>
+                    <option value="4">Empleado</option>
+                    <option value="3">Encargado</option>
+                </select>
+            </div>
+            <div class="form-row" id="usrPerfilDuenoRowDsh" style="display:none">
+                <label class="form-label">Dueño asignado *</label>
+                <select class="form-select" id="usrPerfilDuenoDsh"><option value="">Seleccioná...</option></select>
+            </div>
+            <div class="form-error" id="usrPerfilErrDsh"></div>
+        </div>
+        <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)">
+            <button class="btn" style="background:var(--s1);border:1px solid var(--border)" onclick="closeModal('modalUsrPerfilDsh')">Cancelar</button>
+            <button class="btn btn-primary" onclick="usrPerfilSubmitDsh()"><i class="fas fa-check"></i> Cambiar</button>
         </div>
     </div>
 </div>
@@ -8586,6 +9127,70 @@ function wizVerCliente() {
 </div>
 <!-- /WIZARD -->
 
+<!-- ───────────────────────────────────────────────────────────────────── -->
+<!-- MODAL PLAN                                                             -->
+<!-- ───────────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalPlan">
+    <div class="modal" style="max-width:520px">
+        <div class="modal-head">
+            <div class="modal-head-icon b" style="background:rgba(255,149,0,.15);color:var(--orange)">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div>
+                <h3 id="mPlanTitle">Nuevo tipo de plan</h3>
+                <p id="mPlanSub">Definí una suscripción para tus clientes (precio + período)</p>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalPlan')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="mPlanId">
+            <div class="form-row">
+                <label class="form-label">Predio <span style="color:var(--red)">*</span></label>
+                <select class="form-select" id="mPlanComplejo">
+                    <option value="">Cargando predios…</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label class="form-label">Nombre del tipo de plan <span style="color:var(--red)">*</span></label>
+                <input type="text" class="form-input" id="mPlanNombre" placeholder="Ej: Abono Mensual, Pase Familiar…" maxlength="100">
+                <div class="form-error" id="mPlanNombreErr"></div>
+            </div>
+            <div class="form-row">
+                <label class="form-label">Descripción</label>
+                <textarea class="form-input" id="mPlanDesc" placeholder="Beneficios incluidos, condiciones…" rows="2" style="resize:vertical"></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Precio <span style="color:var(--red)">*</span></label>
+                    <input type="number" class="form-input" id="mPlanPrecio" placeholder="0" min="0" step="0.01">
+                </div>
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Período de cobro <span style="color:var(--red)">*</span></label>
+                    <select class="form-select" id="mPlanPeriodo">
+                        <option value="mensual">Mensual</option>
+                        <option value="bimestral">Bimestral</option>
+                        <option value="trimestral">Trimestral</option>
+                        <option value="semestral">Semestral</option>
+                        <option value="anual">Anual</option>
+                        <option value="unico">Pago único</option>
+                    </select>
+                </div>
+                <div class="form-row" style="margin:0">
+                    <label class="form-label">Créditos <span style="font-size:.7rem;color:var(--muted)">(0=∞)</span></label>
+                    <input type="number" class="form-input" id="mPlanCreditos" placeholder="0" min="0" step="1" value="0">
+                </div>
+            </div>
+            <div id="mPlanErr" class="form-error" style="margin-top:10px"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalPlan')">Cancelar</button>
+            <button class="btn btn-primary" id="mPlanBtn" onclick="planesGuardar()">
+                <i class="fas fa-check"></i> Guardar tipo de plan
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- NOTIFICACIÓN RESERVAS PENDIENTES -->
 <div id="notif-pendientes" style="display:none;position:fixed;bottom:24px;right:24px;z-index:9999;
      background:linear-gradient(135deg,rgba(255,149,0,0.15),rgba(255,149,0,0.08));
@@ -8686,6 +9291,385 @@ function wizVerCliente() {
     setTimeout(pollPendientes, 5000);
     setInterval(pollPendientes, 30000);
 })();
+
+/* ═══════════════════════════════════════════════════════════════
+   USUARIOS DSH — gestión completa (solo SA en view-usuarios)
+═══════════════════════════════════════════════════════════════ */
+const usrDshState = { page:1, pages:1, total:0, debTimer:null };
+const USR_DSH_API = 'api/usuarios.php';
+
+async function usrDshCargar(page) {
+    if (page) usrDshState.page = page;
+    const q      = document.getElementById('usrDshQ')?.value.trim() || '';
+    const perfil = document.getElementById('usrDshPerfil')?.value || '';
+    const activo = document.getElementById('usrDshActivo')?.value ?? '';
+    const params = new URLSearchParams({ action:'listar', page:usrDshState.page, q, perfil_id:perfil, activo });
+
+    const tb = document.getElementById('usrDshTbody');
+    if (!tb) return;
+    tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div><p>Cargando...</p></div></td></tr>';
+
+    const r  = await fetch(`${USR_DSH_API}?${params}`);
+    const j  = await r.json();
+    if (!j.ok) { toast(j.msg, 'err'); return; }
+
+    const { users, total, page:pg, pages } = j.data;
+    usrDshState.page  = pg;
+    usrDshState.pages = pages;
+    usrDshState.total = total;
+    usrDshRenderTabla(users);
+    usrDshRenderPag(total, pg, pages);
+}
+
+function usrDshRenderTabla(users) {
+    const tb = document.getElementById('usrDshTbody');
+    if (!users.length) {
+        tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="es-icon"><i class="fas fa-users-slash"></i></div><p>No se encontraron usuarios</p></div></td></tr>';
+        return;
+    }
+    tb.innerHTML = users.map(u => {
+        const pid    = parseInt(u.PERFIL_ID);
+        const badge  = PERFIL_BADGE[pid] || `<span class="badge">${esc(u.PERFIL_NOMBRE)}</span>`;
+        const activo = parseInt(u.ACTIVO);
+        const estado = activo
+            ? '<span class="badge active">Activo</span>'
+            : '<span class="badge pending">Inactivo</span>';
+        const dni    = (u.USUARIOS_DNI||'').startsWith('SIN-') ? '—' : esc(u.USUARIOS_DNI||'');
+        let ref = '—';
+        if ([3,4].includes(pid) && u.DUENO_FULL?.trim()) ref = `<span style="font-size:11px;color:var(--muted)">↳ ${esc(u.DUENO_FULL)}</span>`;
+        else if (pid===2 && parseInt(u.TOTAL_PREDIOS)>0) ref = `<span style="font-size:11px;color:var(--muted)">${u.TOTAL_PREDIOS} predio${u.TOTAL_PREDIOS>1?'s':''}</span>`;
+
+        return `<tr>
+            <td>
+                <div class="user-cell">
+                    <div class="user-av">${(u.USUARIOS_NOMBRE||'?')[0].toUpperCase()}</div>
+                    <div>
+                        <div class="user-name">${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}</div>
+                        <div class="user-email" style="font-size:10px;color:var(--muted)">DNI: ${dni}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div>${esc(u.USUARIOS_EMAIL||'—')}</div>
+                <div class="user-email">${esc(u.USUARIOS_TELEFONO||'—')}</div>
+            </td>
+            <td>${badge}</td>
+            <td>${ref}</td>
+            <td>${estado}</td>
+            <td>
+                <div class="row-actions">
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="staffAbrirEditar(${u.USUARIOS_ID})" title="Editar datos"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrPassAbrirDsh(${u.USUARIOS_ID},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}')" title="Contraseña"><i class="fas fa-key"></i></button>
+                    <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrPerfilAbrirDsh(${u.USUARIOS_ID},'${esc(u.USUARIOS_NOMBRE)} ${esc(u.USUARIOS_APELLIDO)}',${pid})" title="Cambiar perfil"><i class="fas fa-user-tag"></i></button>
+                    <button class="btn btn-sm ${activo?'btn-danger':''}" style="${activo?'':'background:var(--s2);border:1px solid var(--border);color:var(--green)'}" onclick="usrDshToggle(${u.USUARIOS_ID},${activo},'${esc(u.USUARIOS_NOMBRE)}')" title="${activo?'Desactivar':'Activar'}">
+                        <i class="fas fa-${activo?'ban':'check'}"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function usrDshRenderPag(total, page, pages) {
+    const el = document.getElementById('usrDshPag');
+    if (!el) return;
+    if (pages <= 1) { el.innerHTML = `<span style="font-size:.8rem;color:var(--muted)">${total} usuario${total!==1?'s':''}</span>`; return; }
+    const from = (page-1)*20+1, to = Math.min(page*20, total);
+    el.innerHTML = `
+        <span style="font-size:.8rem;color:var(--muted)">${from}–${to} de ${total}</span>
+        <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrDshCargar(${page-1})" ${page<=1?'disabled':''}>‹</button>
+            <span style="font-size:.8rem;color:var(--muted);padding:4px 8px">${page} / ${pages}</span>
+            <button class="btn btn-sm" style="background:var(--s2);border:1px solid var(--border)" onclick="usrDshCargar(${page+1})" ${page>=pages?'disabled':''}>›</button>
+        </div>`;
+}
+
+function usrDshDebounce() {
+    clearTimeout(usrDshState.debTimer);
+    usrDshState.debTimer = setTimeout(() => usrDshCargar(1), 380);
+}
+
+function usrDshToggle(id, activo, nombre) {
+    confirmar(
+        `¿${activo?'Desactivar':'Activar'} la cuenta de ${nombre}?`,
+        activo ? 'Desactivar' : 'Activar',
+        async () => {
+            const fd = new FormData(); fd.append('id',id);
+            const r = await fetch(`${USR_DSH_API}?action=toggle`,{method:'POST',body:fd});
+            const j = await r.json();
+            if (!j.ok) { toast(j.msg,'err'); return; }
+            toast(j.msg);
+            usrDshCargar();
+        }
+    );
+}
+
+// ── Reset contraseña ──────────────────────────────────────────────────────
+function usrPassAbrirDsh(id, nombre) {
+    document.getElementById('usrPassIdDsh').value         = id;
+    document.getElementById('usrPassSubDsh').textContent  = nombre;
+    document.getElementById('usrPassNewDsh').value        = '';
+    document.getElementById('usrPassConfDsh').value       = '';
+    document.getElementById('usrPassErrDsh').textContent  = '';
+    openModal('modalUsrPass');
+}
+
+async function usrPassSubmitDsh() {
+    const pass = document.getElementById('usrPassNewDsh').value;
+    const conf = document.getElementById('usrPassConfDsh').value;
+    const err  = document.getElementById('usrPassErrDsh');
+    err.textContent = '';
+    if (pass.length < 6) { err.textContent = 'Mínimo 6 caracteres.'; return; }
+    if (pass !== conf)   { err.textContent = 'Las contraseñas no coinciden.'; return; }
+    const fd = new FormData();
+    fd.append('id', document.getElementById('usrPassIdDsh').value);
+    fd.append('password', pass);
+    const r = await fetch(`${USR_DSH_API}?action=reset_password`,{method:'POST',body:fd});
+    const j = await r.json();
+    if (!j.ok) { err.textContent = j.msg; return; }
+    closeModal('modalUsrPass');
+    toast(j.msg);
+}
+
+// ── Cambiar perfil ────────────────────────────────────────────────────────
+async function usrPerfilAbrirDsh(id, nombre, perfilActual) {
+    if (perfilActual === 2) {
+        toast('El perfil Dueño solo puede modificarse desde el Panel Desarrollador.', 'err');
+        return;
+    }
+    document.getElementById('usrPerfilIdDsh').value         = id;
+    document.getElementById('usrPerfilSubDsh').textContent  = nombre;
+    document.getElementById('usrPerfilSelDsh').value        = perfilActual;
+    document.getElementById('usrPerfilErrDsh').textContent  = '';
+    await poblarSelectDuenos('usrPerfilDuenoDsh');
+    usrPerfilDshChange();
+    openModal('modalUsrPerfilDsh');
+}
+
+function usrPerfilDshChange() {
+    const pid = parseInt(document.getElementById('usrPerfilSelDsh').value);
+    document.getElementById('usrPerfilDuenoRowDsh').style.display = [3,4].includes(pid) ? '' : 'none';
+}
+
+async function usrPerfilSubmitDsh() {
+    const err = document.getElementById('usrPerfilErrDsh');
+    err.textContent = '';
+    const fd = new FormData();
+    fd.append('id',        document.getElementById('usrPerfilIdDsh').value);
+    fd.append('perfil_id', document.getElementById('usrPerfilSelDsh').value);
+    fd.append('dueno_id',  document.getElementById('usrPerfilDuenoDsh').value||'');
+    const r = await fetch(`${USR_DSH_API}?action=cambiar_perfil`,{method:'POST',body:fd});
+    const j = await r.json();
+    if (!j.ok) { err.textContent = j.msg; return; }
+    closeModal('modalUsrPerfilDsh');
+    toast(j.msg);
+    usrDshCargar();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PLANES
+═══════════════════════════════════════════════════════════════════════ */
+const PLAN_API = 'api/planes.php';
+let planData = [], planFilterVal = 'all', planSearchVal = '';
+
+async function loadPlanes() {
+    document.getElementById('planTbody').innerHTML =
+        `<tr><td colspan="6"><div class="empty-state">
+            <div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div>
+            <p style="color:var(--muted)">Cargando…</p>
+        </div></td></tr>`;
+    const res  = await fetch(`${PLAN_API}?action=listar`);
+    const json = await res.json();
+    if (!json.ok) { toast(json.msg,'err'); return; }
+    planData = json.data || [];
+    renderPlanes();
+}
+
+function renderPlanes() {
+    const s = planSearchVal.toLowerCase();
+    const filtered = planData.filter(r => {
+        const mf = planFilterVal === 'all' || String(r.ACTIVO) === planFilterVal;
+        const ms = !s || r.PLAN_NOMBRE.toLowerCase().includes(s)
+                     || (r.COMPLEJO_NOMBRE||'').toLowerCase().includes(s)
+                     || (r.PLAN_DESCRIPCION||'').toLowerCase().includes(s);
+        return mf && ms;
+    });
+
+    if (!filtered.length) {
+        document.getElementById('planTbody').innerHTML =
+            `<tr><td colspan="6"><div class="empty-state">
+                <div class="es-icon"><i class="fas fa-tags"></i></div>
+                <h4>Sin tipos de plan</h4>
+                <p>${planData.length ? 'No hay tipos de plan con los filtros actuales.' : 'Creá tu primer tipo de plan de suscripción.'}</p>
+                <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="planesAbrirCrear()">
+                    <i class="fas fa-plus"></i> Nuevo tipo de plan
+                </button>
+            </div></td></tr>`;
+        return;
+    }
+
+    const fmtARS = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+    const PERIODO_LBL = { mensual:'Mensual', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', unico:'Pago único' };
+
+    document.getElementById('planTbody').innerHTML = filtered.map((r,i) => {
+        const activo = parseInt(r.ACTIVO);
+        const periodoLbl = PERIODO_LBL[r.PLAN_PERIODO] || 'Mensual';
+        return `<tr style="animation:fadeUp .25s ease ${i*.04}s both">
+            <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,149,0,.12);color:var(--orange);
+                                display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:13px">${escHtml(r.PLAN_NOMBRE)}</div>
+                        <div style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                            ${r.PLAN_DESCRIPCION ? escHtml(r.PLAN_DESCRIPCION) : '—'}
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+                    <i class="fas fa-building" style="color:var(--blue);font-size:11px"></i>
+                    <span style="font-weight:600">${escHtml(r.COMPLEJO_NOMBRE)}</span>
+                </div>
+            </td>
+            <td style="font-weight:800;font-size:14px;color:var(--green)">${fmtARS(r.PLAN_PRECIO)}</td>
+            <td><span style="font-size:11px;font-weight:700;color:var(--orange);background:rgba(255,149,0,.12);border-radius:6px;padding:3px 9px">${periodoLbl}</span></td>
+            <td><span class="badge ${activo?'active':'inactive'}">${activo?'Activo':'Inactivo'}</span></td>
+            <td>
+                <div class="row-actions">
+                    <button class="act-btn edit" title="Editar" onclick="planesAbrirEditar(${r.PLAN_ID})">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button class="act-btn toggle ${activo?'on':''}" title="${activo?'Desactivar':'Activar'}"
+                        onclick="planToggle(${r.PLAN_ID},this)">
+                        <i class="fas ${activo?'fa-toggle-on':'fa-toggle-off'}"></i>
+                    </button>
+                    <button class="act-btn del" title="Eliminar" onclick="planEliminar(${r.PLAN_ID}, '${escHtml(r.PLAN_NOMBRE).replace(/'/g,'')}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function planFilter()           { planSearchVal = document.getElementById('planSearch').value; renderPlanes(); }
+function planSetFilter(btn, v)  {
+    document.querySelectorAll('[data-planf]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); planFilterVal = v; renderPlanes();
+}
+
+async function planCargarComplejos(selValor) {
+    const res  = await fetch(`${PLAN_API}?action=mis_complejos`);
+    const json = await res.json();
+    const sel  = document.getElementById('mPlanComplejo');
+    if (!json.ok || !json.data.length) {
+        sel.innerHTML = '<option value="">Sin predios activos</option>';
+        return;
+    }
+    sel.innerHTML = json.data.map(c =>
+        `<option value="${c.COMPLEJO_ID}" ${selValor==c.COMPLEJO_ID?'selected':''}>${escHtml(c.COMPLEJO_NOMBRE)}</option>`
+    ).join('');
+}
+
+async function planesAbrirCrear() {
+    document.getElementById('mPlanId').value      = '';
+    document.getElementById('mPlanNombre').value  = '';
+    document.getElementById('mPlanDesc').value    = '';
+    document.getElementById('mPlanPrecio').value  = '';
+    document.getElementById('mPlanPeriodo').value = 'mensual';
+    document.getElementById('mPlanCreditos').value = '0';
+    document.getElementById('mPlanNombreErr').textContent = '';
+    document.getElementById('mPlanErr').textContent = '';
+    document.getElementById('mPlanTitle').textContent = 'Nuevo tipo de plan';
+    document.getElementById('mPlanSub').textContent   = 'Definí una suscripción para tus clientes (precio + período)';
+    await planCargarComplejos('');
+    openModal('modalPlan');
+    setTimeout(() => document.getElementById('mPlanNombre').focus(), 80);
+}
+
+async function planesAbrirEditar(id) {
+    const r = planData.find(p => p.PLAN_ID == id);
+    if (!r) return;
+    document.getElementById('mPlanId').value       = r.PLAN_ID;
+    document.getElementById('mPlanNombre').value   = r.PLAN_NOMBRE;
+    document.getElementById('mPlanDesc').value     = r.PLAN_DESCRIPCION || '';
+    document.getElementById('mPlanPrecio').value   = r.PLAN_PRECIO;
+    document.getElementById('mPlanPeriodo').value  = r.PLAN_PERIODO || 'mensual';
+    document.getElementById('mPlanCreditos').value = r.PLAN_CREDITOS;
+    document.getElementById('mPlanNombreErr').textContent = '';
+    document.getElementById('mPlanErr').textContent = '';
+    document.getElementById('mPlanTitle').textContent = 'Editar tipo de plan';
+    document.getElementById('mPlanSub').textContent   = escHtml(r.PLAN_NOMBRE);
+    await planCargarComplejos(r.COMPLEJO_ID);
+    openModal('modalPlan');
+    setTimeout(() => document.getElementById('mPlanNombre').focus(), 80);
+}
+
+async function planesGuardar() {
+    const id       = document.getElementById('mPlanId').value;
+    const nombre   = document.getElementById('mPlanNombre').value.trim();
+    const complejo = document.getElementById('mPlanComplejo').value;
+    const precio   = document.getElementById('mPlanPrecio').value;
+    const periodo  = document.getElementById('mPlanPeriodo').value;
+    const creditos = document.getElementById('mPlanCreditos').value;
+    const desc     = document.getElementById('mPlanDesc').value.trim();
+
+    document.getElementById('mPlanNombreErr').textContent = '';
+    document.getElementById('mPlanErr').textContent = '';
+
+    if (!nombre) { document.getElementById('mPlanNombreErr').textContent = 'El nombre es obligatorio.'; return; }
+    if (!complejo) { document.getElementById('mPlanErr').textContent = 'Seleccioná un predio.'; return; }
+
+    const btn = document.getElementById('mPlanBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Guardando…';
+
+    const fd = new FormData();
+    fd.append('action',      id ? 'editar' : 'crear');
+    if (id) fd.append('id', id);
+    fd.append('complejo_id', complejo);
+    fd.append('nombre',      nombre);
+    fd.append('descripcion', desc);
+    fd.append('precio',      precio || 0);
+    fd.append('periodo',     periodo || 'mensual');
+    fd.append('creditos',    creditos || 0);
+
+    const res  = await fetch(PLAN_API, { method:'POST', body: fd });
+    const json = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = orig;
+
+    if (!json.ok) { document.getElementById('mPlanErr').textContent = json.msg; return; }
+    closeModal('modalPlan');
+    toast(json.msg, 'ok');
+    await loadPlanes();
+}
+
+async function planToggle(id, btn) {
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    const fd = new FormData(); fd.append('action','toggle'); fd.append('id', id);
+    const json = await fetch(PLAN_API,{method:'POST',body:fd}).then(r=>r.json()).catch(()=>null);
+    btn.disabled = false;
+    if (!json?.ok) { toast(json?.msg||'Error','err'); btn.innerHTML=orig; return; }
+    toast(json.msg,'ok');
+    await loadPlanes();
+}
+
+function planEliminar(id, nombre) {
+    confirmar('Eliminar plan', `¿Eliminar el plan <strong>${nombre}</strong>? Esta acción no se puede deshacer.`, async () => {
+        const fd = new FormData(); fd.append('action','eliminar'); fd.append('id', id);
+        const json = await fetch(PLAN_API,{method:'POST',body:fd}).then(r=>r.json()).catch(()=>null);
+        if (!json?.ok) { toast(json?.msg||'Error al eliminar','err'); return; }
+        toast(json.msg,'ok');
+        await loadPlanes();
+    });
+}
 </script>
 
 </body>

@@ -49,6 +49,8 @@ $_SESSION['usuario_perfil']   = (int)$user['PERFIL_ID'];
 // Redirigir según perfil
 if ((int)$user['PERFIL_ID'] === 5) {
     header('Location: view/maquetaCliente/LaCanchitaCliente.php');
+} elseif (in_array((int)$user['PERFIL_ID'], [3, 4])) {
+    header('Location: view/maquetaEncargado/PanelEncargado.php');
 } else {
     header('Location: view/maquetaAdmin/Dashboard.php');
 }
