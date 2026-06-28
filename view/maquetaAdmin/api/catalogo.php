@@ -13,7 +13,19 @@ $tablas = [
     'tipo_cancha'  => ['id' => 'TIPO_CANCHA_ID',   'nombre' => 'TIPO_CANCHA_NOMBRE',   'icono' => 'TIPO_CANCHA_ICONO'],
     'tipo_complejo'=> ['id' => 'TIPO_COMPLEJO_ID',  'nombre' => 'TIPO_COMPLEJO_NOMBRE', 'icono' => 'TIPO_COMPLEJO_ICONO'],
     'medio_pago'   => ['id' => 'MEDIO_PAGO_ID',     'nombre' => 'MEDIO_PAGO_NOMBRE',    'icono' => 'MEDIO_PAGO_ICONO'],
+    'tipo_plan'    => ['id' => 'TIPO_PLAN_ID',      'nombre' => 'TIPO_PLAN_NOMBRE',     'icono' => 'TIPO_PLAN_ICONO'],
 ];
+
+// Auto-crear catálogo de tipos de plan si no existe
+mysqli_query($link,
+    "CREATE TABLE IF NOT EXISTS tipo_plan (
+        TIPO_PLAN_ID     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        TIPO_PLAN_NOMBRE VARCHAR(100) NOT NULL,
+        TIPO_PLAN_ICONO  VARCHAR(60) NULL,
+        ACTIVO           TINYINT(1) NOT NULL DEFAULT 1,
+        UNIQUE KEY uq_tipo_plan_nombre (TIPO_PLAN_NOMBRE)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+);
 
 if (!array_key_exists($tabla, $tablas)) {
     echo json_encode(['ok' => false, 'msg' => 'Tabla no válida.']);

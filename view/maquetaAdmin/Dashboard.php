@@ -1917,6 +1917,9 @@ if ($perfil >= 2) {
                     <div class="stab" data-cat="medio_pago" onclick="switchCat(this)">
                         Medios de pago <span class="stab-count" id="cnt-medio_pago">—</span>
                     </div>
+                    <div class="stab" data-cat="tipo_plan" onclick="switchCat(this)">
+                        Tipos de plan <span class="stab-count" id="cnt-tipo_plan">—</span>
+                    </div>
                 </div>
 
                 <!-- Toolbar dinámico -->
@@ -3285,12 +3288,14 @@ const CAT_LABELS = {
     tipo_cancha:   { label: 'Tipo de cancha',   sub: 'Tipos de canchas disponibles en el sistema' },
     tipo_complejo: { label: 'Tipo de complejo',  sub: 'Clasificación de complejos deportivos' },
     medio_pago:    { label: 'Medio de pago',     sub: 'Métodos de pago disponibles para reservas' },
+    tipo_plan:     { label: 'Tipo de plan',      sub: 'Categorías para tus planes de suscripción' },
 };
 
 const ICON_PRESETS = {
     tipo_cancha:   ['fa-futbol','fa-table-tennis-paddle-ball','fa-volleyball','fa-baseball','fa-basketball','fa-hockey-puck','fa-bowling-ball'],
     tipo_complejo: ['fa-shield-halved','fa-building','fa-person-running','fa-dumbbell','fa-tree','fa-house-chimney','fa-water'],
     medio_pago:    ['fa-money-bill','fa-building-columns','fa-mobile-screen','fa-credit-card','fa-wallet','fa-qrcode'],
+    tipo_plan:     ['fa-calendar-day','fa-calendar-week','fa-calendar-alt','fa-star','fa-crown','fa-people-group','fa-infinity'],
 };
 
 // ═══════════════════════════════════════════════
@@ -3400,7 +3405,7 @@ function updateCount(tabla, n) {
 function renderTable(tabla, rows) {
     filterActive = filterActive ?? 'all';
     const search = searchText.toLowerCase();
-    const cfg    = { tipo_cancha: 'TIPO_CANCHA', tipo_complejo: 'TIPO_COMPLEJO', medio_pago: 'MEDIO_PAGO' }[tabla];
+    const cfg    = { tipo_cancha: 'TIPO_CANCHA', tipo_complejo: 'TIPO_COMPLEJO', medio_pago: 'MEDIO_PAGO', tipo_plan: 'TIPO_PLAN' }[tabla];
     const idKey  = cfg + '_ID';
     const nmKey  = cfg + '_NOMBRE';
     const icKey  = cfg + '_ICONO';
@@ -9157,6 +9162,15 @@ function wizVerCliente() {
                 <div class="form-error" id="mPlanNombreErr"></div>
             </div>
             <div class="form-row">
+                <label class="form-label">Tipo de plan</label>
+                <select class="form-select" id="mPlanTipo">
+                    <option value="">Sin categoría</option>
+                </select>
+                <div style="font-size:.72rem;color:var(--muted);margin-top:4px">
+                    Gestioná las categorías en <strong>Tipos y categorías → Tipos de plan</strong>.
+                </div>
+            </div>
+            <div class="form-row">
                 <label class="form-label">Descripción</label>
                 <textarea class="form-input" id="mPlanDesc" placeholder="Beneficios incluidos, condiciones…" rows="2" style="resize:vertical"></textarea>
             </div>
@@ -9516,7 +9530,10 @@ function renderPlanes() {
                         <i class="fas fa-tags"></i>
                     </div>
                     <div>
-                        <div style="font-weight:700;font-size:13px">${escHtml(r.PLAN_NOMBRE)}</div>
+                        <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                            ${escHtml(r.PLAN_NOMBRE)}
+                            ${r.TIPO_PLAN_NOMBRE ? `<span style="font-size:10px;font-weight:700;color:var(--orange);background:rgba(255,149,0,.12);border-radius:6px;padding:2px 7px">${r.TIPO_PLAN_ICONO?`<i class="fas ${escHtml(r.TIPO_PLAN_ICONO)}" style="margin-right:4px"></i>`:''}${escHtml(r.TIPO_PLAN_NOMBRE)}</span>` : ''}
+                        </div>
                         <div style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                             ${r.PLAN_DESCRIPCION ? escHtml(r.PLAN_DESCRIPCION) : '—'}
                         </div>
@@ -9570,6 +9587,20 @@ async function planCargarComplejos(selValor) {
     ).join('');
 }
 
+async function planCargarTipos(selValor) {
+    const sel = document.getElementById('mPlanTipo');
+    sel.innerHTML = '<option value="">Sin categoría</option>';
+    try {
+        const json = await fetch(`${PLAN_API}?action=tipos`).then(r => r.json());
+        if (json.ok && json.data.length) {
+            sel.innerHTML += json.data.map(t =>
+                `<option value="${t.TIPO_PLAN_ID}" ${selValor==t.TIPO_PLAN_ID?'selected':''}>${escHtml(t.TIPO_PLAN_NOMBRE)}</option>`
+            ).join('');
+        }
+    } catch(e) {}
+    sel.value = selValor || '';
+}
+
 async function planesAbrirCrear() {
     document.getElementById('mPlanId').value      = '';
     document.getElementById('mPlanNombre').value  = '';
@@ -9582,6 +9613,7 @@ async function planesAbrirCrear() {
     document.getElementById('mPlanTitle').textContent = 'Nuevo plan';
     document.getElementById('mPlanSub').textContent   = 'Completá los datos del plan de suscripción';
     await planCargarComplejos('');
+    await planCargarTipos('');
     openModal('modalPlan');
     setTimeout(() => document.getElementById('mPlanNombre').focus(), 80);
 }
@@ -9600,6 +9632,7 @@ async function planesAbrirEditar(id) {
     document.getElementById('mPlanTitle').textContent = 'Editar plan';
     document.getElementById('mPlanSub').textContent   = escHtml(r.PLAN_NOMBRE);
     await planCargarComplejos(r.COMPLEJO_ID);
+    await planCargarTipos(r.TIPO_PLAN_ID || '');
     openModal('modalPlan');
     setTimeout(() => document.getElementById('mPlanNombre').focus(), 80);
 }
@@ -9629,6 +9662,7 @@ async function planesGuardar() {
     if (id) fd.append('id', id);
     fd.append('complejo_id', complejo);
     fd.append('nombre',      nombre);
+    fd.append('tipo_plan_id', document.getElementById('mPlanTipo').value);
     fd.append('descripcion', desc);
     fd.append('precio',      precio || 0);
     fd.append('creditos',    creditos || 0);
