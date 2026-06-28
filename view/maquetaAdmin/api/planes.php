@@ -27,19 +27,18 @@ mysqli_query($link,
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
 );
 
-// Catálogo de tipos de plan (autoadministrable desde "Tipos y categorías")
-mysqli_query($link,
-    "CREATE TABLE IF NOT EXISTS tipo_plan (
-        TIPO_PLAN_ID     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        TIPO_PLAN_NOMBRE VARCHAR(100) NOT NULL,
-        TIPO_PLAN_ICONO  VARCHAR(60) NULL,
-        ACTIVO           TINYINT(1) NOT NULL DEFAULT 1,
-        UNIQUE KEY uq_tipo_plan_nombre (TIPO_PLAN_NOMBRE)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-);
+// Cada tipo de plan (suscripción) tiene un período de cobro: mensual, trimestral, etc.
+mysqli_query($link, "ALTER TABLE plan_predio ADD COLUMN IF NOT EXISTS PLAN_PERIODO VARCHAR(20) NOT NULL DEFAULT 'mensual' AFTER PLAN_PRECIO");
 
-// Vincular plan a su tipo (opcional)
-mysqli_query($link, "ALTER TABLE plan_predio ADD COLUMN IF NOT EXISTS TIPO_PLAN_ID INT UNSIGNED NULL DEFAULT NULL AFTER PLAN_NOMBRE");
+// Períodos de cobro válidos → cantidad de días de vigencia que representan
+$PLAN_PERIODOS = [
+    'mensual'    => 30,
+    'bimestral'  => 60,
+    'trimestral' => 90,
+    'semestral'  => 180,
+    'anual'      => 365,
+    'unico'      => 0,
+];
 
 /**
  * Filtro de complejos basado en dueño efectivo (no en asignación de canchas).
@@ -92,23 +91,14 @@ case 'listar':
     $rows  = [];
     $q = mysqli_query($link,
         "SELECT p.PLAN_ID, p.COMPLEJO_ID, p.PLAN_NOMBRE, p.PLAN_DESCRIPCION,
-                p.PLAN_PRECIO, p.PLAN_CREDITOS, p.PLAN_DURACION, p.ACTIVO,
-                p.TIPO_PLAN_ID, tp.TIPO_PLAN_NOMBRE, tp.TIPO_PLAN_ICONO,
+                p.PLAN_PRECIO, p.PLAN_PERIODO, p.PLAN_CREDITOS, p.PLAN_DURACION, p.ACTIVO,
                 c.COMPLEJO_NOMBRE
          FROM plan_predio p
          JOIN complejo c ON c.COMPLEJO_ID = p.COMPLEJO_ID
-         LEFT JOIN tipo_plan tp ON tp.TIPO_PLAN_ID = p.TIPO_PLAN_ID
          WHERE $where
          ORDER BY c.COMPLEJO_NOMBRE ASC, p.ACTIVO DESC, p.PLAN_NOMBRE ASC"
     );
     while ($r = mysqli_fetch_assoc($q)) $rows[] = $r;
-    resp(true, '', $rows);
-
-// ── TIPOS DE PLAN (catálogo, para el selector del modal) ─────────────────────
-case 'tipos':
-    $rows = [];
-    $q = mysqli_query($link, "SELECT TIPO_PLAN_ID, TIPO_PLAN_NOMBRE, TIPO_PLAN_ICONO FROM tipo_plan WHERE ACTIVO=1 ORDER BY TIPO_PLAN_NOMBRE");
-    if ($q) { while ($r = mysqli_fetch_assoc($q)) $rows[] = $r; }
     resp(true, '', $rows);
 
 // ── CREAR ────────────────────────────────────────────────────────────────────
@@ -118,9 +108,10 @@ case 'crear':
     $desc       = e($link, $_POST['descripcion'] ?? '');
     $precio     = (float)($_POST['precio']       ?? 0);
     $creditos   = max(0, (int)($_POST['creditos']  ?? 0));
-    $duracion   = max(1, (int)($_POST['duracion']  ?? 30));
-    $tipoPlan   = (int)($_POST['tipo_plan_id'] ?? 0);
-    $tipoSql    = $tipoPlan ? $tipoPlan : 'NULL';
+    $periodo    = $_POST['periodo'] ?? 'mensual';
+    if (!isset($PLAN_PERIODOS[$periodo])) $periodo = 'mensual';
+    $duracion   = $PLAN_PERIODOS[$periodo] ?: 30;
+    $periodoSql = e($link, $periodo);
 
     if (!$complejoId) resp(false, 'Seleccioná un predio.');
     if (!$nombre)     resp(false, 'El nombre del plan es obligatorio.');
@@ -131,10 +122,10 @@ case 'crear':
     if ($ids !== null && !in_array($complejoId, (array)$ids)) resp(false, 'Sin acceso a ese predio.');
 
     mysqli_query($link,
-        "INSERT INTO plan_predio (COMPLEJO_ID, PLAN_NOMBRE, TIPO_PLAN_ID, PLAN_DESCRIPCION, PLAN_PRECIO, PLAN_CREDITOS, PLAN_DURACION)
-         VALUES ($complejoId, '$nombre', $tipoSql, '$desc', $precio, $creditos, $duracion)"
+        "INSERT INTO plan_predio (COMPLEJO_ID, PLAN_NOMBRE, PLAN_DESCRIPCION, PLAN_PRECIO, PLAN_PERIODO, PLAN_CREDITOS, PLAN_DURACION)
+         VALUES ($complejoId, '$nombre', '$desc', $precio, '$periodoSql', $creditos, $duracion)"
     );
-    resp(true, 'Plan creado correctamente.', ['id' => mysqli_insert_id($link)]);
+    resp(true, 'Tipo de plan creado correctamente.', ['id' => mysqli_insert_id($link)]);
 
 // ── EDITAR ───────────────────────────────────────────────────────────────────
 case 'editar':
@@ -143,9 +134,10 @@ case 'editar':
     $desc     = e($link, $_POST['descripcion'] ?? '');
     $precio   = (float)($_POST['precio']       ?? 0);
     $creditos = max(0, (int)($_POST['creditos']  ?? 0));
-    $duracion = max(1, (int)($_POST['duracion']  ?? 30));
-    $tipoPlan = (int)($_POST['tipo_plan_id'] ?? 0);
-    $tipoSql  = $tipoPlan ? $tipoPlan : 'NULL';
+    $periodo  = $_POST['periodo'] ?? 'mensual';
+    if (!isset($PLAN_PERIODOS[$periodo])) $periodo = 'mensual';
+    $duracion   = $PLAN_PERIODOS[$periodo] ?: 30;
+    $periodoSql = e($link, $periodo);
 
     if (!$id)     resp(false, 'ID inválido.');
     if (!$nombre) resp(false, 'El nombre del plan es obligatorio.');
@@ -156,11 +148,11 @@ case 'editar':
     if ($ids !== null && !in_array((int)$p['COMPLEJO_ID'], (array)$ids)) resp(false, 'Sin acceso.');
 
     mysqli_query($link,
-        "UPDATE plan_predio SET PLAN_NOMBRE='$nombre', TIPO_PLAN_ID=$tipoSql, PLAN_DESCRIPCION='$desc',
-         PLAN_PRECIO=$precio, PLAN_CREDITOS=$creditos, PLAN_DURACION=$duracion
+        "UPDATE plan_predio SET PLAN_NOMBRE='$nombre', PLAN_DESCRIPCION='$desc',
+         PLAN_PRECIO=$precio, PLAN_PERIODO='$periodoSql', PLAN_CREDITOS=$creditos, PLAN_DURACION=$duracion
          WHERE PLAN_ID=$id"
     );
-    resp(true, 'Plan actualizado correctamente.');
+    resp(true, 'Tipo de plan actualizado correctamente.');
 
 // ── TOGGLE ───────────────────────────────────────────────────────────────────
 case 'toggle':

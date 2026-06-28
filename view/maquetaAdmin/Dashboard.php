@@ -1473,7 +1473,7 @@ if ($perfil >= 2) {
         </div>
         <div class="sb-section">Plataforma</div>
         <div class="sb-item" data-view="planes" onclick="showView(this)">
-            <i class="fas fa-tags"></i> Planes
+            <i class="fas fa-tags"></i> Tipos de plan
         </div>
         <div class="sb-section">Personas</div>
         <div class="sb-item" data-view="staff" onclick="showView(this)">
@@ -1518,7 +1518,7 @@ if ($perfil >= 2) {
         </div>
         <div class="sb-section">Plataforma</div>
         <div class="sb-item" data-view="planes" onclick="showView(this)">
-            <i class="fas fa-tags"></i> Planes
+            <i class="fas fa-tags"></i> Tipos de plan
         </div>
         <div class="sb-section">Personas</div>
         <div class="sb-item" data-view="staff" onclick="showView(this)">
@@ -1534,7 +1534,7 @@ if ($perfil >= 2) {
         <!-- ── Staff: plataforma + operaciones ── -->
         <div class="sb-section">Plataforma</div>
         <div class="sb-item" data-view="planes" onclick="showView(this)">
-            <i class="fas fa-tags"></i> Planes
+            <i class="fas fa-tags"></i> Tipos de plan
         </div>
         <div class="sb-section">Operaciones</div>
         <div class="sb-item" data-view="reportes" onclick="showView(this)">
@@ -1916,9 +1916,6 @@ if ($perfil >= 2) {
                     </div>
                     <div class="stab" data-cat="medio_pago" onclick="switchCat(this)">
                         Medios de pago <span class="stab-count" id="cnt-medio_pago">—</span>
-                    </div>
-                    <div class="stab" data-cat="tipo_plan" onclick="switchCat(this)">
-                        Tipos de plan <span class="stab-count" id="cnt-tipo_plan">—</span>
                     </div>
                 </div>
 
@@ -2715,12 +2712,12 @@ if ($perfil >= 2) {
 <div class="view" id="view-planes">
     <div class="page-header">
         <div class="page-header-left">
-            <h1>Planes</h1>
-            <p>Creá y gestioná los planes de suscripción para tus clientes</p>
+            <h1>Tipos de plan</h1>
+            <p>Definí las suscripciones de cada predio: nombre, precio y período de cobro</p>
         </div>
         <div class="page-header-right">
             <button class="btn btn-primary" onclick="planesAbrirCrear()">
-                <i class="fas fa-plus"></i> Nuevo plan
+                <i class="fas fa-plus"></i> Nuevo tipo de plan
             </button>
         </div>
     </div>
@@ -2729,7 +2726,7 @@ if ($perfil >= 2) {
         <div class="dt-toolbar">
             <div class="dt-search">
                 <i class="fas fa-search"></i>
-                <input type="text" id="planSearch" placeholder="Buscar plan…" oninput="planFilter()">
+                <input type="text" id="planSearch" placeholder="Buscar tipo de plan…" oninput="planFilter()">
             </div>
             <div class="dt-filter">
                 <button class="filter-btn active" data-planf="all" onclick="planSetFilter(this,'all')">Todos</button>
@@ -2740,16 +2737,15 @@ if ($perfil >= 2) {
         <div id="planTableWrap">
             <table>
                 <thead><tr>
-                    <th>Plan</th>
+                    <th>Tipo de plan</th>
                     <th>Predio</th>
                     <th>Precio</th>
-                    <th>Créditos</th>
-                    <th>Vigencia</th>
+                    <th>Período</th>
                     <th>Estado</th>
                     <th style="width:80px">Acciones</th>
                 </tr></thead>
                 <tbody id="planTbody">
-                    <tr><td colspan="7"><div class="empty-state">
+                    <tr><td colspan="6"><div class="empty-state">
                         <div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div>
                         <p>Cargando…</p>
                     </div></td></tr>
@@ -3288,14 +3284,12 @@ const CAT_LABELS = {
     tipo_cancha:   { label: 'Tipo de cancha',   sub: 'Tipos de canchas disponibles en el sistema' },
     tipo_complejo: { label: 'Tipo de complejo',  sub: 'Clasificación de complejos deportivos' },
     medio_pago:    { label: 'Medio de pago',     sub: 'Métodos de pago disponibles para reservas' },
-    tipo_plan:     { label: 'Tipo de plan',      sub: 'Categorías para tus planes de suscripción' },
 };
 
 const ICON_PRESETS = {
     tipo_cancha:   ['fa-futbol','fa-table-tennis-paddle-ball','fa-volleyball','fa-baseball','fa-basketball','fa-hockey-puck','fa-bowling-ball'],
     tipo_complejo: ['fa-shield-halved','fa-building','fa-person-running','fa-dumbbell','fa-tree','fa-house-chimney','fa-water'],
     medio_pago:    ['fa-money-bill','fa-building-columns','fa-mobile-screen','fa-credit-card','fa-wallet','fa-qrcode'],
-    tipo_plan:     ['fa-calendar-day','fa-calendar-week','fa-calendar-alt','fa-star','fa-crown','fa-people-group','fa-infinity'],
 };
 
 // ═══════════════════════════════════════════════
@@ -3308,7 +3302,7 @@ const VIEW_LABELS = {
     reportes:'Reportes',
     agenda:'Agenda', reservas:'Reservas', pagos:'Pagos', usuarios:'Usuarios',
     staff:'Mi Staff', duenos:'Clientes / Dueños', clientes:'Clientes',
-    perfil:'Mi perfil', planes:'Planes'
+    perfil:'Mi perfil', planes:'Tipos de plan'
 };
 const PERFIL = <?= $perfil ?>;
 
@@ -3405,7 +3399,7 @@ function updateCount(tabla, n) {
 function renderTable(tabla, rows) {
     filterActive = filterActive ?? 'all';
     const search = searchText.toLowerCase();
-    const cfg    = { tipo_cancha: 'TIPO_CANCHA', tipo_complejo: 'TIPO_COMPLEJO', medio_pago: 'MEDIO_PAGO', tipo_plan: 'TIPO_PLAN' }[tabla];
+    const cfg    = { tipo_cancha: 'TIPO_CANCHA', tipo_complejo: 'TIPO_COMPLEJO', medio_pago: 'MEDIO_PAGO' }[tabla];
     const idKey  = cfg + '_ID';
     const nmKey  = cfg + '_NOMBRE';
     const icKey  = cfg + '_ICONO';
@@ -9143,8 +9137,8 @@ function wizVerCliente() {
                 <i class="fas fa-tags"></i>
             </div>
             <div>
-                <h3 id="mPlanTitle">Nuevo plan</h3>
-                <p id="mPlanSub">Completá los datos del plan de suscripción</p>
+                <h3 id="mPlanTitle">Nuevo tipo de plan</h3>
+                <p id="mPlanSub">Definí una suscripción para tus clientes (precio + período)</p>
             </div>
             <button class="modal-close" onclick="closeModal('modalPlan')"><i class="fas fa-times"></i></button>
         </div>
@@ -9157,18 +9151,9 @@ function wizVerCliente() {
                 </select>
             </div>
             <div class="form-row">
-                <label class="form-label">Nombre del plan <span style="color:var(--red)">*</span></label>
-                <input type="text" class="form-input" id="mPlanNombre" placeholder="Ej: Plan Mensual, Abono Familiar…" maxlength="100">
+                <label class="form-label">Nombre del tipo de plan <span style="color:var(--red)">*</span></label>
+                <input type="text" class="form-input" id="mPlanNombre" placeholder="Ej: Abono Mensual, Pase Familiar…" maxlength="100">
                 <div class="form-error" id="mPlanNombreErr"></div>
-            </div>
-            <div class="form-row">
-                <label class="form-label">Tipo de plan</label>
-                <select class="form-select" id="mPlanTipo">
-                    <option value="">Sin categoría</option>
-                </select>
-                <div style="font-size:.72rem;color:var(--muted);margin-top:4px">
-                    Gestioná las categorías en <strong>Tipos y categorías → Tipos de plan</strong>.
-                </div>
             </div>
             <div class="form-row">
                 <label class="form-label">Descripción</label>
@@ -9180,12 +9165,19 @@ function wizVerCliente() {
                     <input type="number" class="form-input" id="mPlanPrecio" placeholder="0" min="0" step="0.01">
                 </div>
                 <div class="form-row" style="margin:0">
-                    <label class="form-label">Créditos <span style="font-size:.7rem;color:var(--muted)">(0=∞)</span></label>
-                    <input type="number" class="form-input" id="mPlanCreditos" placeholder="0" min="0" step="1" value="0">
+                    <label class="form-label">Período de cobro <span style="color:var(--red)">*</span></label>
+                    <select class="form-select" id="mPlanPeriodo">
+                        <option value="mensual">Mensual</option>
+                        <option value="bimestral">Bimestral</option>
+                        <option value="trimestral">Trimestral</option>
+                        <option value="semestral">Semestral</option>
+                        <option value="anual">Anual</option>
+                        <option value="unico">Pago único</option>
+                    </select>
                 </div>
                 <div class="form-row" style="margin:0">
-                    <label class="form-label">Vigencia (días)</label>
-                    <input type="number" class="form-input" id="mPlanDuracion" placeholder="30" min="1" step="1" value="30">
+                    <label class="form-label">Créditos <span style="font-size:.7rem;color:var(--muted)">(0=∞)</span></label>
+                    <input type="number" class="form-input" id="mPlanCreditos" placeholder="0" min="0" step="1" value="0">
                 </div>
             </div>
             <div id="mPlanErr" class="form-error" style="margin-top:10px"></div>
@@ -9193,7 +9185,7 @@ function wizVerCliente() {
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modalPlan')">Cancelar</button>
             <button class="btn btn-primary" id="mPlanBtn" onclick="planesGuardar()">
-                <i class="fas fa-check"></i> Guardar plan
+                <i class="fas fa-check"></i> Guardar tipo de plan
             </button>
         </div>
     </div>
@@ -9482,7 +9474,7 @@ let planData = [], planFilterVal = 'all', planSearchVal = '';
 
 async function loadPlanes() {
     document.getElementById('planTbody').innerHTML =
-        `<tr><td colspan="7"><div class="empty-state">
+        `<tr><td colspan="6"><div class="empty-state">
             <div class="es-icon"><i class="fas fa-spinner fa-spin"></i></div>
             <p style="color:var(--muted)">Cargando…</p>
         </div></td></tr>`;
@@ -9505,23 +9497,23 @@ function renderPlanes() {
 
     if (!filtered.length) {
         document.getElementById('planTbody').innerHTML =
-            `<tr><td colspan="7"><div class="empty-state">
+            `<tr><td colspan="6"><div class="empty-state">
                 <div class="es-icon"><i class="fas fa-tags"></i></div>
-                <h4>Sin planes</h4>
-                <p>${planData.length ? 'No hay planes con los filtros actuales.' : 'Creá tu primer plan de suscripción.'}</p>
+                <h4>Sin tipos de plan</h4>
+                <p>${planData.length ? 'No hay tipos de plan con los filtros actuales.' : 'Creá tu primer tipo de plan de suscripción.'}</p>
                 <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="planesAbrirCrear()">
-                    <i class="fas fa-plus"></i> Nuevo plan
+                    <i class="fas fa-plus"></i> Nuevo tipo de plan
                 </button>
             </div></td></tr>`;
         return;
     }
 
     const fmtARS = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+    const PERIODO_LBL = { mensual:'Mensual', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', unico:'Pago único' };
 
     document.getElementById('planTbody').innerHTML = filtered.map((r,i) => {
         const activo = parseInt(r.ACTIVO);
-        const creditos = parseInt(r.PLAN_CREDITOS);
-        const creditosTxt = creditos === 0 ? '<span style="color:var(--green)">Ilimitados</span>' : `${creditos} crédito${creditos!==1?'s':''}`;
+        const periodoLbl = PERIODO_LBL[r.PLAN_PERIODO] || 'Mensual';
         return `<tr style="animation:fadeUp .25s ease ${i*.04}s both">
             <td>
                 <div style="display:flex;align-items:center;gap:10px">
@@ -9530,10 +9522,7 @@ function renderPlanes() {
                         <i class="fas fa-tags"></i>
                     </div>
                     <div>
-                        <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                            ${escHtml(r.PLAN_NOMBRE)}
-                            ${r.TIPO_PLAN_NOMBRE ? `<span style="font-size:10px;font-weight:700;color:var(--orange);background:rgba(255,149,0,.12);border-radius:6px;padding:2px 7px">${r.TIPO_PLAN_ICONO?`<i class="fas ${escHtml(r.TIPO_PLAN_ICONO)}" style="margin-right:4px"></i>`:''}${escHtml(r.TIPO_PLAN_NOMBRE)}</span>` : ''}
-                        </div>
+                        <div style="font-weight:700;font-size:13px">${escHtml(r.PLAN_NOMBRE)}</div>
                         <div style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                             ${r.PLAN_DESCRIPCION ? escHtml(r.PLAN_DESCRIPCION) : '—'}
                         </div>
@@ -9547,8 +9536,7 @@ function renderPlanes() {
                 </div>
             </td>
             <td style="font-weight:800;font-size:14px;color:var(--green)">${fmtARS(r.PLAN_PRECIO)}</td>
-            <td style="font-size:12px">${creditosTxt}</td>
-            <td style="font-size:12px">${r.PLAN_DURACION} día${r.PLAN_DURACION!=1?'s':''}</td>
+            <td><span style="font-size:11px;font-weight:700;color:var(--orange);background:rgba(255,149,0,.12);border-radius:6px;padding:3px 9px">${periodoLbl}</span></td>
             <td><span class="badge ${activo?'active':'inactive'}">${activo?'Activo':'Inactivo'}</span></td>
             <td>
                 <div class="row-actions">
@@ -9587,33 +9575,18 @@ async function planCargarComplejos(selValor) {
     ).join('');
 }
 
-async function planCargarTipos(selValor) {
-    const sel = document.getElementById('mPlanTipo');
-    sel.innerHTML = '<option value="">Sin categoría</option>';
-    try {
-        const json = await fetch(`${PLAN_API}?action=tipos`).then(r => r.json());
-        if (json.ok && json.data.length) {
-            sel.innerHTML += json.data.map(t =>
-                `<option value="${t.TIPO_PLAN_ID}" ${selValor==t.TIPO_PLAN_ID?'selected':''}>${escHtml(t.TIPO_PLAN_NOMBRE)}</option>`
-            ).join('');
-        }
-    } catch(e) {}
-    sel.value = selValor || '';
-}
-
 async function planesAbrirCrear() {
     document.getElementById('mPlanId').value      = '';
     document.getElementById('mPlanNombre').value  = '';
     document.getElementById('mPlanDesc').value    = '';
     document.getElementById('mPlanPrecio').value  = '';
+    document.getElementById('mPlanPeriodo').value = 'mensual';
     document.getElementById('mPlanCreditos').value = '0';
-    document.getElementById('mPlanDuracion').value = '30';
     document.getElementById('mPlanNombreErr').textContent = '';
     document.getElementById('mPlanErr').textContent = '';
-    document.getElementById('mPlanTitle').textContent = 'Nuevo plan';
-    document.getElementById('mPlanSub').textContent   = 'Completá los datos del plan de suscripción';
+    document.getElementById('mPlanTitle').textContent = 'Nuevo tipo de plan';
+    document.getElementById('mPlanSub').textContent   = 'Definí una suscripción para tus clientes (precio + período)';
     await planCargarComplejos('');
-    await planCargarTipos('');
     openModal('modalPlan');
     setTimeout(() => document.getElementById('mPlanNombre').focus(), 80);
 }
@@ -9625,14 +9598,13 @@ async function planesAbrirEditar(id) {
     document.getElementById('mPlanNombre').value   = r.PLAN_NOMBRE;
     document.getElementById('mPlanDesc').value     = r.PLAN_DESCRIPCION || '';
     document.getElementById('mPlanPrecio').value   = r.PLAN_PRECIO;
+    document.getElementById('mPlanPeriodo').value  = r.PLAN_PERIODO || 'mensual';
     document.getElementById('mPlanCreditos').value = r.PLAN_CREDITOS;
-    document.getElementById('mPlanDuracion').value = r.PLAN_DURACION;
     document.getElementById('mPlanNombreErr').textContent = '';
     document.getElementById('mPlanErr').textContent = '';
-    document.getElementById('mPlanTitle').textContent = 'Editar plan';
+    document.getElementById('mPlanTitle').textContent = 'Editar tipo de plan';
     document.getElementById('mPlanSub').textContent   = escHtml(r.PLAN_NOMBRE);
     await planCargarComplejos(r.COMPLEJO_ID);
-    await planCargarTipos(r.TIPO_PLAN_ID || '');
     openModal('modalPlan');
     setTimeout(() => document.getElementById('mPlanNombre').focus(), 80);
 }
@@ -9642,8 +9614,8 @@ async function planesGuardar() {
     const nombre   = document.getElementById('mPlanNombre').value.trim();
     const complejo = document.getElementById('mPlanComplejo').value;
     const precio   = document.getElementById('mPlanPrecio').value;
+    const periodo  = document.getElementById('mPlanPeriodo').value;
     const creditos = document.getElementById('mPlanCreditos').value;
-    const duracion = document.getElementById('mPlanDuracion').value;
     const desc     = document.getElementById('mPlanDesc').value.trim();
 
     document.getElementById('mPlanNombreErr').textContent = '';
@@ -9662,11 +9634,10 @@ async function planesGuardar() {
     if (id) fd.append('id', id);
     fd.append('complejo_id', complejo);
     fd.append('nombre',      nombre);
-    fd.append('tipo_plan_id', document.getElementById('mPlanTipo').value);
     fd.append('descripcion', desc);
     fd.append('precio',      precio || 0);
+    fd.append('periodo',     periodo || 'mensual');
     fd.append('creditos',    creditos || 0);
-    fd.append('duracion',    duracion || 30);
 
     const res  = await fetch(PLAN_API, { method:'POST', body: fd });
     const json = await res.json();
