@@ -1120,7 +1120,7 @@ function renderReservas(){
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           ${wspHtml}
-          ${estado==='pendiente'?`<button class="btn-cancelar" onclick="cancelarReserva(${res.RESERVA_ID})"><i class="fas fa-times" style="margin-right:4px"></i>Cancelar</button>`:''}
+          ${(estado==='pendiente'||estado==='confirmada')?`<button class="btn-cancelar" onclick="cancelarReserva(${res.RESERVA_ID})"><i class="fas fa-times" style="margin-right:4px"></i>Cancelar</button>`:''}
         </div>
       </div>
     </div>`;
