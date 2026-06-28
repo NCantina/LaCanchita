@@ -202,9 +202,30 @@ if ($action === 'por_cancha') {
     $desde = e($link, $desde);
     $hasta = e($link, $hasta);
 
-    // Días del período para calcular ocupación aproximada
-    $dias_periodo = max(1, (int) ceil((strtotime($hasta) - strtotime($desde)) / 86400) + 1);
-    $franjas_max  = $dias_periodo * 9;  // aprox. 9 franjas por día
+    // Capacidad real por cancha = franjas activas × cuántas veces cae su día
+    // de semana dentro del período (en vez de la constante mágica "9 franjas/día").
+    $dowCount = array_fill(1, 7, 0);            // 1=Lun .. 7=Dom (igual que DIA_ID)
+    for ($t = strtotime($desde), $tEnd = strtotime($hasta); $t <= $tEnd; $t += 86400) {
+        $dowCount[(int) date('N', $t)]++;
+    }
+
+    $cap = [];  // [CANCHA_ID => cantidad de turnos disponibles en el período]
+    $qcap = mysqli_query($link,
+        "SELECT fh.CANCHA_ID, fd.DIA_ID, COUNT(*) AS franjas
+         FROM franja_horaria fh
+         JOIN franja_dia fd ON fd.FRANJA_ID = fh.FRANJA_ID
+         JOIN cancha ca     ON ca.CANCHA_ID = fh.CANCHA_ID
+         JOIN complejo co   ON co.COMPLEJO_ID = ca.COMPLEJO_ID
+         WHERE fh.ACTIVO = 1 AND ca.ACTIVO = 1 AND $scope
+         GROUP BY fh.CANCHA_ID, fd.DIA_ID"
+    );
+    if ($qcap) {
+        while ($f = mysqli_fetch_assoc($qcap)) {
+            $cid = (int) $f['CANCHA_ID'];
+            $dia = (int) $f['DIA_ID'];
+            $cap[$cid] = ($cap[$cid] ?? 0) + ((int) $f['franjas']) * ($dowCount[$dia] ?? 0);
+        }
+    }
 
     // Reservas e ingresos por cancha
     $qr = mysqli_query($link,
@@ -243,7 +264,8 @@ if ($action === 'por_cancha') {
     while ($r = mysqli_fetch_assoc($qr)) {
         $cid  = (int)$r['CANCHA_ID'];
         $res  = (int)$r['reservas'];
-        $ocup = $franjas_max > 0 ? min(100, (int) round($res / $franjas_max * 100)) : 0;
+        $capCancha = $cap[$cid] ?? 0;
+        $ocup = $capCancha > 0 ? min(100, (int) round($res / $capCancha * 100)) : 0;
         $result[] = [
             'CANCHA_ID'         => $cid,
             'CANCHA_NOMBRE'     => $r['CANCHA_NOMBRE'],
