@@ -4,9 +4,12 @@ header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';
 
-require_perfil(2);
-
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+// Acciones operativas de mostrador que también usa el staff (encargado/empleado).
+// El resto del archivo sigue siendo solo para dueño/SA.
+$STAFF_ACTIONS = ['crear_cliente_rapido', 'buscar_clientes'];
+require_perfil(in_array($action, $STAFF_ACTIONS, true) ? 4 : 2);
 function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 function e($link,$v){ return mysqli_real_escape_string($link,trim($v??'')); }
 
@@ -313,18 +316,27 @@ case 'buscar_clientes':
     require_perfil(4);
     $q = e($link, $_GET['q'] ?? '');
     if (strlen($q) < 2) resp(true, '', []);
+
+    // Privacidad multi-tenant: solo clientes con historial en los complejos del
+    // tenant actual (no toda la base de clientes de la plataforma).
+    $ids   = tenant_complejo_ids($link);            // null = SA (todos)
+    $scope = tenant_where($ids, 'co.COMPLEJO_ID');  // "1=1" | "1=0" | "co.COMPLEJO_ID IN (..)"
+
     $rows = [];
     $qr = mysqli_query($link,
-        "SELECT USUARIOS_ID, USUARIOS_NOMBRE, USUARIOS_APELLIDO,
-                USUARIOS_EMAIL, USUARIOS_TELEFONO, USUARIOS_DNI
-         FROM usuarios
-         WHERE PERFIL_ID=5 AND ACTIVO=1
-           AND (USUARIOS_NOMBRE LIKE '%$q%'
-             OR USUARIOS_APELLIDO LIKE '%$q%'
-             OR USUARIOS_EMAIL LIKE '%$q%'
-             OR USUARIOS_TELEFONO LIKE '%$q%'
-             OR USUARIOS_DNI LIKE '%$q%')
-         ORDER BY USUARIOS_APELLIDO, USUARIOS_NOMBRE
+        "SELECT DISTINCT u.USUARIOS_ID, u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO,
+                u.USUARIOS_EMAIL, u.USUARIOS_TELEFONO, u.USUARIOS_DNI
+         FROM usuarios u
+         JOIN reserva r   ON r.USUARIOS_ID = u.USUARIOS_ID
+         JOIN cancha c    ON c.CANCHA_ID   = r.CANCHA_ID
+         JOIN complejo co ON co.COMPLEJO_ID = c.COMPLEJO_ID
+         WHERE u.PERFIL_ID=5 AND u.ACTIVO=1 AND $scope
+           AND (u.USUARIOS_NOMBRE LIKE '%$q%'
+             OR u.USUARIOS_APELLIDO LIKE '%$q%'
+             OR u.USUARIOS_EMAIL LIKE '%$q%'
+             OR u.USUARIOS_TELEFONO LIKE '%$q%'
+             OR u.USUARIOS_DNI LIKE '%$q%')
+         ORDER BY u.USUARIOS_APELLIDO, u.USUARIOS_NOMBRE
          LIMIT 10"
     );
     while ($r = mysqli_fetch_assoc($qr)) $rows[] = $r;
