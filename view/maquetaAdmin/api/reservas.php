@@ -3,6 +3,7 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';
+require_once '../../../config/dist/script/php/reserva_notify.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
@@ -255,6 +256,8 @@ case 'crear':
     $reserva_id = mysqli_insert_id($link);
     mysqli_commit($link);
 
+    notificarReservaCreada($link, (int)$reserva_id); // comprobante al cliente + aviso al dueño/encargados
+
     resp(true, 'Reserva creada. En breve te confirmamos.', ['RESERVA_ID' => $reserva_id]);
 
 // ── AGENDA GRID (vista grilla cancha×horario) ──────────────────────────────
@@ -440,6 +443,9 @@ case 'crear_admin':
     }
     $reserva_id = mysqli_insert_id($link);
     mysqli_commit($link);
+
+    // Avisar al cliente con el estado real; no pingear al staff que la creó
+    notificarReservaCreada($link, (int)$reserva_id, $estado_ini, false);
 
     resp(true, 'Reserva creada correctamente.', ['RESERVA_ID' => $reserva_id]);
 

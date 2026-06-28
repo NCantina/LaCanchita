@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/dist/script/php/conn.php';
+require_once __DIR__ . '/../config/dist/script/php/reserva_notify.php';
 
 function resp($ok, $msg, $data=null){
     $json = json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE);
@@ -32,6 +33,7 @@ if (!$cancha_id || !$fecha || !$hora) resp(false,'Datos incompletos.');
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) resp(false,'Fecha inválida.');
 if (!preg_match('/^\d{2}:\d{2}$/', $hora)) resp(false,'Hora inválida (se esperaba HH:MM).');
 if (strtotime($fecha) < strtotime(date('Y-m-d'))) resp(false,'No podés reservar fechas pasadas.');
+if (strtotime("$fecha $hora") < time()) resp(false,'Ese horario ya pasó. Elegí uno futuro.');
 
 try {
     $eFecha = e($link, $fecha);
@@ -111,17 +113,23 @@ try {
             RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_SENA,RESERVA_ESTADO,RESERVA_ES_FIJA,ACTIVO)
          VALUES (?,?,?,?,?,?,?,?,'pendiente',0,1)"
     );
-    if (!$stmt) { mysqli_rollback($link); resp(false,'Error preparando la reserva: ' . mysqli_error($link)); }
+    if (!$stmt) {
+        error_log('reservar_publico prepare: ' . mysqli_error($link));
+        mysqli_rollback($link);
+        resp(false,'No pudimos procesar la reserva. Probá de nuevo.');
+    }
 
     mysqli_stmt_bind_param($stmt,'iiisssdd',
         $cancha_id,$franja_id,$uid,$fecha,$h_ini,$h_fin,$precio,$sena
     );
     if (!mysqli_stmt_execute($stmt)) {
+        error_log('reservar_publico execute: ' . mysqli_stmt_error($stmt));
         mysqli_rollback($link);
-        resp(false,'Error al guardar la reserva: ' . mysqli_stmt_error($stmt));
+        resp(false,'No pudimos guardar la reserva. Probá de nuevo.');
     }
     $reserva_id = mysqli_insert_id($link);
     mysqli_commit($link);
+    notificarReservaCreada($link, (int)$reserva_id); // push+email al cliente y aviso al dueño/encargados
 
     // Info del complejo para respuesta y email
     $comp = qfetch($link,
@@ -148,5 +156,6 @@ try {
         // Intentar rollback si hay transacción activa
         @mysqli_rollback($link);
     }
-    resp(false, 'Error inesperado: ' . $ex->getMessage());
+    error_log('reservar_publico error: ' . $ex->getMessage());
+    resp(false, 'Ocurrió un error inesperado. Probá de nuevo en unos segundos.');
 }

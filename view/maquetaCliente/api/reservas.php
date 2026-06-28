@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
+require_once '../../../config/dist/script/php/reserva_notify.php';
 
 function resp($ok,$msg,$data=null){
     $j=json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data],JSON_UNESCAPED_UNICODE);
@@ -115,6 +116,9 @@ if ($action === 'crear') {
     );
     if (!$diaOk) resp(false,'La franja no aplica para ese día.');
 
+    // No permitir reservar un horario que ya pasó (validación server-side, no solo en el JS)
+    if (strtotime("$fecha $hIni") < time()) resp(false,'Ese horario ya pasó. Elegí uno futuro.');
+
     mysqli_begin_transaction($link);
 
     $lock = mysqli_query($link,
@@ -156,6 +160,7 @@ if ($action === 'crear') {
     if (!mysqli_stmt_execute($stmt)) { mysqli_rollback($link); resp(false,'Error al guardar la reserva.'); }
     $rid = mysqli_insert_id($link);
     mysqli_commit($link);
+    notificarReservaCreada($link, (int)$rid); // push+email al cliente y aviso al dueño/encargados
     resp(true,'¡Reserva creada! El predio la confirmará pronto.',['RESERVA_ID'=>$rid]);
 }
 
