@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
+require_once '../../../config/dist/script/php/tenancy.php';
 require_once '../../../config/dist/script/php/reserva_notify.php';
 
 function resp($ok,$msg,$data=null){
@@ -118,6 +119,9 @@ if ($action === 'crear') {
 
     // No permitir reservar un horario que ya pasó (validación server-side, no solo en el JS)
     if (strtotime("$fecha $hIni") < time()) resp(false,'Ese horario ya pasó. Elegí uno futuro.');
+
+    // El predio no recibe reservas si su dueño está en mora (suscripción vencida)
+    if (!complejo_recibe_reservas($link, $cmpId)) resp(false,'Este predio no está recibiendo reservas por el momento.');
 
     mysqli_begin_transaction($link);
 

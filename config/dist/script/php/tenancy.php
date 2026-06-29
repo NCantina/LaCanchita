@@ -165,3 +165,55 @@ function current_dueno_id($link) {
     }
     return null;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Enforcement de suscripción de plataforma (modo solo-lectura para morosos).
+ * Un dueño con la suscripción 'vencido' o 'cancelado' queda en solo lectura:
+ * puede ver su panel pero no puede escribir, y sus predios dejan de recibir
+ * reservas nuevas. Si no hay fila de suscripción, NO se bloquea (no todos los
+ * dueños están enrolados en el billing todavía).
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+function dueno_suspendido($link, $duenoId): bool {
+    $duenoId = (int)$duenoId;
+    if ($duenoId <= 0) return false;
+    $res = @mysqli_query($link,
+        "SELECT ESTADO FROM suscripcion_plataforma WHERE USUARIOS_ID = $duenoId LIMIT 1");
+    if (!$res) return false;                       // tabla inexistente o sin acceso
+    $r = mysqli_fetch_assoc($res);
+    if (!$r) return false;                          // sin suscripción registrada
+    return in_array($r['ESTADO'], ['vencido', 'cancelado'], true);
+}
+
+/**
+ * ¿El tenant del usuario actual está en modo solo-lectura por mora?
+ * SuperAdmin sin contexto nunca lo está; en modo soporte se evalúa el dueño impersonado.
+ */
+function tenant_readonly($link): bool {
+    if (is_superadmin()) {
+        $as = admin_as_dueno_id();
+        if ($as === null) return false;
+        return dueno_suspendido($link, $as);
+    }
+    $dueno = current_dueno_id($link);
+    return $dueno ? dueno_suspendido($link, $dueno) : false;
+}
+
+/**
+ * Guard para acciones de ESCRITURA del panel: corta si el tenant está en mora.
+ */
+function assert_tenant_activo($link, $msg = 'Tu suscripción está vencida: el panel quedó en modo solo lectura hasta regularizar el pago.') {
+    if (tenant_readonly($link)) tenancy_deny($msg, 402);
+}
+
+/**
+ * ¿Este complejo puede recibir reservas nuevas? (false si su dueño está en mora)
+ * Para los flujos de alta de reserva, que no tienen un "dueño actual".
+ */
+function complejo_recibe_reservas($link, $complejoId): bool {
+    $complejoId = (int)$complejoId;
+    $r = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT USUARIOS_ID FROM complejo WHERE COMPLEJO_ID = $complejoId LIMIT 1"));
+    if (!$r || empty($r['USUARIOS_ID'])) return true;     // sin dueño asignado
+    return !dueno_suspendido($link, (int)$r['USUARIOS_ID']);
+}

@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/dist/script/php/conn.php';
+require_once __DIR__ . '/../config/dist/script/php/tenancy.php';
 require_once __DIR__ . '/../config/dist/script/php/reserva_notify.php';
 
 function resp($ok, $msg, $data=null){
@@ -55,6 +56,12 @@ try {
 
     $franja_id   = (int)$franja['FRANJA_ID'];
     $complejo_id = (int)$franja['COMPLEJO_ID'];
+
+    // El predio no recibe reservas si su dueño está en mora (suscripción vencida)
+    if (!complejo_recibe_reservas($link, $complejo_id)) {
+        resp(false, 'Este predio no está recibiendo reservas por el momento.');
+    }
+
     $h_ini = $franja['FRANJA_HORA_INICIO'];
     $h_fin = $franja['FRANJA_HORA_FIN'];
     $precio= (float)$franja['FRANJA_PRECIO'];
