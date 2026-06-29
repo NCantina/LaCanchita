@@ -13,6 +13,10 @@ require_perfil(in_array($action, $STAFF_ACTIONS, true) ? 4 : 2);
 function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 function e($link,$v){ return mysqli_real_escape_string($link,trim($v??'')); }
 
+// Modo solo-lectura por mora: bloquear escritura del tenant (no las acciones de
+// plataforma del SuperAdmin, que con assert_tenant_activo no se ven afectadas).
+if (in_array($action, ['crear_staff','editar','toggle','asignar_canchas','crear_cliente_rapido'], true)) assert_tenant_activo($link);
+
 switch($action) {
 
 // ── LISTAR STAFF (dueño: su staff; superadmin: todos los usuarios) ──────

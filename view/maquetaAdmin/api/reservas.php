@@ -44,6 +44,10 @@ function assert_cancha_encargado($link, $cancha_id) {
     if (!$ok) resp(false, 'Sin acceso a esta cancha.');
 }
 
+// Modo solo-lectura por mora: bloquear acciones de escritura del panel.
+$WRITE_ACTIONS = ['crear', 'crear_admin', 'confirmar', 'rechazar', 'cancelar', 'registrar_pago'];
+if (in_array($action, $WRITE_ACTIONS, true)) assert_tenant_activo($link);
+
 switch ($action) {
 
 // ── DISPONIBILIDAD ─────────────────────────────────────────────────────────

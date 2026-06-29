@@ -31,6 +31,9 @@ function valid_date($s) {
     return $d && $d->format('Y-m-d') === $s;
 }
 
+// Modo solo-lectura por mora: bloquear escritura del panel.
+if (in_array($action, ['crear','editar','toggle','eliminar'], true)) assert_tenant_activo($link);
+
 switch($action) {
 
 // ── Listar cierres ──────────────────────────────────────────────────────────

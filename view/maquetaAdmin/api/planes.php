@@ -82,6 +82,9 @@ function planes_complejo_ids($link) {
     return [];
 }
 
+// Modo solo-lectura por mora: bloquear escritura del panel.
+if (in_array($action, ['crear','editar','toggle','eliminar'], true)) assert_tenant_activo($link);
+
 switch($action) {
 
 // ── LISTAR ──────────────────────────────────────────────────────────────────
