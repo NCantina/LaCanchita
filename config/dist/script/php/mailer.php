@@ -322,3 +322,73 @@ function enviarRecordatorioDesarrollador(array $datos): bool {
         return false;
     }
 }
+
+/**
+ * Envía el link de recuperación de contraseña.
+ *
+ * @param string $email  destinatario
+ * @param string $nombre nombre del usuario
+ * @param string $url    link absoluto con el token de reset
+ */
+function enviarEmailReset(string $email, string $nombre, string $url): bool {
+    if (!defined('MAIL_ENABLED') || !MAIL_ENABLED) return false;
+    if (!$email) return false;
+
+    $urlSafe = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+    $html = "<!DOCTYPE html>
+<html lang='es'>
+<head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>Recuperá tu contraseña — La Canchita</title></head>
+<body style='margin:0;padding:0;background:#f4f4f4;font-family:Segoe UI,Arial,sans-serif'>
+<table width='100%' cellpadding='0' cellspacing='0' style='background:#f4f4f4;padding:32px 0'>
+  <tr><td align='center'>
+    <table width='560' cellpadding='0' cellspacing='0' style='background:#ffffff;border-radius:16px;overflow:hidden;max-width:95%'>
+      <tr><td style='background:#0d0d0d;padding:28px 36px;text-align:center'>
+        <div style='font-size:28px;margin-bottom:6px'>🔑</div>
+        <div style='color:#4cd964;font-size:22px;font-weight:800;letter-spacing:-0.5px'>La Canchita</div>
+      </td></tr>
+      <tr><td style='background:#4cd96418;border-bottom:3px solid #4cd964;padding:20px 36px;text-align:center'>
+        <div style='font-size:20px;font-weight:800;color:#1a1a1a'>Recuperá tu contraseña</div>
+      </td></tr>
+      <tr><td style='padding:28px 36px 8px'>
+        <p style='margin:0;font-size:15px;color:#333'>Hola <strong>" . htmlspecialchars($nombre) . "</strong>,</p>
+        <p style='margin:12px 0 0;font-size:14px;color:#555'>Recibimos un pedido para restablecer tu contraseña. Hacé clic en el botón para crear una nueva. Este link vence en 1 hora.</p>
+      </td></tr>
+      <tr><td style='padding:20px 36px;text-align:center'>
+        <a href='{$urlSafe}' style='display:inline-block;background:#4cd964;color:#0d0d0d;font-weight:800;font-size:15px;text-decoration:none;padding:14px 32px;border-radius:10px'>Crear nueva contraseña</a>
+      </td></tr>
+      <tr><td style='padding:0 36px 8px'>
+        <p style='margin:0;font-size:12px;color:#888'>Si el botón no funciona, copiá y pegá este link en tu navegador:</p>
+        <p style='margin:6px 0 0;font-size:12px;color:#4cd964;word-break:break-all'>{$urlSafe}</p>
+      </td></tr>
+      <tr><td style='padding:16px 36px 28px;text-align:center;border-top:1px solid #eee'>
+        <p style='margin:0;font-size:12px;color:#aaa'>Si no pediste esto, ignorá este email: tu contraseña no cambia.<br>La Canchita · Sistema de reservas deportivas</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>";
+
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = MAIL_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = MAIL_USER;
+        $mail->Password   = MAIL_PASS;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = MAIL_PORT;
+        $mail->CharSet    = 'UTF-8';
+        $mail->setFrom(MAIL_FROM, MAIL_FROM_NAME);
+        $mail->addAddress($email, $nombre);
+        $mail->isHTML(true);
+        $mail->Subject = '🔑 Recuperá tu contraseña — La Canchita';
+        $mail->Body    = $html;
+        $mail->AltBody = "Recuperá tu contraseña en La Canchita. Abrí este link (vence en 1 hora): $url";
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log('Mailer reset error: ' . $mail->ErrorInfo);
+        return false;
+    }
+}
