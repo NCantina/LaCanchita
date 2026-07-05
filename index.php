@@ -962,6 +962,52 @@ function colorTipo($tipo) {
             line-height: 1.6;
         }
 
+        /* ============ ¿POR QUÉ LA CANCHITA? (beneficios jugador) ============ */
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 24px;
+        }
+        .why-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px 24px;
+            animation: fadeUp 0.6s ease both;
+            transition: border-color 0.25s, transform 0.25s;
+        }
+        .why-card:hover {
+            border-color: rgba(76,217,100,0.3);
+            transform: translateY(-4px);
+        }
+        .why-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            background: rgba(76,217,100,0.12);
+            border: 1px solid rgba(76,217,100,0.28);
+            color: var(--green);
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+        .why-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .why-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        @media (max-width: 600px) {
+            .why-grid { gap: 16px; }
+            .why-card { padding: 24px 18px; }
+        }
+
         /* ============ PARA DUEÑOS ============ */
         #duenos {
             background: linear-gradient(135deg, rgba(76,217,100,0.04) 0%, rgba(52,199,89,0.08) 100%);
@@ -1569,6 +1615,39 @@ function colorTipo($tipo) {
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
+    </div>
+</section>
+
+<!-- ============ ¿POR QUÉ LA CANCHITA? ============ -->
+<section id="beneficios">
+    <div class="container">
+        <div class="section-header anim">
+            <span class="section-eyebrow">Para jugar</span>
+            <h2 class="section-title">¿Por qué La Canchita?</h2>
+            <p class="section-sub">Reservar tu cancha nunca fue tan fácil.</p>
+        </div>
+        <div class="why-grid">
+            <div class="why-card anim">
+                <div class="why-icon"><i class="fas fa-bolt"></i></div>
+                <h3 class="why-title">Reservá online, 24/7</h3>
+                <p class="why-desc">Elegí predio, día y horario en segundos. Sin llamados ni esperar respuesta.</p>
+            </div>
+            <div class="why-card anim" style="transition-delay:.08s">
+                <div class="why-icon"><i class="fas fa-bell"></i></div>
+                <h3 class="why-title">Confirmación al instante</h3>
+                <p class="why-desc">Te avisamos por email y notificación apenas el predio confirma tu turno.</p>
+            </div>
+            <div class="why-card anim" style="transition-delay:.16s">
+                <div class="why-icon"><i class="fas fa-shapes"></i></div>
+                <h3 class="why-title">Multideporte y cerca tuyo</h3>
+                <p class="why-desc">Fútbol, pádel, tenis, básquet y más, filtrando por tu zona.</p>
+            </div>
+            <div class="why-card anim" style="transition-delay:.24s">
+                <div class="why-icon"><i class="fas fa-mobile-screen"></i></div>
+                <h3 class="why-title">Llevala en el celu</h3>
+                <p class="why-desc">Instalá La Canchita como app y tené tus reservas siempre a mano.</p>
+            </div>
+        </div>
     </div>
 </section>
 
