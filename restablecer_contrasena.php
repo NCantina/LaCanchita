@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/dist/script/php/conn.php';
+require_once 'config/dist/script/php/csrf.php';
 
 function tokenValido($link, string $token) {
     if (!preg_match('/^[a-f0-9]{64}$/', $token)) return null;
@@ -23,7 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass  = $_POST['password']  ?? '';
     $pass2 = $_POST['password2'] ?? '';
 
-    if (!$row) {
+    if (!csrf_valid()) {
+        $errorMsg = 'Sesión expirada. Volvé a enviar el formulario.';
+    } elseif (!$row) {
         $errorMsg = 'El link de recuperación es inválido o expiró. Pedí uno nuevo.';
     } elseif (strlen($pass) < 6) {
         $errorMsg = 'La contraseña debe tener al menos 6 caracteres.';
@@ -94,6 +97,7 @@ $tokenOk = (bool) $row;
       <p class="sub">Elegí una contraseña de al menos 6 caracteres.</p>
       <?php if ($errorMsg): ?><div class="alert err"><?= htmlspecialchars($errorMsg) ?></div><?php endif; ?>
       <form method="post" autocomplete="off">
+        <?= csrf_field() ?>
         <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
         <label for="password">Nueva contraseña</label>
         <input id="password" name="password" type="password" placeholder="••••••••" required autofocus minlength="6">

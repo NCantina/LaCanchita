@@ -2,6 +2,7 @@
 session_start();
 require_once 'config/dist/script/php/conn.php';
 require_once 'config/dist/script/php/mailer.php';
+require_once 'config/dist/script/php/csrf.php';
 
 // Respaldo en dev: asegurar la tabla aunque no se haya corrido la migración
 mysqli_query($link,
@@ -22,7 +23,9 @@ $errorMsg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
-    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    if (!csrf_valid()) {
+        $errorMsg = 'Sesión expirada. Recargá la página e intentá de nuevo.';
+    } elseif (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errorMsg = 'Ingresá un email válido.';
     } else {
         // Buscar usuario activo con ese email
@@ -108,6 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <p class="sub">Ingresá el email de tu cuenta y te mandamos un link para restablecerla.</p>
       <?php if ($errorMsg): ?><div class="alert err"><?= htmlspecialchars($errorMsg) ?></div><?php endif; ?>
       <form method="post" autocomplete="off">
+        <?= csrf_field() ?>
         <label for="email">Email</label>
         <input id="email" name="email" type="email" placeholder="tu@email.com" required autofocus
           value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">

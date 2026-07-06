@@ -19,6 +19,14 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Protección CSRF: todo método de escritura (POST/PUT/DELETE) debe traer el
+// token válido (header X-CSRF-Token, inyectado por el wrapper global de fetch).
+// Las lecturas (GET) pasan. Los endpoints pre-login (login/registro) NO incluyen
+// este archivo, así que no se ven afectados.
+require_once __DIR__ . '/csrf.php';
+csrf_require();
+
 // Liberar el lock de sesión inmediatamente para permitir requests concurrentes
 session_write_close();
 

@@ -16,7 +16,7 @@ mysql -uroot --default-character-set=utf8mb4 lacanchita_test < tests/seed_test.s
 ## Correr
 ```bash
 DB_NAME=lacanchita_test php -S 127.0.0.1:8088 -t . &   # server con la base de test
-bash tests/suite.sh                                     # espera "TOTAL: PASS=59 FAIL=0"
+bash tests/suite.sh                                     # espera "TOTAL: PASS=62 FAIL=0"
 ```
 Usuarios seed (password `test1234`): sa@test.com, dueno@test.com, enc@test.com,
 emp@test.com, cliente@test.com, dueno2@test.com.
