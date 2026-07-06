@@ -2,8 +2,12 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/dist/script/php/conn.php';
+require_once __DIR__ . '/../config/dist/script/php/ratelimit.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { echo json_encode(['ok'=>false,'msg'=>'Método no permitido']); exit; }
+
+// Anti spam de cuentas: máx 8 registros por IP cada 15 minutos
+rate_limit_guard_json($link, 'registro', 8, 900);
 
 $b        = json_decode(file_get_contents('php://input'), true) ?? [];
 $nombre   = trim($b['nombre']   ?? '');

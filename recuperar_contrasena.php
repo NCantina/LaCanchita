@@ -3,6 +3,7 @@ session_start();
 require_once 'config/dist/script/php/conn.php';
 require_once 'config/dist/script/php/mailer.php';
 require_once 'config/dist/script/php/csrf.php';
+require_once 'config/dist/script/php/ratelimit.php';
 
 // Respaldo en dev: asegurar la tabla aunque no se haya corrido la migración
 mysqli_query($link,
@@ -25,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     if (!csrf_valid()) {
         $errorMsg = 'Sesión expirada. Recargá la página e intentá de nuevo.';
+    } elseif (!rate_limit_ok($link, 'reset', 6, 900)) {
+        $errorMsg = 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.';
     } elseif (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errorMsg = 'Ingresá un email válido.';
     } else {
