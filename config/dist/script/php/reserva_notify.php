@@ -86,3 +86,51 @@ function notificarReservaCreada($link, int $reservaId, string $tipoCliente = 'pe
         } catch (\Throwable $e) {}
     }
 }
+
+/**
+ * Aviso al dueño + encargados cuando el CLIENTE cancela su reserva
+ * (antes nadie del complejo se enteraba).
+ */
+function notificarCancelacionCliente($link, int $reservaId): void {
+    $rid = (int)$reservaId;
+    if ($rid <= 0) return;
+
+    $row = null;
+    $res = mysqli_query($link,
+        "SELECT r.RESERVA_FECHA, r.RESERVA_HORA_INICIO, r.RESERVA_HORA_FIN,
+                c.CANCHA_ID, c.CANCHA_NOMBRE, co.USUARIOS_ID AS DUENO_ID,
+                u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO
+         FROM reserva r
+         JOIN cancha c    ON c.CANCHA_ID    = r.CANCHA_ID
+         JOIN complejo co ON co.COMPLEJO_ID = c.COMPLEJO_ID
+         JOIN usuarios u  ON u.USUARIOS_ID  = r.USUARIOS_ID
+         WHERE r.RESERVA_ID = $rid LIMIT 1"
+    );
+    if ($res && $res !== true) $row = mysqli_fetch_assoc($res);
+    if (!$row) return;
+
+    $destinos = [];
+    if (!empty($row['DUENO_ID'])) $destinos[(int)$row['DUENO_ID']] = true;
+    $canchaId = (int)$row['CANCHA_ID'];
+    $qe = mysqli_query($link,
+        "SELECT USUARIOS_ID FROM cancha_encargado WHERE CANCHA_ID = $canchaId AND ACTIVO = 1"
+    );
+    if ($qe && $qe !== true) {
+        while ($e = mysqli_fetch_assoc($qe)) $destinos[(int)$e['USUARIOS_ID']] = true;
+    }
+
+    $hIni    = substr($row['RESERVA_HORA_INICIO'] ?? '', 0, 5);
+    $hFin    = substr($row['RESERVA_HORA_FIN'] ?? '', 0, 5);
+    $cliente = trim(($row['USUARIOS_NOMBRE'] ?? '') . ' ' . ($row['USUARIOS_APELLIDO'] ?? ''));
+    $cuerpo  = trim(($row['CANCHA_NOMBRE'] ?? 'Cancha') . " · {$row['RESERVA_FECHA']} $hIni–$hFin" . ($cliente ? " · $cliente" : ''));
+
+    foreach (array_keys($destinos) as $destId) {
+        if ($destId <= 0) continue;
+        try {
+            enviarPush($destId, '❌ Reserva cancelada por el cliente', $cuerpo, [
+                'tipo' => 'reserva_cancelada',
+                'url'  => '/view/maquetaAdmin/Dashboard.php',
+            ]);
+        } catch (\Throwable $e) {}
+    }
+}

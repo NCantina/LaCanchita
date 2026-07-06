@@ -247,7 +247,7 @@ case 'crear':
             RESERVA_HORA_FIN, RESERVA_PRECIO, RESERVA_SENA, RESERVA_ESTADO, RESERVA_ES_FIJA, ACTIVO)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 0, 1)"
     );
-    mysqli_stmt_bind_param($stmt, 'iiisssddd',
+    mysqli_stmt_bind_param($stmt, 'iiisssdd',
         $cancha_id, $franja_id, $uid, $fecha,
         $franja['FRANJA_HORA_INICIO'], $franja['FRANJA_HORA_FIN'],
         $precio, $sena
@@ -541,11 +541,18 @@ case 'pendientes_count':
     $scope = tenant_where($ids, 'co.COMPLEJO_ID');
     $since = e($link, $_GET['since'] ?? '');
     $sinceClause = $since ? "AND r.RESERVA_ID > " . (int)$since : '';
+    // Staff: contar solo canchas asignadas (mismo scope que 'listar'/'agenda_grid')
+    $join_staff_pc = '';
+    if (is_staff()) {
+        $uid_pc = (int)current_uid();
+        $join_staff_pc = "JOIN cancha_encargado ce_pc ON ce_pc.CANCHA_ID=ca.CANCHA_ID AND ce_pc.USUARIOS_ID=$uid_pc AND ce_pc.ACTIVO=1";
+    }
     $row = mysqli_fetch_assoc(mysqli_query($link,
         "SELECT COUNT(*) AS cnt, MAX(r.RESERVA_ID) AS last_id
          FROM reserva r
          JOIN cancha ca ON ca.CANCHA_ID = r.CANCHA_ID
          JOIN complejo co ON co.COMPLEJO_ID = ca.COMPLEJO_ID
+         $join_staff_pc
          WHERE r.RESERVA_ESTADO = 'pendiente' AND r.ACTIVO = 1 AND $scope $sinceClause"
     ));
     resp(true, 'ok', ['count' => (int)($row['cnt']??0), 'last_id' => (int)($row['last_id']??0)]);
@@ -741,6 +748,11 @@ case 'registrar_pago':
 
     if ($res['RESERVA_ESTADO'] === 'cancelada') resp(false, 'No se puede registrar pago en una reserva cancelada.');
 
+    // Transacción + lock de la reserva: dos cobros concurrentes sobre la misma
+    // reserva se serializan y no pueden superar el precio total.
+    mysqli_begin_transaction($link);
+    mysqli_query($link, "SELECT RESERVA_ID FROM reserva WHERE RESERVA_ID=$reserva_id FOR UPDATE");
+
     // Total ya pagado
     $pagado_row = mysqli_fetch_assoc(mysqli_query($link,
         "SELECT COALESCE(SUM(PAGO_MONTO),0) AS TOTAL FROM pago
@@ -750,6 +762,7 @@ case 'registrar_pago':
     $precio_total = (float)$res['RESERVA_PRECIO'];
 
     if ($pagado_total + $monto > $precio_total) {
+        mysqli_rollback($link);
         $disponible = $precio_total - $pagado_total;
         resp(false, "El monto excede el saldo pendiente. Máximo a cobrar: $disponible.");
     }
@@ -762,7 +775,7 @@ case 'registrar_pago':
     mysqli_stmt_bind_param($stmt, 'idsssi',
         $reserva_id, $monto, $tipo, $medio, $observacion, $uid
     );
-    if (!mysqli_stmt_execute($stmt)) resp(false, 'Error al registrar el pago.');
+    if (!mysqli_stmt_execute($stmt)) { mysqli_rollback($link); resp(false, 'Error al registrar el pago.'); }
 
     $nuevo_total = $pagado_total + $monto;
     $saldo       = $precio_total - $nuevo_total;
@@ -775,6 +788,7 @@ case 'registrar_pago':
         mysqli_stmt_bind_param($s, 'i', $reserva_id);
         mysqli_stmt_execute($s);
     }
+    mysqli_commit($link);
 
     resp(true, 'Pago registrado.', [
         'PAGADO_TOTAL'    => $nuevo_total,

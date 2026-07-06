@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/../../../../vendor/autoload.php';
-require_once __DIR__ . '/../../../../config/mail.php';
+
+// Config SMTP opcional: si falta config/mail.php (gitignoreado) el mail queda
+// deshabilitado en vez de tirar fatal error en cada flujo que notifica.
+$__mailCfg = __DIR__ . '/../../../../config/mail.php';
+if (is_file($__mailCfg)) require_once $__mailCfg;
+if (!defined('MAIL_ENABLED')) define('MAIL_ENABLED', false);
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;

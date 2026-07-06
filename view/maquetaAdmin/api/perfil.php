@@ -57,9 +57,11 @@ case 'update':
             $passSQL
          WHERE USUARIOS_ID=$uid");
 
-    // Actualizar nombre en sesión
+    // Actualizar nombre en sesión (tenancy.php ya cerró la sesión: reabrir)
+    session_start();
     $_SESSION['usuario_nombre']   = $nombre;
     $_SESSION['usuario_apellido'] = $apellido;
+    session_write_close();
 
     resp(true,'Perfil actualizado correctamente.');
 

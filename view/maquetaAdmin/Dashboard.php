@@ -22,7 +22,12 @@ if ($perfil === 2 && empty($_SESSION['onboarding_skip']) && !isset($_GET['skip_o
     ))['n'] ?? 0);
     if ($nComp === 0) { header('Location: Onboarding.php'); exit; }
 }
-if (isset($_GET['skip_onboarding'])) $_SESSION['onboarding_skip'] = true;
+if (isset($_GET['skip_onboarding'])) {
+    // tenancy.php ya cerró la sesión: reabrir para que el flag persista
+    session_start();
+    $_SESSION['onboarding_skip'] = true;
+    session_write_close();
+}
 $hora   = (int)date('H');
 $saludo = $hora < 12 ? 'Buenos días' : ($hora < 19 ? 'Buenas tardes' : 'Buenas noches');
 

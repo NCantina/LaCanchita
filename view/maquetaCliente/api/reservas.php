@@ -178,7 +178,9 @@ if ($action === 'cancelar') {
     if (!$r) resp(false,'Reserva no encontrada.');
     if ((int)$r['USUARIOS_ID'] !== $uid) resp(false,'No tenés permiso.');
     if (!in_array($r['RESERVA_ESTADO'],['pendiente','confirmada'])) resp(false,'No se puede cancelar una reserva '.$r['RESERVA_ESTADO'].'.');
-    mysqli_query($link,"UPDATE reserva SET RESERVA_ESTADO='cancelada' WHERE RESERVA_ID=$rid");
+    // ACTIVO=0 para alinear con el 'rechazar' del admin (misma semántica de baja)
+    mysqli_query($link,"UPDATE reserva SET RESERVA_ESTADO='cancelada', ACTIVO=0 WHERE RESERVA_ID=$rid");
+    notificarCancelacionCliente($link, $rid); // avisar al dueño/encargados
     resp(true,'Reserva cancelada correctamente.');
 }
 

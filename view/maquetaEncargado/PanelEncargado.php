@@ -139,6 +139,8 @@ $apellido = $_SESSION['usuario_apellido'] ?? '';
         .btn-confirmar:hover { background: #e08600; }
         .btn-cobrar { background: rgba(76,217,100,0.12); color: var(--green); border: 1px solid rgba(76,217,100,0.3); }
         .btn-cobrar:hover { background: rgba(76,217,100,0.22); }
+        .btn-rechazar { background: rgba(231,76,60,0.1); color: var(--red); border: 1px solid rgba(231,76,60,0.3); }
+        .btn-rechazar:hover { background: rgba(231,76,60,0.2); }
         .btn-accion:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* ── FAB (botón + turno) ── */
@@ -369,6 +371,7 @@ function renderLista() {
         let acciones = '';
         if (estado === 'pendiente') {
             acciones += `<button class="btn-accion btn-confirmar" id="btn-conf-${id}" onclick="confirmar(${id},${i})"><i class="fas fa-check"></i> Confirmar</button>`;
+            acciones += `<button class="btn-accion btn-rechazar" id="btn-rech-${id}" onclick="rechazar(${id})"><i class="fas fa-times"></i></button>`;
         }
         if (estado === 'confirmada' && saldo > 0) {
             acciones += `<button class="btn-accion btn-cobrar" onclick="abrirCobro(${id},${saldo},'${esc(nombre)}')"><i class="fas fa-dollar-sign"></i> Cobrar ${fmt(saldo)}</button>`;
@@ -421,6 +424,23 @@ async function confirmar(id, i) {
         toast('Reserva confirmada ✓');
         cargar();
     } catch(e) { toast('Error de conexión', true); if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-check"></i> Confirmar';} }
+}
+
+// ── RECHAZAR ──
+async function rechazar(id) {
+    if (!window.confirm('¿Rechazar esta reserva? Se le avisará al cliente.')) return;
+    const btn = document.getElementById(`btn-rech-${id}`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
+    const fd = new FormData();
+    fd.append('action', 'rechazar');
+    fd.append('reserva_id', id);
+    try {
+        const r = await fetch(API, { method: 'POST', body: fd });
+        const j = await r.json();
+        if (!j.ok) { toast(j.msg, true); if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-times"></i>';} return; }
+        toast('Reserva rechazada');
+        cargar();
+    } catch(e) { toast('Error de conexión', true); if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-times"></i>';} }
 }
 
 // ── COBRO ──

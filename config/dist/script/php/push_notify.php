@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 
+// Cargar claves VAPID si existen (antes solo push_subscribe.php las incluía,
+// por lo que TODO push disparado desde el server salía como no-op).
+$__vapidCfg = __DIR__ . '/../../../../config/vapid.php';
+if (is_file($__vapidCfg)) require_once $__vapidCfg;
+
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 
@@ -31,11 +36,11 @@ function enviarPush(int $usuarios_id, string $titulo, string $cuerpo, array $dat
     ]);
     $webPush->setReuseVAPIDHeaders(true);
 
+    // Sin icon/badge en el payload: el SW aplica su default resuelto contra el
+    // scope, que funciona también en instalaciones bajo subdirectorio.
     $payload = json_encode([
         'title' => $titulo,
         'body'  => $cuerpo,
-        'icon'  => '/config/dist/img/pwa/icon-192.png',
-        'badge' => '/config/dist/img/pwa/icon-192.png',
         'data'  => $data,
     ]);
 
