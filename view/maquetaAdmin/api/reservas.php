@@ -33,9 +33,11 @@ function get_reserva_tenant($link, $reserva_id) {
     return $row;
 }
 
-// Para staff: verificar que tiene asignada esa cancha
+// Autorización por cancha: dueño → la cancha debe ser de su tenant;
+// staff → debe tenerla asignada en cancha_encargado.
 function assert_cancha_encargado($link, $cancha_id) {
-    if (is_superadmin() || is_dueno()) return;
+    if (is_superadmin()) return;
+    if (is_dueno()) { assert_cancha($link, $cancha_id); return; }
     $uid = (int)current_uid();
     $cid = (int)$cancha_id;
     $ok = mysqli_fetch_assoc(mysqli_query($link,
