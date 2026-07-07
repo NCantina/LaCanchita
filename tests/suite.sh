@@ -1,6 +1,7 @@
 #!/bin/bash
 # Suite funcional end-to-end de LaCanchita (token-aware: CSRF activo)
 B=http://127.0.0.1:8088
+DB="${DB_NAME:-lacanchita_test}"   # misma base que usa la app (DB_NAME); NUNCA la de dev
 J=$(mktemp -d)
 mkdir -p $J; rm -f $J/*.jar
 PASS=0; FAIL=0
@@ -88,15 +89,15 @@ echo "══ ONBOARDING ATÓMICO ══"
 TD2=$(login $J/due2.jar dueno2@test.com)
 ck "onboarding completo OK" "$(jpost $J/due2.jar $TD2 view/maquetaAdmin/api/onboarding_completo.php "{\"predio\":{\"nombre\":\"Predio Onb\",\"direccion\":\"Calle 3\",\"localidad_id\":1},\"cancha\":{\"nombre\":\"Cancha Onb\",\"tipo_cancha_id\":1},\"franjas\":[{\"ini\":\"09:00\",\"fin\":\"10:00\",\"dias\":[1,2,3],\"precio\":5000}]}")" '"ok":true'
 ck "onboarding precio 0 falla" "$(jpost $J/due2.jar $TD2 view/maquetaAdmin/api/onboarding_completo.php "{\"predio\":{\"nombre\":\"Predio Roto\",\"direccion\":\"C4\",\"localidad_id\":1},\"cancha\":{\"nombre\":\"C\",\"tipo_cancha_id\":1},\"franjas\":[{\"ini\":\"09:00\",\"fin\":\"10:00\",\"dias\":[1],\"precio\":0}]}")" '"ok":false'
-N=$(mysql -uroot lacanchita -N -e "SELECT COUNT(*) FROM complejo WHERE COMPLEJO_NOMBRE='Predio Roto'")
+N=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM complejo WHERE COMPLEJO_NOMBRE='Predio Roto'")
 if [ "$N" = "0" ]; then PASS=$((PASS+1)); echo "PASS: rollback atómico"; else FAIL=$((FAIL+1)); echo "FAIL: predio huérfano"; fi
 
 echo "══ ENFORCEMENT DE MORA ══"
-mysql -uroot lacanchita -e "INSERT INTO suscripcion_plataforma (USUARIOS_ID,PLAN_NOMBRE,PLAN_PRECIO,ESTADO) VALUES (2,'Estándar',30000,'vencido') ON DUPLICATE KEY UPDATE ESTADO='vencido'"
+mysql -uroot "$DB" -e "INSERT INTO suscripcion_plataforma (USUARIOS_ID,PLAN_NOMBRE,PLAN_PRECIO,ESTADO) VALUES (2,'Estándar',30000,'vencido') ON DUPLICATE KEY UPDATE ESTADO='vencido'"
 ck "predio moroso no recibe reservas" "$(jpost $J/cli.jar $TC api/reservar_publico.php "{\"cancha_id\":1,\"fecha\":\"$MANANA\",\"hora\":\"12:00\"}")" 'no está recibiendo'
 ck "dueño moroso no escribe (402)" "$(fpost $J/due.jar $TD view/maquetaAdmin/api/canchas.php "action=crear&nombre=Nueva&tipo_cancha_id=1&complejo_id=1")" 'solo lectura'
 ck "dueño moroso SÍ lee" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/canchas.php?action=listar")" '"ok":true'
-mysql -uroot lacanchita -e "UPDATE suscripcion_plataforma SET ESTADO='activo' WHERE USUARIOS_ID=2"
+mysql -uroot "$DB" -e "UPDATE suscripcion_plataforma SET ESTADO='activo' WHERE USUARIOS_ID=2"
 ck "regularizado vuelve a recibir" "$(jpost $J/cli.jar $TC api/reservar_publico.php "{\"cancha_id\":1,\"fecha\":\"$MANANA\",\"hora\":\"12:00\"}")" '"ok":true'
 
 echo "══ RESET DE CONTRASEÑA ══"
@@ -108,7 +109,7 @@ ck "pedido reset responde" "$(curl -s -b $RCJ -X POST $B/recuperar_contrasena.ph
 ck "pedido reset SIN token rechazado" "$(curl -s -b $RCJ -X POST $B/recuperar_contrasena.php -d "email=cliente@test.com")" 'Sesión expirada'
 TOKEN=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
 TH=$(php -r "echo hash('sha256','$TOKEN');")
-mysql -uroot lacanchita -e "DELETE FROM password_reset WHERE USUARIOS_ID=5; INSERT INTO password_reset (USUARIOS_ID,TOKEN_HASH,EXPIRA) VALUES (5,'$TH',DATE_ADD(NOW(),INTERVAL 1 HOUR))"
+mysql -uroot "$DB" -e "DELETE FROM password_reset WHERE USUARIOS_ID=5; INSERT INTO password_reset (USUARIOS_ID,TOKEN_HASH,EXPIRA) VALUES (5,'$TH',DATE_ADD(NOW(),INTERVAL 1 HOUR))"
 RSJ=$J/setpass.jar
 STOK=$(curl -s -c $RSJ "$B/restablecer_contrasena.php?token=$TOKEN" | grep -oP 'name="csrf" value="\K[a-f0-9]{64}')
 ck "página reset token válido" "$(curl -s "$B/restablecer_contrasena.php?token=$TOKEN")" 'Creá tu nueva'
@@ -119,7 +120,7 @@ ck "token ya usado invalida" "$(curl -s "$B/restablecer_contrasena.php?token=$TO
 echo "══ SUPERADMIN / PLATAFORMA ══"
 ck "SA stats" "$(curl -s -b $J/sa.jar "$B/view/maquetaSuperAdmin/api/clientes.php?action=stats")" '"ok":true'
 ck "SA registra cobro" "$(fpost $J/sa.jar $TS view/maquetaSuperAdmin/api/clientes.php "action=registrar_cobro&usuarios_id=2&monto=30000")" '"ok":true'
-PROX=$(mysql -uroot lacanchita -N -e "SELECT PROXIMO_COBRO >= CURDATE() FROM suscripcion_plataforma WHERE USUARIOS_ID=2")
+PROX=$(mysql -uroot "$DB" -N -e "SELECT PROXIMO_COBRO >= CURDATE() FROM suscripcion_plataforma WHERE USUARIOS_ID=2")
 if [ "$PROX" = "1" ]; then PASS=$((PASS+1)); echo "PASS: PROXIMO_COBRO futuro"; else FAIL=$((FAIL+1)); echo "FAIL: PROXIMO_COBRO pasado"; fi
 ck "cliente NO accede API SA" "$(curl -s -b $J/cli.jar "$B/view/maquetaSuperAdmin/api/clientes.php?action=stats")" 'permisos'
 
