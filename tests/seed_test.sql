@@ -1,7 +1,7 @@
 INSERT INTO perfil (PERFIL_ID, PERFIL_NOMBRE) VALUES (1,'SuperAdmin'),(2,'Dueño'),(3,'Encargado'),(4,'Empleado'),(5,'Cliente');
 INSERT INTO provincia (PROVINCIA_ID, PROVINCIA_NOMBRE) VALUES (1,'Buenos Aires');
 INSERT INTO partido (PARTIDO_ID, PARTIDO_NOMBRE, PROVINCIA_ID) VALUES (1,'La Plata',1);
-INSERT INTO localidad (LOCALIDAD_ID, LOCALIDAD_NOMBRE, PARTIDO_ID) VALUES (1,'La Plata',1),(2,'City Bell',1);
+INSERT INTO localidad (LOCALIDAD_ID, LOCALIDAD_NOMBRE, PARTIDO_ID, PROVINCIA_ID) VALUES (1,'La Plata',1,1),(2,'City Bell',1,1);
 INSERT INTO tipo_complejo (TIPO_COMPLEJO_ID, TIPO_COMPLEJO_NOMBRE, TIPO_COMPLEJO_ICONO) VALUES (1,'Club','fa-shield-halved');
 INSERT INTO tipo_cancha (TIPO_CANCHA_ID, TIPO_CANCHA_NOMBRE, TIPO_CANCHA_ICONO) VALUES (1,'Fútbol 5','fa-futbol'),(2,'Pádel','fa-table-tennis-paddle-ball');
 INSERT INTO medio_pago (MEDIO_PAGO_ID, MEDIO_PAGO_NOMBRE) VALUES (1,'Efectivo'),(2,'Transferencia');
