@@ -2565,6 +2565,24 @@ if ($perfil >= 2) {
                 </div>
             </div>
 
+            <!-- Arqueo / cierre de caja -->
+            <div class="card" id="arqueoCard" style="margin-bottom:24px;padding:20px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <div class="kpi-icon g" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="fas fa-cash-register"></i></div>
+                        <div>
+                            <div style="font-weight:800;font-size:1rem">Arqueo de caja</div>
+                            <div style="font-size:.78rem;color:var(--muted)">Cierre del día por predio</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <select id="arqueoComplejo" class="form-select" style="padding:8px 12px;width:auto;min-width:160px" onchange="loadArqueo()"></select>
+                        <button class="btn btn-primary btn-sm" id="arqueoCerrarBtn" onclick="abrirCierre()"><i class="fas fa-lock"></i> Cerrar caja</button>
+                    </div>
+                </div>
+                <div id="arqueoBody"><div style="text-align:center;padding:20px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i></div></div>
+            </div>
+
             <div id="pagosLista"></div>
         </div><!-- /view-pagos -->
 
@@ -7551,6 +7569,7 @@ async function dashConfirmar(id, btn) {
 //  RESERVAS
 // ══════════════════════════════════════════════
 const RES_API = 'api/reservas.php';
+const CAJA_API = 'api/caja.php';
 let _resEstado = '';
 
 function resSetEstado(btn, estado) {
@@ -7731,6 +7750,8 @@ async function loadPagosView() {
     const opcFecha = { weekday:'long', day:'numeric', month:'long' };
     label.textContent = new Date(fecha+'T12:00:00').toLocaleDateString('es-AR', opcFecha);
 
+    loadArqueo(); // refrescar arqueo de caja del día
+
     lista.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i></div>';
 
     // Cargamos reservas del día y mostramos las que tienen movimiento de pago o saldo pendiente
@@ -7787,6 +7808,109 @@ async function loadPagosView() {
             </tbody>
         </table>
     </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ARQUEO / CIERRE DE CAJA
+// ══════════════════════════════════════════════════════════════════
+let _arqueoData = null;
+
+async function loadArqueoComplejos() {
+    const sel = document.getElementById('arqueoComplejo');
+    if (!sel || sel.dataset.loaded) return;
+    const j = await fetch(`${CAJA_API}?action=complejos`).then(r => r.json()).catch(() => null);
+    if (!j?.ok || !j.data.length) { sel.innerHTML = '<option value="">Sin predios</option>'; return; }
+    sel.innerHTML = j.data.map(c => `<option value="${c.COMPLEJO_ID}">${escHtml(c.COMPLEJO_NOMBRE)}</option>`).join('');
+    sel.dataset.loaded = '1';
+}
+
+async function loadArqueo() {
+    await loadArqueoComplejos();
+    const sel = document.getElementById('arqueoComplejo');
+    const body = document.getElementById('arqueoBody');
+    if (!sel || !body) return;
+    const cmp = sel.value;
+    const fecha = document.getElementById('pagosFecha').value;
+    const cerrarBtn = document.getElementById('arqueoCerrarBtn');
+    if (!cmp) { body.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No hay predios para arquear.</p>'; if (cerrarBtn) cerrarBtn.style.display = 'none'; return; }
+    if (cerrarBtn) cerrarBtn.style.display = '';
+    body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i></div>';
+    const j = await fetch(`${CAJA_API}?action=arqueo&complejo_id=${cmp}&fecha=${fecha}`).then(r => r.json()).catch(() => null);
+    if (!j?.ok) { body.innerHTML = `<p class="form-error">${escHtml(j?.msg || 'Error al cargar el arqueo.')}</p>`; return; }
+    _arqueoData = j.data;
+    renderArqueo(j.data);
+}
+
+function _cajaFmt(n) { return '$' + parseFloat(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 }); }
+
+function renderArqueo(d) {
+    const medioLbl = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' };
+    const chips = (d.por_medio || []).map(m =>
+        `<span style="display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:.82rem"><strong>${medioLbl[m.PAGO_MEDIO] || m.PAGO_MEDIO}</strong> ${_cajaFmt(m.total)} <span style="color:var(--muted)">(${m.cnt})</span></span>`
+    ).join('') || '<span style="color:var(--muted);font-size:.85rem">Sin cobros este día</span>';
+    const emp = (d.por_empleado || []).map(e =>
+        `<tr><td>${escHtml(e.USUARIOS_NOMBRE + ' ' + e.USUARIOS_APELLIDO)}</td><td style="text-align:right">${_cajaFmt(e.efectivo)}</td><td style="text-align:right;font-weight:600">${_cajaFmt(e.total)}</td><td style="text-align:right;color:var(--muted)">${e.cnt}</td></tr>`
+    ).join('');
+    let cierreBanner = '';
+    if (d.cierre) {
+        const dif = parseFloat(d.cierre.DIFERENCIA || 0);
+        const col = dif === 0 ? 'var(--green)' : (dif < 0 ? 'var(--red)' : 'var(--orange)');
+        const esperado = parseFloat(d.cierre.EFECTIVO_SISTEMA || 0) + parseFloat(d.cierre.FONDO_INICIAL || 0);
+        cierreBanner = `<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(76,217,100,.08);border:1px solid rgba(76,217,100,.25);font-size:.85rem">
+            <i class="fas fa-check-circle" style="color:var(--green)"></i> Caja cerrada — contado ${_cajaFmt(d.cierre.EFECTIVO_DECLARADO)} · esperado ${_cajaFmt(esperado)} · diferencia <strong style="color:${col}">${_cajaFmt(dif)}</strong></div>`;
+    }
+    document.getElementById('arqueoBody').innerHTML = `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${chips}</div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px">
+            <div><div style="font-size:.72rem;color:var(--muted)">Total cobrado</div><div style="font-size:1.3rem;font-weight:800">${_cajaFmt(d.total_general)}</div></div>
+            <div><div style="font-size:.72rem;color:var(--muted)">Efectivo</div><div style="font-size:1.3rem;font-weight:800;color:var(--green)">${_cajaFmt(d.total_efectivo)}</div></div>
+        </div>
+        ${emp ? `<table class="tbl" style="margin:0;font-size:.85rem"><thead><tr><th>Empleado</th><th style="text-align:right">Efectivo</th><th style="text-align:right">Total</th><th style="text-align:right">#</th></tr></thead><tbody>${emp}</tbody></table>` : ''}
+        ${cierreBanner}`;
+    const btn = document.getElementById('arqueoCerrarBtn');
+    if (btn) btn.innerHTML = d.cierre ? '<i class="fas fa-rotate"></i> Re-cerrar' : '<i class="fas fa-lock"></i> Cerrar caja';
+}
+
+function abrirCierre() {
+    if (!_arqueoData) return;
+    const c = _arqueoData.cierre;
+    document.getElementById('mCierreEfectivo').textContent = _cajaFmt(_arqueoData.total_efectivo);
+    document.getElementById('mCierreFondo').value = c ? c.FONDO_INICIAL : '0';
+    document.getElementById('mCierreDeclarado').value = c ? c.EFECTIVO_DECLARADO : '';
+    document.getElementById('mCierreNotas').value = c ? (c.NOTAS || '') : '';
+    document.getElementById('mCierreErr').textContent = '';
+    document.getElementById('mCierreSub').textContent = document.getElementById('arqueoComplejo').selectedOptions[0]?.textContent || '';
+    cierreDif();
+    openModal('modalCierre');
+}
+
+function cierreDif() {
+    const ef = parseFloat(_arqueoData?.total_efectivo || 0);
+    const fondo = parseFloat(document.getElementById('mCierreFondo').value || 0);
+    const declInput = document.getElementById('mCierreDeclarado').value;
+    const el = document.getElementById('mCierreDif');
+    if (declInput === '') { el.innerHTML = ''; return; }
+    const dif = parseFloat(declInput || 0) - (ef + fondo);
+    const col = dif === 0 ? 'var(--green)' : (dif < 0 ? 'var(--red)' : 'var(--orange)');
+    el.innerHTML = `Diferencia: <span style="color:${col}">${dif >= 0 ? '+' : ''}${_cajaFmt(dif)}</span>`;
+}
+
+async function guardarCierre() {
+    const cmp = document.getElementById('arqueoComplejo').value;
+    const fecha = document.getElementById('pagosFecha').value;
+    const decl = document.getElementById('mCierreDeclarado').value;
+    if (decl === '') { document.getElementById('mCierreErr').textContent = 'Ingresá el efectivo contado.'; return; }
+    const btn = document.getElementById('mCierreBtn'); const orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Guardando…';
+    const fd = new FormData();
+    fd.append('action', 'cerrar'); fd.append('complejo_id', cmp); fd.append('fecha', fecha);
+    fd.append('fondo_inicial', document.getElementById('mCierreFondo').value || 0);
+    fd.append('efectivo_declarado', decl);
+    fd.append('notas', document.getElementById('mCierreNotas').value.trim());
+    const j = await fetch(CAJA_API, { method: 'POST', body: fd }).then(r => r.json()).catch(() => null);
+    btn.disabled = false; btn.innerHTML = orig;
+    if (!j?.ok) { document.getElementById('mCierreErr').textContent = j?.msg || 'Error al cerrar la caja.'; return; }
+    closeModal('modalCierre'); toast('Caja cerrada correctamente.', 'ok'); loadArqueo();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -9191,6 +9315,47 @@ function wizVerCliente() {
             <button class="btn btn-ghost" onclick="closeModal('modalPlan')">Cancelar</button>
             <button class="btn btn-primary" id="mPlanBtn" onclick="planesGuardar()">
                 <i class="fas fa-check"></i> Guardar tipo de plan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CIERRE DE CAJA -->
+<div class="modal-overlay" id="modalCierre">
+    <div class="modal" style="max-width:440px">
+        <div class="modal-head">
+            <div class="modal-head-icon b" style="background:rgba(76,217,100,.15);color:var(--green)">
+                <i class="fas fa-cash-register"></i>
+            </div>
+            <div>
+                <h3>Cerrar caja</h3>
+                <p id="mCierreSub">Arqueo del día</p>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalCierre')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:.85rem">
+                Efectivo cobrado (sistema): <strong id="mCierreEfectivo" style="color:var(--green)">—</strong>
+            </div>
+            <div class="form-row">
+                <label class="form-label">Fondo inicial de caja</label>
+                <input type="number" class="form-input" id="mCierreFondo" value="0" min="0" step="0.01" oninput="cierreDif()">
+            </div>
+            <div class="form-row">
+                <label class="form-label">Efectivo contado (físico) <span style="color:var(--red)">*</span></label>
+                <input type="number" class="form-input" id="mCierreDeclarado" placeholder="0" min="0" step="0.01" oninput="cierreDif()">
+            </div>
+            <div class="form-row">
+                <label class="form-label">Notas</label>
+                <textarea class="form-input" id="mCierreNotas" rows="2" placeholder="Observaciones del cierre…" style="resize:vertical"></textarea>
+            </div>
+            <div id="mCierreDif" style="font-size:.9rem;font-weight:700;margin-top:6px"></div>
+            <div id="mCierreErr" class="form-error" style="margin-top:8px"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalCierre')">Cancelar</button>
+            <button class="btn btn-primary" id="mCierreBtn" onclick="guardarCierre()">
+                <i class="fas fa-lock"></i> Confirmar cierre
             </button>
         </div>
     </div>
