@@ -3288,6 +3288,33 @@ if ($perfil >= 2) {
     </div>
 </div>
 
+<!-- MODAL FOTOS DEL PREDIO -->
+<div class="modal-overlay" id="modalFotos">
+    <div class="modal" style="max-width:640px">
+        <div class="modal-head">
+            <div class="modal-head-icon b" style="background:rgba(52,152,219,.15);color:var(--blue)">
+                <i class="fas fa-camera"></i>
+            </div>
+            <div>
+                <h3>Fotos del predio</h3>
+                <p id="mFotosSub">Subí fotos para la landing y el buscador</p>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalFotos')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <label class="btn btn-primary btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" id="mFotosSubirLbl">
+                <i class="fas fa-upload"></i> Subir foto
+                <input type="file" id="mFotosInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="subirFoto()">
+            </label>
+            <span style="font-size:.72rem;color:var(--muted);margin-left:10px">JPG/PNG/WEBP · máx 5 MB · hasta 8 fotos. La <strong>portada</strong> es la que se muestra primero.</span>
+            <div id="mFotosGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:16px"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalFotos')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════ TOASTS ═══════════ -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -4664,6 +4691,7 @@ function canTogglePredio(cid, btn) {
 // COMPLEJOS
 // ═══════════════════════════════════════════════
 const CMP_API    = 'api/complejos.php';
+const FOTOS_API  = 'api/fotos.php';
 let cmpData      = [];
 let cmpFilterVal = 'all';
 let cmpSearchVal = '';
@@ -4774,6 +4802,11 @@ function renderComplejos() {
                     <button class="act-btn edit" title="Editar datos" onclick="complejosAbrirEditar(${r.COMPLEJO_ID})">
                         <i class="fas fa-pen"></i>
                     </button>
+                    <button class="act-btn" title="Fotos del predio"
+                        onclick="abrirFotos(${r.COMPLEJO_ID},'${escHtml(r.COMPLEJO_NOMBRE).replace(/'/g,"\\'")}')"
+                        style="color:var(--blue);border-color:rgba(52,152,219,.2)">
+                        <i class="fas fa-camera"></i>
+                    </button>
                     <button class="act-btn toggle ${activo?'on':''}" title="${activo?'Desactivar':'Activar'}"
                         onclick="cmpToggle(${r.COMPLEJO_ID},this)">
                         <i class="fas ${activo?'fa-toggle-on':'fa-toggle-off'}"></i>
@@ -4788,6 +4821,76 @@ function renderComplejos() {
 
 function escHtml(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════
+// FOTOS DEL PREDIO
+// ═══════════════════════════════════════════════
+let _fotosCid = null;
+
+function abrirFotos(cid, nombre) {
+    _fotosCid = cid;
+    document.getElementById('mFotosSub').textContent = nombre;
+    document.getElementById('mFotosInput').value = '';
+    openModal('modalFotos');
+    loadFotos();
+}
+
+async function loadFotos() {
+    const grid = document.getElementById('mFotosGrid');
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px"><i class="fas fa-spinner fa-spin"></i></div>';
+    const j = await fetch(`${FOTOS_API}?action=listar&complejo_id=${_fotosCid}`).then(r => r.json()).catch(() => null);
+    if (!j?.ok) { grid.innerHTML = `<p class="form-error" style="grid-column:1/-1">${escHtml(j?.msg || 'Error al cargar las fotos.')}</p>`; return; }
+    renderFotos(j.data);
+}
+
+function renderFotos(fotos) {
+    const grid = document.getElementById('mFotosGrid');
+    if (!fotos.length) {
+        grid.innerHTML = '<p style="grid-column:1/-1;color:var(--muted);font-size:.85rem;text-align:center;padding:24px">Todavía no hay fotos. Subí la primera 📷</p>';
+        return;
+    }
+    grid.innerHTML = fotos.map(f => {
+        const principal = parseInt(f.FOTO_PRINCIPAL) === 1;
+        return `<div style="position:relative;border-radius:12px;overflow:hidden;border:2px solid ${principal ? 'var(--green)' : 'rgba(255,255,255,.1)'};aspect-ratio:4/3;background:#111">
+            <img src="../../${escHtml(f.FOTO_PATH)}" style="width:100%;height:100%;object-fit:cover" alt="" loading="lazy">
+            ${principal ? '<span style="position:absolute;top:6px;left:6px;background:var(--green);color:#000;font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:6px">PORTADA</span>' : ''}
+            <div style="position:absolute;bottom:0;left:0;right:0;display:flex;gap:4px;padding:6px;background:linear-gradient(0deg,rgba(0,0,0,.75),transparent)">
+                ${!principal ? `<button class="btn btn-ghost btn-sm" style="flex:1;font-size:.7rem;padding:4px" title="Marcar como portada" onclick="fotoPrincipal(${f.FOTO_ID})"><i class="fas fa-star"></i></button>` : ''}
+                <button class="btn btn-ghost btn-sm" style="flex:1;font-size:.7rem;padding:4px;color:var(--red)" title="Eliminar" onclick="fotoEliminar(${f.FOTO_ID})"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function subirFoto() {
+    const input = document.getElementById('mFotosInput');
+    if (!input.files.length) return;
+    const file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) { toast('La imagen supera los 5 MB.', 'err'); input.value = ''; return; }
+    const lbl = document.getElementById('mFotosSubirLbl'); const orig = lbl.innerHTML;
+    lbl.style.pointerEvents = 'none'; lbl.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Subiendo…';
+    const fd = new FormData();
+    fd.append('action', 'subir'); fd.append('complejo_id', _fotosCid); fd.append('foto', file);
+    const j = await fetch(FOTOS_API, { method: 'POST', body: fd }).then(r => r.json()).catch(() => null);
+    lbl.style.pointerEvents = ''; lbl.innerHTML = orig; input.value = '';
+    if (!j?.ok) { toast(j?.msg || 'Error al subir la foto.', 'err'); return; }
+    toast('Foto subida.', 'ok'); loadFotos();
+}
+
+async function fotoPrincipal(id) {
+    const fd = new FormData(); fd.append('action', 'principal'); fd.append('foto_id', id);
+    const j = await fetch(FOTOS_API, { method: 'POST', body: fd }).then(r => r.json()).catch(() => null);
+    if (!j?.ok) { toast(j?.msg || 'Error', 'err'); return; }
+    loadFotos();
+}
+
+async function fotoEliminar(id) {
+    if (!confirm('¿Seguro que querés eliminar esta foto?')) return;
+    const fd = new FormData(); fd.append('action', 'eliminar'); fd.append('foto_id', id);
+    const j = await fetch(FOTOS_API, { method: 'POST', body: fd }).then(r => r.json()).catch(() => null);
+    if (!j?.ok) { toast(j?.msg || 'Error al eliminar.', 'err'); return; }
+    toast('Foto eliminada.', 'ok'); loadFotos();
 }
 
 function cmpFilter()          { cmpSearchVal = document.getElementById('cmpSearch').value; renderComplejos(); }
