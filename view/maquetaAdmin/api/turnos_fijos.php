@@ -28,6 +28,9 @@ function get_turno($link, $id) {
     return $r;
 }
 
+// Modo solo-lectura por mora: bloquear escritura del panel.
+if (in_array($action, ['crear','editar','toggle','eliminar'], true)) assert_tenant_activo($link);
+
 switch ($action) {
 
 // ── SELECTS ────────────────────────────────────────────────────────────────

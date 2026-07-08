@@ -69,14 +69,31 @@ elseif (strpos($horario, 'arde') !== false)  $horarioFilter = " AND TIME(fh2.FRA
 elseif (strpos($horario, 'oche') !== false)  $horarioFilter = " AND TIME(fh2.FRANJA_HORA_INICIO) >= '18:00'";
 
 foreach ($canchas as &$c) {
-    $cid = (int)$c['CANCHA_ID'];
+    $cid   = (int)$c['CANCHA_ID'];
+    $cmpId = (int)$c['COMPLEJO_ID'];
+    // Un slot está libre solo si no hay reserva activa (pendiente/confirmada),
+    // no es turno fijo y la cancha/complejo no está cerrada en ese horario.
     $slotSql = "
         SELECT fh2.FRANJA_HORA_INICIO AS hora,
                (SELECT COUNT(*) FROM reserva r
                 WHERE r.CANCHA_ID = fh2.CANCHA_ID
                   AND r.RESERVA_FECHA = ?
                   AND r.RESERVA_HORA_INICIO = fh2.FRANJA_HORA_INICIO
-                  AND r.ACTIVO = 1) AS ocupado
+                  AND r.RESERVA_ESTADO IN ('pendiente','confirmada')
+                  AND r.ACTIVO = 1) AS ocupado,
+               (SELECT COUNT(*) FROM turno_fijo tf
+                WHERE tf.CANCHA_ID = fh2.CANCHA_ID
+                  AND tf.TURNO_FIJO_DIA = ?
+                  AND tf.TURNO_FIJO_HORA_INICIO = fh2.FRANJA_HORA_INICIO
+                  AND tf.ACTIVO = 1
+                  AND tf.TURNO_FIJO_FECHA_DESDE <= ?
+                  AND (tf.TURNO_FIJO_FECHA_HASTA IS NULL OR tf.TURNO_FIJO_FECHA_HASTA >= ?)) AS turnofijo,
+               (SELECT COUNT(*) FROM cierre_cancha cc
+                WHERE cc.ACTIVO = 1
+                  AND (cc.CANCHA_ID = fh2.CANCHA_ID OR (cc.CANCHA_ID IS NULL AND cc.COMPLEJO_ID = ?))
+                  AND cc.CIERRE_FECHA_DESDE <= ? AND cc.CIERRE_FECHA_HASTA >= ?
+                  AND (cc.CIERRE_HORA_DESDE IS NULL
+                       OR (cc.CIERRE_HORA_DESDE < fh2.FRANJA_HORA_FIN AND cc.CIERRE_HORA_HASTA > fh2.FRANJA_HORA_INICIO))) AS cerrado
         FROM franja_horaria fh2
         INNER JOIN franja_dia fd ON fd.FRANJA_ID = fh2.FRANJA_ID AND fd.DIA_ID = ?
         WHERE fh2.CANCHA_ID = ? AND fh2.ACTIVO = 1
@@ -85,12 +102,15 @@ foreach ($canchas as &$c) {
         LIMIT 8
     ";
     $s2 = mysqli_prepare($link, $slotSql);
-    mysqli_stmt_bind_param($s2, 'sii', $fecha, $diaId, $cid);
+    // Orden de los 9 placeholders: reserva.fecha, tf.dia, tf.desde, tf.hasta,
+    // cierre.complejo, cierre.desde, cierre.hasta, franja_dia.dia, cancha.id
+    mysqli_stmt_bind_param($s2, 'sississii', $fecha, $diaId, $fecha, $fecha, $cmpId, $fecha, $fecha, $diaId, $cid);
     mysqli_stmt_execute($s2);
     $r2 = mysqli_stmt_get_result($s2);
     $slots = [];
     while ($sl = mysqli_fetch_assoc($r2)) {
-        $slots[] = ['hora' => substr($sl['hora'], 0, 5), 'libre' => ($sl['ocupado'] == 0)];
+        $libre = ($sl['ocupado'] == 0 && $sl['turnofijo'] == 0 && $sl['cerrado'] == 0);
+        $slots[] = ['hora' => substr($sl['hora'], 0, 5), 'libre' => $libre];
     }
     $c['slots'] = $slots;
 }

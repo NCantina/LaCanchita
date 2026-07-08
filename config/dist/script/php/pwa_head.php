@@ -10,6 +10,10 @@
  */
 $PWA_BASE = $PWA_BASE ?? './';
 $b = htmlspecialchars($PWA_BASE, ENT_QUOTES);
+
+// Token CSRF: se emite si hay sesión activa (todas las vistas hacen session_start).
+require_once __DIR__ . '/csrf.php';
+$__csrfToken = (session_status() === PHP_SESSION_ACTIVE) ? csrf_token() : '';
 ?>
 <!-- PWA -->
 <link rel="manifest" href="<?= $b ?>manifest.webmanifest">
@@ -21,6 +25,27 @@ $b = htmlspecialchars($PWA_BASE, ENT_QUOTES);
 <link rel="apple-touch-icon" href="<?= $b ?>config/dist/img/pwa/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="<?= $b ?>config/dist/img/pwa/icon-192.png">
 <script>
+// ── CSRF: token + wrapper global de fetch ──────────────────────────────────
+// Todo POST/PUT/DELETE/PATCH del mismo origen lleva el header X-CSRF-Token
+// automáticamente, sin tocar cada fetch individual.
+window.CSRF_TOKEN = <?= json_encode($__csrfToken) ?>;
+(function () {
+  if (!window.fetch || !window.CSRF_TOKEN || window.__csrfPatched) return;
+  window.__csrfPatched = true;
+  var _fetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    init = init || {};
+    var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+    var url = (typeof input === 'string') ? input : (input && input.url) || '';
+    var sameOrigin = !/^https?:\/\//i.test(url) || url.indexOf(location.origin) === 0;
+    if (sameOrigin && method !== 'GET' && method !== 'HEAD') {
+      var h = new Headers(init.headers || (typeof input === 'object' ? input.headers : undefined) || {});
+      if (!h.has('X-CSRF-Token')) h.set('X-CSRF-Token', window.CSRF_TOKEN);
+      init.headers = h;
+    }
+    return _fetch(input, init);
+  };
+})();
 (function () {
   var PWA_BASE   = <?= json_encode($PWA_BASE) ?>;
   var PUSH_API   = PWA_BASE + 'api/push_subscribe.php';

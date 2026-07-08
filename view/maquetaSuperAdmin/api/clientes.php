@@ -271,7 +271,11 @@ if ($action === 'registrar_cobro') {
     if ($sp) {
         $ints = ['mensual'=>'+1 month','trimestral'=>'+3 months','anual'=>'+1 year'];
         $int  = $ints[$sp['PLAN_CICLO']] ?? '+1 month';
+        // Avanzar desde el MAYOR entre el próximo cobro previo y la fecha del pago:
+        // si el cliente estuvo vencido varios ciclos, un solo cobro no debe dejar
+        // PROXIMO_COBRO en el pasado con ESTADO='activo'.
         $base = $sp['PROXIMO_COBRO'] ?: $fecha;
+        if ($base < $fecha) $base = $fecha;
         $nuevo = e(date('Y-m-d', strtotime($base . ' ' . $int)));
         $ef    = e($fecha);
         mysqli_query($link,
@@ -287,10 +291,43 @@ if ($action === 'registrar_cobro') {
 if ($action === 'eliminar_cobro') {
     $id = (int)($_POST['cobro_id'] ?? 0);
     if (!$id) resp(false, 'cobro_id requerido.');
+
+    // Guardar a qué cliente pertenecía antes de borrar, para resincronizar su suscripción
+    $cobro = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT USUARIOS_ID FROM cobro_plataforma WHERE COBRO_ID=$id LIMIT 1"));
+    if (!$cobro) resp(false, 'Cobro no encontrado.');
+    $cuid = (int)$cobro['USUARIOS_ID'];
+
     $stmt = mysqli_prepare($link, "DELETE FROM cobro_plataforma WHERE COBRO_ID=?");
     mysqli_stmt_bind_param($stmt, 'i', $id);
     if (!mysqli_stmt_execute($stmt)) resp(false, 'Error al eliminar.');
-    resp(true, 'Cobro eliminado.');
+
+    // Resincronizar la suscripción con el historial real que quedó
+    $sp = mysqli_fetch_assoc(mysqli_query($link,
+        "SELECT PLAN_CICLO FROM suscripcion_plataforma WHERE USUARIOS_ID=$cuid LIMIT 1"));
+    if ($sp) {
+        $ult = mysqli_fetch_assoc(mysqli_query($link,
+            "SELECT MAX(COBRO_FECHA) AS F FROM cobro_plataforma WHERE USUARIOS_ID=$cuid"));
+        $ultimo = $ult['F'] ?? null;
+        $ints = ['mensual'=>'+1 month','trimestral'=>'+3 months','anual'=>'+1 year'];
+        $int  = $ints[$sp['PLAN_CICLO']] ?? '+1 month';
+        if ($ultimo) {
+            $prox   = date('Y-m-d', strtotime($ultimo . ' ' . $int));
+            $estado = ($prox < date('Y-m-d')) ? 'vencido' : 'activo';
+            $eu = e($ultimo); $ep = e($prox);
+            mysqli_query($link,
+                "UPDATE suscripcion_plataforma
+                 SET ULTIMO_COBRO='$eu', PROXIMO_COBRO='$ep', ESTADO='$estado'
+                 WHERE USUARIOS_ID=$cuid");
+        } else {
+            // Sin cobros restantes: sin último cobro ni próxima fecha derivable
+            mysqli_query($link,
+                "UPDATE suscripcion_plataforma
+                 SET ULTIMO_COBRO=NULL, PROXIMO_COBRO=NULL
+                 WHERE USUARIOS_ID=$cuid");
+        }
+    }
+    resp(true, 'Cobro eliminado. Suscripción resincronizada.');
 }
 
 // ── GUARDAR NOTAS ─────────────────────────────────────────────────────────────

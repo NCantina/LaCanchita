@@ -1,8 +1,15 @@
 <?php
 session_start();
 require_once 'config/dist/script/php/conn.php';
+require_once 'config/dist/script/php/ratelimit.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: register.php'); exit;
+}
+
+// Anti spam de cuentas: máx 8 registros por IP cada 15 minutos
+if (!rate_limit_ok($link, 'registro', 8, 900)) {
+    $_SESSION['registro_error'] = 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.';
     header('Location: register.php'); exit;
 }
 
@@ -78,6 +85,7 @@ $user  = mysqli_fetch_assoc(mysqli_query($link,
             u.PERFIL_ID, u.ACTIVO
      FROM usuarios u WHERE u.USUARIOS_ID=$newId"));
 
+session_regenerate_id(true); // evitar fijación de sesión al auto-loguear tras registro
 $_SESSION['usuario_id']       = $user['USUARIOS_ID'];
 $_SESSION['usuario_nombre']   = $user['USUARIOS_NOMBRE'];
 $_SESSION['usuario_apellido'] = $user['USUARIOS_APELLIDO'];

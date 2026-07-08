@@ -15,6 +15,9 @@ function e($link,$v){ return mysqli_real_escape_string($link, trim($v??'')); }
 // Agregar columna Instagram si no existe
 mysqli_query($link, "ALTER TABLE complejo ADD COLUMN IF NOT EXISTS COMPLEJO_INSTAGRAM VARCHAR(150) NULL DEFAULT NULL AFTER COMPLEJO_EMAIL");
 
+// Modo solo-lectura por mora: bloquear escritura del panel.
+if (in_array($action, ['crear','editar','toggle','eliminar'], true)) assert_tenant_activo($link);
+
 switch($action) {
 
 // ── LISTAR ──────────────────────────────────────────────────────────────

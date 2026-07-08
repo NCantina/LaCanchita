@@ -12,6 +12,9 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 function e($link,$v){ return mysqli_real_escape_string($link, trim($v??'')); }
 
+// Modo solo-lectura por mora: bloquear escritura del panel.
+if (in_array($action, ['crear','editar','toggle','eliminar'], true)) assert_tenant_activo($link);
+
 switch($action) {
 
 // ── LISTAR ──────────────────────────────────────────────────────────────

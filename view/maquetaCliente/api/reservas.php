@@ -2,6 +2,8 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
+require_once '../../../config/dist/script/php/tenancy.php';
+require_once '../../../config/dist/script/php/reserva_notify.php';
 
 function resp($ok,$msg,$data=null){
     $j=json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data],JSON_UNESCAPED_UNICODE);
@@ -115,6 +117,12 @@ if ($action === 'crear') {
     );
     if (!$diaOk) resp(false,'La franja no aplica para ese día.');
 
+    // No permitir reservar un horario que ya pasó (validación server-side, no solo en el JS)
+    if (strtotime("$fecha $hIni") < time()) resp(false,'Ese horario ya pasó. Elegí uno futuro.');
+
+    // El predio no recibe reservas si su dueño está en mora (suscripción vencida)
+    if (!complejo_recibe_reservas($link, $cmpId)) resp(false,'Este predio no está recibiendo reservas por el momento.');
+
     mysqli_begin_transaction($link);
 
     $lock = mysqli_query($link,
@@ -156,6 +164,7 @@ if ($action === 'crear') {
     if (!mysqli_stmt_execute($stmt)) { mysqli_rollback($link); resp(false,'Error al guardar la reserva.'); }
     $rid = mysqli_insert_id($link);
     mysqli_commit($link);
+    notificarReservaCreada($link, (int)$rid); // push+email al cliente y aviso al dueño/encargados
     resp(true,'¡Reserva creada! El predio la confirmará pronto.',['RESERVA_ID'=>$rid]);
 }
 
@@ -169,7 +178,9 @@ if ($action === 'cancelar') {
     if (!$r) resp(false,'Reserva no encontrada.');
     if ((int)$r['USUARIOS_ID'] !== $uid) resp(false,'No tenés permiso.');
     if (!in_array($r['RESERVA_ESTADO'],['pendiente','confirmada'])) resp(false,'No se puede cancelar una reserva '.$r['RESERVA_ESTADO'].'.');
-    mysqli_query($link,"UPDATE reserva SET RESERVA_ESTADO='cancelada' WHERE RESERVA_ID=$rid");
+    // ACTIVO=0 para alinear con el 'rechazar' del admin (misma semántica de baja)
+    mysqli_query($link,"UPDATE reserva SET RESERVA_ESTADO='cancelada', ACTIVO=0 WHERE RESERVA_ID=$rid");
+    notificarCancelacionCliente($link, $rid); // avisar al dueño/encargados
     resp(true,'Reserva cancelada correctamente.');
 }
 

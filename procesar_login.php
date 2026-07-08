@@ -1,8 +1,16 @@
 <?php
 session_start();
 require_once 'config/dist/script/php/conn.php';
+require_once 'config/dist/script/php/ratelimit.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: login.php');
+    exit;
+}
+
+// Anti fuerza-bruta: máx 15 intentos por IP cada 5 minutos
+if (!rate_limit_ok($link, 'login', 15, 300)) {
+    $_SESSION['login_error'] = 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.';
     header('Location: login.php');
     exit;
 }
@@ -39,6 +47,9 @@ if ((int)$user['ACTIVO'] === 0) {
     header('Location: login.php');
     exit;
 }
+
+// Evitar fijación de sesión: nuevo ID al elevar privilegios (login)
+session_regenerate_id(true);
 
 $_SESSION['usuario_id']       = $user['USUARIOS_ID'];
 $_SESSION['usuario_nombre']   = $user['USUARIOS_NOMBRE'];

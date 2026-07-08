@@ -8,6 +8,7 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/dist/script/php/conn.php';
+require_once __DIR__ . '/../config/dist/script/php/csrf.php';
 require_once __DIR__ . '/../config/vapid.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
@@ -16,6 +17,9 @@ if ($action === 'vapid_public') {
     echo json_encode(['ok' => true, 'key' => VAPID_PUBLIC]);
     exit;
 }
+
+// subscribe/unsubscribe son POST: exigir token CSRF (llega por header)
+csrf_require();
 
 // Las siguientes acciones requieren sesión
 $uid = (int)($_SESSION['usuario_id'] ?? 0);

@@ -95,11 +95,15 @@ self.addEventListener('push', (event) => {
   let payload = {};
   try { payload = event.data.json(); } catch { payload = { title: 'La Canchita', body: event.data.text() }; }
 
+  // Ícono resuelto contra el scope del SW: funciona en raíz y en subdirectorio
+  // (ej: http://localhost/LaCanchita/) donde una ruta absoluta '/config/...' rompería.
+  const defaultIcon = new URL('config/dist/img/pwa/icon-192.png', self.registration.scope).href;
+
   const title   = payload.title ?? 'La Canchita';
   const options = {
     body:    payload.body  ?? '',
-    icon:    payload.icon  ?? '/config/dist/img/pwa/icon-192.png',
-    badge:   payload.badge ?? '/config/dist/img/pwa/icon-192.png',
+    icon:    payload.icon  ?? defaultIcon,
+    badge:   payload.badge ?? defaultIcon,
     data:    payload.data  ?? {},
     vibrate: [200, 100, 200],
     tag:     payload.data?.tipo ?? 'lacanchita',  // agrupa notifs del mismo tipo
@@ -111,11 +115,13 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url ?? '/';
+  // Resolver la URL contra el scope del SW para soportar instalaciones en subdirectorio
+  const raw = event.notification.data?.url ?? '.';
+  const url = new URL(raw.replace(/^\//, ''), self.registration.scope).href;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const client of list) {
-        if (client.url.includes(url) && 'focus' in client) return client.focus();
+        if (client.url === url && 'focus' in client) return client.focus();
       }
       if (clients.openWindow) return clients.openWindow(url);
     })
