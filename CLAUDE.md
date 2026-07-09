@@ -173,6 +173,15 @@ Base: `view/maquetaAdmin/api/`
 
 ---
 
+## Historial de decisiones
+
+- Toda decisión o cambio importante (arquitectura, producto, features terminadas, bugs graves, convenciones nuevas) se registra en `HISTORIAL.md`, con fecha y origen `[CODE]` o `[COWORK]`.
+- Lo más nuevo va arriba. Entradas cortas, 1-3 bullets.
+- Al iniciar una sesión de trabajo, leer las últimas entradas de `HISTORIAL.md` para tener contexto reciente.
+- `CLAUDE.md` se mantiene corto: solo reglas y estado actual, el histórico va en `HISTORIAL.md`.
+
+---
+
 ## Git
 
 - Rama de desarrollo: `claude/session-context-u2ymzs`
