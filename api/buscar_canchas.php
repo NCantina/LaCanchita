@@ -60,6 +60,20 @@ $res = mysqli_stmt_get_result($stmt);
 $canchas = [];
 while ($row = mysqli_fetch_assoc($res)) $canchas[] = $row;
 
+// Foto de portada por predio (tolerante si la tabla complejo_foto no existe aún)
+$fotoMap = [];
+$cmpIds  = array_values(array_unique(array_map(fn($c) => (int)$c['COMPLEJO_ID'], $canchas)));
+if ($cmpIds) {
+    $qf = @mysqli_query($link,
+        "SELECT COMPLEJO_ID, FOTO_PATH FROM complejo_foto
+         WHERE COMPLEJO_ID IN (" . implode(',', $cmpIds) . ")
+         ORDER BY FOTO_PRINCIPAL DESC, FOTO_ORDEN ASC");
+    if ($qf) while ($f = mysqli_fetch_assoc($qf)) {
+        $cid = (int)$f['COMPLEJO_ID'];
+        if (!isset($fotoMap[$cid])) $fotoMap[$cid] = $f['FOTO_PATH']; // el primero = principal
+    }
+}
+
 // DIA_ID: 1=Lun..7=Dom (PHP date('N') gives 1=Mon..7=Sun — matches)
 $diaId = (int)date('N', strtotime($fecha));
 
@@ -71,6 +85,7 @@ elseif (strpos($horario, 'oche') !== false)  $horarioFilter = " AND TIME(fh2.FRA
 foreach ($canchas as &$c) {
     $cid   = (int)$c['CANCHA_ID'];
     $cmpId = (int)$c['COMPLEJO_ID'];
+    $c['PREDIO_FOTO'] = $fotoMap[$cmpId] ?? '';
     // Un slot está libre solo si no hay reserva activa (pendiente/confirmada),
     // no es turno fijo y la cancha/complejo no está cerrada en ese horario.
     $slotSql = "

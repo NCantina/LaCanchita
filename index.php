@@ -1965,6 +1965,11 @@ function handleSearch(e) {
                 const icon   = sportIcon(c.TIPO_CANCHA_NOMBRE);
                 const precio = c.PRECIO_DESDE ? `<div class="res-precio-tag">${fmt(c.PRECIO_DESDE)}/h</div>` : '';
                 const tipo   = c.TIPO_CANCHA_NOMBRE || 'Cancha';
+                const thumbStyle = c.PREDIO_FOTO
+                    ? `background:#111 url('${escHtml(c.PREDIO_FOTO)}') center/cover no-repeat`
+                    : `background:linear-gradient(135deg,${color}22 0%,${color}11 100%)`;
+                const thumbIcon = c.PREDIO_FOTO ? '' :
+                    `<div class="res-thumb-icon" style="color:${color};border-color:${color}44;background:${color}18"><i class="fas ${icon}"></i></div>`;
 
                 // Slots horarios
                 let slotsHtml = '';
@@ -1978,10 +1983,8 @@ function handleSearch(e) {
                 }
 
                 return `<div class="res-card" style="animation-delay:${i*0.07}s">
-                    <div class="res-thumb" style="background:linear-gradient(135deg,${color}22 0%,${color}11 100%)">
-                        <div class="res-thumb-icon" style="color:${color};border-color:${color}44;background:${color}18">
-                            <i class="fas ${icon}"></i>
-                        </div>
+                    <div class="res-thumb" style="${thumbStyle}">
+                        ${thumbIcon}
                         <div class="res-badge-tipo" style="color:${color};border:1px solid ${color}55">${escHtml(tipo)}</div>
                         ${precio}
                     </div>
