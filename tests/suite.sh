@@ -129,4 +129,21 @@ ck "geo provincias" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/geo.php?a
 ck "catálogo tipos cancha" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/catalogo.php?action=listar&tabla=tipo_cancha")" "tbol 5"
 ck "catálogo tabla no permitida" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/catalogo.php?action=listar&tabla=usuarios")" "no v"
 
+echo "══ RECORDATORIOS DE TURNO ══"
+# Reserva "inminente" (~90 min → ventana 2h) y "previa" (~5 h → ventana 24h) para el cliente
+F1=$(date -d "+90 min" +%Y-%m-%d);  H1=$(date -d "+90 min" +%H:%M:%S);  H1F=$(date -d "+150 min" +%H:%M:%S)
+F2=$(date -d "+5 hours" +%Y-%m-%d); H2=$(date -d "+5 hours" +%H:%M:%S);  H2F=$(date -d "+6 hours" +%H:%M:%S)
+mysql -uroot "$DB" -e "INSERT INTO reserva (CANCHA_ID,FRANJA_ID,USUARIOS_ID,RESERVA_FECHA,RESERVA_HORA_INICIO,RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_ESTADO) SELECT 1,1,USUARIOS_ID,'$F1','$H1','$H1F',1000,'confirmada' FROM usuarios WHERE USUARIOS_EMAIL='cliente@test.com'"
+mysql -uroot "$DB" -e "INSERT INTO reserva (CANCHA_ID,FRANJA_ID,USUARIOS_ID,RESERVA_FECHA,RESERVA_HORA_INICIO,RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_ESTADO) SELECT 1,1,USUARIOS_ID,'$F2','$H2','$H2F',1000,'confirmada' FROM usuarios WHERE USUARIOS_EMAIL='cliente@test.com'"
+CRON1=$(DB_NAME=$DB php cron/recordatorios_turno.php)
+ck "cron responde ok" "$CRON1" '"ok":true'
+N1=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM recordatorio_turno")
+if [ "${N1:-0}" -ge 2 ]; then PASS=$((PASS+1)); echo "PASS: recordatorios registrados ($N1)"; else FAIL=$((FAIL+1)); echo "FAIL: esperaba >=2 recordatorios, obtuve ${N1:-0}"; fi
+ck "recordatorio inminente (2h) registrado" "$(mysql -uroot "$DB" -N -e "SELECT TIPO FROM recordatorio_turno WHERE TIPO='2h' LIMIT 1")" '2h'
+ck "recordatorio previo (24h) registrado" "$(mysql -uroot "$DB" -N -e "SELECT TIPO FROM recordatorio_turno WHERE TIPO='24h' LIMIT 1")" '24h'
+CRON2=$(DB_NAME=$DB php cron/recordatorios_turno.php)
+ck "cron 2da corrida no reenvía (total 0)" "$CRON2" '"total":0'
+N2=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM recordatorio_turno")
+if [ "$N2" = "$N1" ]; then PASS=$((PASS+1)); echo "PASS: idempotente (sin filas nuevas)"; else FAIL=$((FAIL+1)); echo "FAIL: idempotencia rota $N1 -> $N2"; fi
+
 echo ""; echo "════════════════════════════"; echo "TOTAL: PASS=$PASS FAIL=$FAIL"

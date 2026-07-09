@@ -88,6 +88,78 @@ function notificarReservaCreada($link, int $reservaId, string $tipoCliente = 'pe
 }
 
 /**
+ * Recordatorio de turno al CLIENTE (anti no-show).
+ *
+ * Lo dispara el cron (cron/recordatorios_turno.php). Best-effort: si falla el
+ * push/email no rompe nada. Devuelve true si la reserva existe y se procesó
+ * (para que el cron marque el recordatorio como enviado aunque el push/mail sea
+ * un no-op por falta de config), false si la reserva no se encontró.
+ *
+ * @param string $tipo '24h' (previo) | '2h' (inminente) — solo cambia el copy.
+ */
+function enviarRecordatorioTurno($link, int $reservaId, string $tipo = '24h'): bool {
+    $rid = (int)$reservaId;
+    if ($rid <= 0) return false;
+    if (!in_array($tipo, ['24h', '2h'], true)) $tipo = '24h';
+
+    $row = null;
+    $res = mysqli_query($link,
+        "SELECT r.RESERVA_ID, r.RESERVA_FECHA, r.RESERVA_HORA_INICIO, r.RESERVA_HORA_FIN,
+                r.RESERVA_PRECIO, r.USUARIOS_ID,
+                c.CANCHA_NOMBRE, co.COMPLEJO_NOMBRE,
+                u.USUARIOS_NOMBRE, u.USUARIOS_APELLIDO, u.USUARIOS_EMAIL
+         FROM reserva r
+         JOIN cancha c    ON c.CANCHA_ID    = r.CANCHA_ID
+         JOIN complejo co ON co.COMPLEJO_ID = c.COMPLEJO_ID
+         JOIN usuarios u  ON u.USUARIOS_ID  = r.USUARIOS_ID
+         WHERE r.RESERVA_ID = $rid LIMIT 1"
+    );
+    if ($res && $res !== true) $row = mysqli_fetch_assoc($res);
+    if (!$row) return false;
+
+    $datos = [
+        'nombre'     => $row['USUARIOS_NOMBRE']   ?? '',
+        'apellido'   => $row['USUARIOS_APELLIDO'] ?? '',
+        'email'      => $row['USUARIOS_EMAIL']    ?? '',
+        'cancha'     => $row['CANCHA_NOMBRE']     ?? '',
+        'complejo'   => $row['COMPLEJO_NOMBRE']   ?? '',
+        'fecha'      => $row['RESERVA_FECHA']     ?? '',
+        'hora_ini'   => $row['RESERVA_HORA_INICIO'] ?? '',
+        'hora_fin'   => $row['RESERVA_HORA_FIN']    ?? '',
+        'precio'     => $row['RESERVA_PRECIO']    ?? 0,
+        'reserva_id' => $row['RESERVA_ID']        ?? '',
+    ];
+
+    // Cuándo — texto siempre correcto (no hardcodeamos "faltan 24hs" porque el
+    // momento real de envío depende de la cadencia del cron y de cuándo se reservó).
+    $cancha  = $row['CANCHA_NOMBRE'] ?? 'tu cancha';
+    $hIni    = substr($row['RESERVA_HORA_INICIO'] ?? '', 0, 5);
+    $fecha   = $row['RESERVA_FECHA'] ?? '';
+    $hoy     = date('Y-m-d');
+    $manana  = date('Y-m-d', strtotime('+1 day'));
+    if ($fecha === $hoy)          $cuando = "hoy a las $hIni";
+    elseif ($fecha === $manana)   $cuando = "mañana a las $hIni";
+    else                          $cuando = date('d/m', strtotime($fecha)) . " a las $hIni";
+
+    $titulo = ($tipo === '2h') ? '⏰ Tu turno es en un rato' : '⏰ Recordatorio de turno';
+    $cola   = ($tipo === '2h') ? ' — ¡te esperamos!' : '';
+    $cuerpo = "$cancha · $cuando$cola";
+
+    // Push al cliente
+    try {
+        enviarPush((int)$row['USUARIOS_ID'], $titulo, $cuerpo, [
+            'tipo' => 'recordatorio_turno',
+            'url'  => '/view/maquetaCliente/LaCanchitaCliente.php',
+        ]);
+    } catch (\Throwable $e) {}
+
+    // Email al cliente (reusa la plantilla de reserva con el copy de recordatorio)
+    try { enviarEmailReserva('recordatorio', $datos); } catch (\Throwable $e) {}
+
+    return true;
+}
+
+/**
  * Aviso al dueño + encargados cuando el CLIENTE cancela su reserva
  * (antes nadie del complejo se enteraba).
  */

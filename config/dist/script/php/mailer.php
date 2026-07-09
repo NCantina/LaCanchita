@@ -50,6 +50,7 @@ function enviarEmailReserva(string $tipo, array $datos): bool {
         'pendiente'  => ['asunto' => '✅ Reserva recibida — La Canchita', 'color' => '#ff9500', 'icono' => '⏳', 'titulo' => '¡Reserva enviada!',    'subtitulo' => 'El predio la revisará y confirmará pronto.'],
         'confirmada' => ['asunto' => '🎉 Reserva confirmada — La Canchita', 'color' => '#4cd964', 'icono' => '✅', 'titulo' => '¡Reserva confirmada!','subtitulo' => 'Ya podés ir preparando los botines.'],
         'cancelada'  => ['asunto' => 'Reserva cancelada — La Canchita',   'color' => '#e74c3c', 'icono' => '❌', 'titulo' => 'Reserva cancelada',    'subtitulo' => 'Tu reserva fue cancelada.'],
+        'recordatorio' => ['asunto' => '⏰ Recordatorio de tu turno — La Canchita', 'color' => '#4cd964', 'icono' => '⏰', 'titulo' => '¡Te esperamos!', 'subtitulo' => 'Este es un recordatorio de tu próximo turno.'],
     ];
     $c = $cfg[$tipo] ?? $cfg['pendiente'];
 
