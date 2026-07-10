@@ -150,6 +150,18 @@ ck "encargado crear cancha ok" "$R" '"ok":true'
 ck "encargado listar canchas ok" "$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/api/canchas.php?action=listar")" '"ok":true'
 AUDCFG=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP='config.canchas'")
 if [ "${AUDCFG:-0}" -ge 1 ]; then PASS=$((PASS+1)); echo "PASS: auditoria de config registrada"; else FAIL=$((FAIL+1)); echo "FAIL: sin auditoria config.canchas"; fi
+# Operativas: el empleado SÍ puede (caja corre local; reservas.php es [FULL-ENV] por vendor)
+HOY=$(date +%Y-%m-%d)
+ck "empleado arqueo caja ok" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/caja.php?action=arqueo&complejo_id=1&fecha=$HOY")" '"ok":true'
+R=$(fpost $J/emp.jar $TM view/maquetaAdmin/api/caja.php "action=cerrar&complejo_id=1&fondo_inicial=0&efectivo_declarado=0")
+ck "empleado cierra caja ok" "$R" '"ok":true'
+AUDCJ=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP='caja.cerrar' AND USUARIOS_ID=4")
+if [ "${AUDCJ:-0}" -ge 1 ]; then PASS=$((PASS+1)); echo "PASS: auditoria de cierre de caja"; else FAIL=$((FAIL+1)); echo "FAIL: sin auditoria caja.cerrar"; fi
+# [FULL-ENV] Staff cancela una confirmada via rechazar (reservas.php incluye push/vendor)
+RIDX=$(mysql -uroot "$DB" -N -e "INSERT INTO reserva (CANCHA_ID,FRANJA_ID,USUARIOS_ID,RESERVA_FECHA,RESERVA_HORA_INICIO,RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_ESTADO) VALUES (1,1,5,DATE_ADD(CURDATE(), INTERVAL 3 DAY),'10:00','11:00',1000,'confirmada'); SELECT LAST_INSERT_ID();")
+ck "[FULL-ENV] empleado cancela confirmada ok" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/reservas.php "action=rechazar&reserva_id=$RIDX")" '"ok":true'
+AUDRC=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP='reserva.cancelar' AND USUARIOS_ID=4")
+if [ "${AUDRC:-0}" -ge 1 ]; then PASS=$((PASS+1)); echo "PASS: [FULL-ENV] auditoria de cancelacion"; else FAIL=$((FAIL+1)); echo "FAIL: [FULL-ENV] sin auditoria reserva.cancelar"; fi
 
 echo "══ RECORDATORIOS DE TURNO ══"
 # Reserva "inminente" (~90 min → ventana 2h) y "previa" (~5 h → ventana 24h) para el cliente

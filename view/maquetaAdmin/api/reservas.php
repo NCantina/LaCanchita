@@ -3,6 +3,7 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';
+require_once '../../../config/dist/script/php/capabilities.php';
 require_once '../../../config/dist/script/php/reserva_notify.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
@@ -359,6 +360,7 @@ case 'agenda_grid':
 // ── CREAR RESERVA (admin/staff, a nombre de un cliente) ───────────────────
 case 'crear_admin':
     require_perfil(4);
+    require_cap('reserva.crear');
 
     $cancha_id  = (int)($_POST['cancha_id']  ?? 0);
     $franja_id  = (int)($_POST['franja_id']  ?? 0);
@@ -485,6 +487,9 @@ case 'mis_reservas':
 // ── CANCELAR (cliente) ─────────────────────────────────────────────────────
 case 'cancelar':
     require_sesion();
+    // Cancelación del propio cliente sobre su reserva; si quien llama es
+    // staff/dueño/SA, exigir la capacidad (defensa en profundidad).
+    if (current_perfil() >= 1 && current_perfil() <= 4) require_cap('reserva.cancelar');
     $uid        = (int)current_uid();
     $reserva_id = (int)($_POST['reserva_id'] ?? 0);
     if (!$reserva_id) resp(false, 'reserva_id requerido.');
@@ -625,6 +630,7 @@ case 'listar':
 // ── CONFIRMAR (admin/staff) ────────────────────────────────────────────────
 case 'confirmar':
     require_perfil(4);
+    require_cap('reserva.confirmar');
 
     $reserva_id = (int)($_POST['reserva_id'] ?? 0);
     $res = get_reserva_tenant($link, $reserva_id);
@@ -684,6 +690,7 @@ case 'confirmar':
 // ── RECHAZAR (admin/staff) ─────────────────────────────────────────────────
 case 'rechazar':
     require_perfil(4);
+    require_cap('reserva.cancelar');
 
     $reserva_id = (int)($_POST['reserva_id'] ?? 0);
     $res = get_reserva_tenant($link, $reserva_id);
@@ -709,6 +716,9 @@ case 'rechazar':
     mysqli_stmt_bind_param($stmt, 'i', $reserva_id);
     mysqli_stmt_execute($stmt);
 
+    registrar_evento($link, 'reserva.cancelar',
+        "reserva #$reserva_id cancelada desde panel (estado previo: {$res['RESERVA_ESTADO']})");
+
     if ($rechazarData) {
         require_once __DIR__ . '/../../../config/dist/script/php/mailer.php';
         require_once __DIR__ . '/../../../config/dist/script/php/push_notify.php';
@@ -733,6 +743,7 @@ case 'rechazar':
 // ── REGISTRAR PAGO (admin/staff) ───────────────────────────────────────────
 case 'registrar_pago':
     require_perfil(4);
+    require_cap('pago.registrar');
 
     $reserva_id  = (int)($_POST['reserva_id'] ?? 0);
     $monto       = (float)($_POST['monto'] ?? 0);

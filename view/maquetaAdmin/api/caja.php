@@ -4,7 +4,9 @@ header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';   // aplica csrf_require() en POST
 
-require_perfil(4); // dueño, encargado, empleado (y SA)
+require_once '../../../config/dist/script/php/capabilities.php';
+require_perfil(4);          // dueño, encargado, empleado (y SA)
+require_cap('caja.cerrar'); // capacidad operativa: todo el staff la tiene
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
@@ -153,6 +155,9 @@ case 'cerrar':
     mysqli_stmt_bind_param($stmt, 'iisddddds',
         $complejoId, $uid, $fecha, $fondo, $efectivoSistema, $declarado, $diferencia, $totalGeneral, $notas);
     if (!mysqli_stmt_execute($stmt)) resp(false, 'Error al cerrar la caja.');
+
+    registrar_evento($link, 'caja.cerrar',
+        "cierre de caja complejo #$complejoId ($fecha), diferencia " . number_format($diferencia, 2, '.', ''));
 
     resp(true, 'Caja cerrada correctamente.', [
         'efectivo_sistema'   => $efectivoSistema,
