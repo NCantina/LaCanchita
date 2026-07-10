@@ -129,6 +129,13 @@ ck "geo provincias" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/geo.php?a
 ck "catálogo tipos cancha" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/catalogo.php?action=listar&tabla=tipo_cancha")" "tbol 5"
 ck "catálogo tabla no permitida" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/catalogo.php?action=listar&tabla=usuarios")" "no v"
 
+echo "══ ROLES / CAPACIDADES ══"
+# Reportes: encargado (3) SÍ, empleado (4) NO
+ck "empleado reportes 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/reportes.php?action=resumen")" 'permisos'
+ck "empleado export_reportes 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/export_reportes.php")" 'permisos'
+ck "empleado cierres 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/cierres.php?action=listar")" 'permisos'
+ck "encargado reportes ok" "$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/api/reportes.php?action=resumen")" '"ok":true'
+
 echo "══ RECORDATORIOS DE TURNO ══"
 # Reserva "inminente" (~90 min → ventana 2h) y "previa" (~5 h → ventana 24h) para el cliente
 F1=$(date -d "+90 min" +%Y-%m-%d);  H1=$(date -d "+90 min" +%H:%M:%S);  H1F=$(date -d "+150 min" +%H:%M:%S)
