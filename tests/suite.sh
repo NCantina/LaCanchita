@@ -157,6 +157,22 @@ R=$(fpost $J/emp.jar $TM view/maquetaAdmin/api/caja.php "action=cerrar&complejo_
 ck "empleado cierra caja ok" "$R" '"ok":true'
 AUDCJ=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP='caja.cerrar' AND USUARIOS_ID=4")
 if [ "${AUDCJ:-0}" -ge 1 ]; then PASS=$((PASS+1)); echo "PASS: auditoria de cierre de caja"; else FAIL=$((FAIL+1)); echo "FAIL: sin auditoria caja.cerrar"; fi
+# Staff: encargado gestiona EMPLEADOS pero no encargados; empleado no gestiona nada
+ck "empleado crear staff 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/usuarios.php 'action=crear_staff&nombre=X&apellido=Y&dni=30000001&email=x1@test.com&telefono=1&perfil_id=4&password=test1234')" 'permisos'
+ck "encargado crea EMPLEADO ok" "$(fpost $J/enc.jar $TE view/maquetaAdmin/api/usuarios.php 'action=crear_staff&nombre=Emple&apellido=Nuevo&dni=30000002&email=empnuevo@test.com&telefono=1&perfil_id=4&password=test1234')" '"ok":true'
+ck "encargado crea ENCARGADO 403" "$(fpost $J/enc.jar $TE view/maquetaAdmin/api/usuarios.php 'action=crear_staff&nombre=Enc&apellido=Nuevo&dni=30000003&email=encnuevo@test.com&telefono=1&perfil_id=3&password=test1234')" 'permisos'
+ck "encargado lista staff ok" "$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/api/usuarios.php?action=listar_staff")" '"ok":true'
+ck "dueno crea ENCARGADO ok" "$(fpost $J/due.jar $TD view/maquetaAdmin/api/usuarios.php 'action=crear_staff&nombre=Enc2&apellido=Due&dni=30000004&email=enc2@test.com&telefono=1&perfil_id=3&password=test1234')" '"ok":true'
+AUDS=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP LIKE 'staff.%'")
+if [ "${AUDS:-0}" -ge 2 ]; then PASS=$((PASS+1)); echo "PASS: auditoria de staff registrada"; else FAIL=$((FAIL+1)); echo "FAIL: auditoria staff insuficiente ($AUDS)"; fi
+# Ruteo por superficie: empleado NO entra al Dashboard (302), encargado SÍ (200)
+ck "empleado Dashboard redirigido" "$(curl -s -o /dev/null -w '%{http_code}' -b $J/emp.jar "$B/view/maquetaAdmin/Dashboard.php")" '302'
+ck "encargado Dashboard entra" "$(curl -s -o /dev/null -w '%{http_code}' -b $J/enc.jar "$B/view/maquetaAdmin/Dashboard.php")" '200'
+ck "empleado PanelEncargado entra" "$(curl -s -o /dev/null -w '%{http_code}' -b $J/emp.jar "$B/view/maquetaEncargado/PanelEncargado.php")" '200'
+DASHENC=$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/Dashboard.php")
+ck "sidebar encargado tiene Reportes" "$DASHENC" 'data-view="reportes"'
+ck "sidebar encargado tiene Mi Staff" "$DASHENC" 'data-view="staff"'
+ck "CAPS inyectado al front" "$DASHENC" 'window.CAPS'
 # [FULL-ENV] Staff cancela una confirmada via rechazar (reservas.php incluye push/vendor)
 RIDX=$(mysql -uroot "$DB" -N -e "INSERT INTO reserva (CANCHA_ID,FRANJA_ID,USUARIOS_ID,RESERVA_FECHA,RESERVA_HORA_INICIO,RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_ESTADO) VALUES (1,1,5,DATE_ADD(CURDATE(), INTERVAL 3 DAY),'10:00','11:00',1000,'confirmada'); SELECT LAST_INSERT_ID();")
 ck "[FULL-ENV] empleado cancela confirmada ok" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/reservas.php "action=rechazar&reserva_id=$RIDX")" '"ok":true'

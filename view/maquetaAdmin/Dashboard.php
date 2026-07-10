@@ -2,6 +2,7 @@
 session_start();
 require_once '../../config/dist/script/php/conn.php';
 require_once '../../config/dist/script/php/tenancy.php';
+require_once '../../config/dist/script/php/capabilities.php';
 
 // Perfiles 1-4 pueden entrar. Clientes (5+) redireccionan al panel cliente.
 if (!isset($_SESSION['usuario_perfil']) || (int)$_SESSION['usuario_perfil'] === 0) {
@@ -9,6 +10,10 @@ if (!isset($_SESSION['usuario_perfil']) || (int)$_SESSION['usuario_perfil'] === 
 }
 if ((int)$_SESSION['usuario_perfil'] >= 5) {
     header('Location: ../maquetaCliente/LaCanchitaCliente.php'); exit;
+}
+if ((int)$_SESSION['usuario_perfil'] === 4) {
+    // El empleado opera en su propio panel, no en el Dashboard
+    header('Location: ../maquetaEncargado/PanelEncargado.php'); exit;
 }
 
 $nombre = $_SESSION['usuario_nombre'] ?? 'Admin';
@@ -1535,16 +1540,29 @@ if ($perfil >= 2) {
         </div>
         <?php endif; ?>
 
-        <?php if($perfil === 3 || $perfil === 4): ?>
-        <!-- ── Staff: plataforma + operaciones ── -->
-        <div class="sb-section">Plataforma</div>
-        <div class="sb-item" data-view="planes" onclick="showView(this)">
-            <i class="fas fa-tags"></i> Tipos de plan
+        <?php if($perfil === 3): ?>
+        <!-- ── Encargado: opera y configura, sin billing ni gestión de encargados ── -->
+        <?php if (can('config.canchas')): ?>
+        <div class="sb-section">Mi negocio</div>
+        <div class="sb-item" data-view="canchas" onclick="showView(this)">
+            <i class="fas fa-futbol"></i> Canchas
         </div>
+        <div class="sb-item" data-view="horarios" onclick="showView(this)">
+            <i class="fas fa-clock"></i> Horarios y precios
+        </div>
+        <div class="sb-item" data-view="cierres" onclick="showView(this)">
+            <i class="fas fa-ban"></i> Cierres
+        </div>
+        <div class="sb-item" data-view="turnos" onclick="showView(this)">
+            <i class="fas fa-redo-alt"></i> Turnos fijos
+        </div>
+        <?php endif; ?>
         <div class="sb-section">Operaciones</div>
+        <?php if (can('reportes.ver')): ?>
         <div class="sb-item" data-view="reportes" onclick="showView(this)">
             <i class="fas fa-chart-bar"></i> Reportes
         </div>
+        <?php endif; ?>
         <div class="sb-item" data-view="agenda" onclick="showView(this)">
             <i class="fas fa-calendar-alt"></i> Agenda
         </div>
@@ -1554,6 +1572,18 @@ if ($perfil >= 2) {
         <div class="sb-item" data-view="pagos" onclick="showView(this)">
             <i class="fas fa-dollar-sign"></i> Cobros
         </div>
+        <?php if (can('config.canchas')): ?>
+        <div class="sb-section">Plataforma</div>
+        <div class="sb-item" data-view="planes" onclick="showView(this)">
+            <i class="fas fa-tags"></i> Tipos de plan
+        </div>
+        <?php endif; ?>
+        <?php if (can('staff.empleados')): ?>
+        <div class="sb-section">Personas</div>
+        <div class="sb-item" data-view="staff" onclick="showView(this)">
+            <i class="fas fa-id-badge"></i> Mi Staff
+        </div>
+        <?php endif; ?>
         <div class="sb-section">Mi cuenta</div>
         <div class="sb-item" data-view="perfil" onclick="showView(this)">
             <i class="fas fa-user-circle"></i> Mi perfil
@@ -3323,6 +3353,15 @@ if ($perfil >= 2) {
 // ═══════════════════════════════════════════════
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════════
+// Capacidades del perfil actual (fuente: capabilities.php) para gatear la UI.
+// La seguridad real vive en el backend (require_cap); esto solo oculta acciones.
+window.CAPS = <?= json_encode([
+    'reportes.ver'        => can('reportes.ver'),
+    'config.canchas'      => can('config.canchas'),
+    'staff.empleados'     => can('staff.empleados'),
+    'staff.encargados'    => can('staff.encargados'),
+    'billing.suscripcion' => can('billing.suscripcion'),
+]) ?>;
 let currentCat   = 'tipo_cancha';
 let catData      = {};
 let filterActive = 'all';
@@ -6293,12 +6332,15 @@ function staffAbrirCrear() {
             <option value="5">Cliente</option>
             <option value="4">Empleado</option>
             <option value="3" selected>Encargado</option>`;
-    } else {
+    } else if (CAPS['staff.encargados']) {
         perfilSel.innerHTML = `
             <option value="3" selected>Encargado</option>
             <option value="4">Empleado</option>`;
+    } else {
+        // Encargado: solo puede crear empleados
+        perfilSel.innerHTML = `<option value="4" selected>Empleado</option>`;
     }
-    document.getElementById('mStaffPerfil').value  = '3';
+    document.getElementById('mStaffPerfil').value  = CAPS['staff.encargados'] ? '3' : '4';
     document.getElementById('mStaffTitle').textContent = 'Nuevo integrante';
     document.getElementById('mStaffPassLabel').textContent = '*';
     document.getElementById('mStaffPassLabel').title = 'Requerida al crear';
