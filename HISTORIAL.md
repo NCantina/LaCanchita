@@ -5,6 +5,12 @@
 
 ---
 
+## 2026-07-10 — [CODE] — Modelo de roles y capacidades implementado
+- `capabilities.php`: can()/require_cap() por rol; encargado ≠ empleado en backend, UI y ruteo.
+- Encargado → Dashboard (reportes/config/staff-empleados); Empleado → PanelEncargado (solo operación).
+- Auditoría de acciones sensibles en tabla `auditoria`. Tests deny-by-default en la suite.
+- Fix de suite en Git Bash/Windows: LC_ALL=C.UTF-8 (grep -P fallaba y los tokens CSRF salían vacíos).
+
 ## 2026-07-09 — [CODE] — Diseño del modelo de roles y capacidades
 - Se define el mapa completo de trabajo por perfil con **capacidades fijas por rol** (helper `capabilities.php`: `can()`/`require_cap()`), enforcement en backend + auditoría + tests deny-by-default. Spec: `docs/superpowers/specs/2026-07-09-roles-y-capacidades-design.md`.
 - Decisiones: empleado (4) puede caja y cancelar confirmadas, pero NO reportes/config; encargado (3) suma reportes/config y gestiona empleados; permisos fijos (no configurables por usuario).

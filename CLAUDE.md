@@ -9,13 +9,17 @@ Sin frameworks, sin ORM. MySQL + mysqli, sesiones PHP nativas.
 
 ## Roles y perfiles
 
-| PERFIL_ID | Nombre      | Panel                                      |
-|-----------|-------------|--------------------------------------------|
-| 1         | SuperAdmin  | `view/maquetaAdmin/Dashboard.php`          |
-| 2         | Dueño       | `view/maquetaAdmin/Dashboard.php`          |
-| 3         | Encargado   | `view/maquetaAdmin/Dashboard.php`          |
-| 4         | Empleado    | `view/maquetaAdmin/Dashboard.php`          |
-| 5         | Cliente     | `view/maquetaCliente/LaCanchitaCliente.php`|
+| PERFIL_ID | Nombre      | Panel                                        |
+|-----------|-------------|----------------------------------------------|
+| 1         | SuperAdmin  | `view/maquetaAdmin/Dashboard.php`            |
+| 2         | Dueño       | `view/maquetaAdmin/Dashboard.php`            |
+| 3         | Encargado   | `view/maquetaAdmin/Dashboard.php` (gated por capacidades) |
+| 4         | Empleado    | `view/maquetaEncargado/PanelEncargado.php`   |
+| 5         | Cliente     | `view/maquetaCliente/LaCanchitaCliente.php`  |
+
+Capacidades por rol: `capabilities.php` (`can()` / `require_cap()`) es la fuente de verdad.
+El encargado suma reportes/config/alta de empleados; el empleado solo opera (reservas, cobros, caja).
+Ruteo post-login: `panel_url_para($perfil)` — única fuente (la usan `procesar_login.php` y `auth_view.php`).
 
 ---
 
@@ -25,6 +29,7 @@ Sin frameworks, sin ORM. MySQL + mysqli, sesiones PHP nativas.
 config/dist/script/php/
   conn.php          → conexión MySQL ($link global)
   tenancy.php       → multi-tenant: tenant_complejo_ids(), tenant_where(), require_perfil()
+  capabilities.php  → capacidades por rol: can(), require_cap(), panel_url_para(), registrar_evento()
   auth_view.php     → require_view($perfil, $minPerfil) para vistas PHP
   pwa_head.php      → <head> PWA: manifest, SW, push, install prompt
   push_notify.php   → enviarPush() y enviarPushReserva()
@@ -184,7 +189,7 @@ Base: `view/maquetaAdmin/api/`
 
 ## Git
 
-- Rama de desarrollo: `claude/session-context-u2ymzs`
+- Rama de desarrollo: `claude/ola-2-monetizacion` (apilada sobre `claude/roadmap-mejoras`)
 - Gitignoreados: `config/vapid.php`, `config/mail.php`, `vendor/`, `*.log`
 - SQL migrations pendientes: `sql/push_subscriptions.sql`, `sql/suscripcion_plataforma.sql`
 
