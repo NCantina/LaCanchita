@@ -1,5 +1,8 @@
 #!/bin/bash
 # Suite funcional end-to-end de LaCanchita (token-aware: CSRF activo)
+# LC_ALL: en Git Bash (Windows) el locale default rompe grep -P ("supports only
+# unibyte and UTF-8 locales") y los tokens CSRF salen vacíos. C.UTF-8 lo arregla.
+export LC_ALL=C.UTF-8
 B=http://127.0.0.1:8088
 DB="${DB_NAME:-lacanchita_test}"   # misma base que usa la app (DB_NAME); NUNCA la de dev
 J=$(mktemp -d)
@@ -135,6 +138,18 @@ ck "empleado reportes 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/re
 ck "empleado export_reportes 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/export_reportes.php")" 'permisos'
 ck "empleado cierres 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/cierres.php?action=listar")" 'permisos'
 ck "encargado reportes ok" "$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/api/reportes.php?action=resumen")" '"ok":true'
+# Config de canchas/horarios/planes/fotos/turnos/complejos: encargado SÍ, empleado NO
+ck "empleado crear cancha 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/canchas.php 'action=crear&complejo_id=1&nombre=X&tipo_cancha_id=1')" 'permisos'
+ck "empleado crear horario 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/horarios.php 'action=crear&cancha_id=1&hora_inicio=20:00&hora_fin=21:00&precio=1')" 'permisos'
+ck "empleado crear plan 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/planes.php 'action=crear&complejo_id=1&nombre=X&precio=1&periodo=mensual')" 'permisos'
+ck "empleado tocar fotos 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/fotos.php 'action=eliminar&foto_id=1')" 'permisos'
+ck "empleado turno fijo 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/turnos_fijos.php 'action=crear&cancha_id=1')" 'permisos'
+ck "empleado editar complejo 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/complejos.php 'action=editar&id=1&nombre=X')" 'permisos'
+R=$(fpost $J/enc.jar $TE view/maquetaAdmin/api/canchas.php 'action=crear&complejo_id=1&nombre=Cancha Enc&tipo_cancha_id=1')
+ck "encargado crear cancha ok" "$R" '"ok":true'
+ck "encargado listar canchas ok" "$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/api/canchas.php?action=listar")" '"ok":true'
+AUDCFG=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP='config.canchas'")
+if [ "${AUDCFG:-0}" -ge 1 ]; then PASS=$((PASS+1)); echo "PASS: auditoria de config registrada"; else FAIL=$((FAIL+1)); echo "FAIL: sin auditoria config.canchas"; fi
 
 echo "══ RECORDATORIOS DE TURNO ══"
 # Reserva "inminente" (~90 min → ventana 2h) y "previa" (~5 h → ventana 24h) para el cliente
