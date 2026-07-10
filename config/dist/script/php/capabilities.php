@@ -59,20 +59,32 @@ function panel_url_para(int $perfil): string {
  */
 function registrar_evento($link, string $cap, string $detalle = ''): void {
     try {
-        // Respaldo de dev (la migración versionada es sql/auditoria.sql)
-        @mysqli_query($link,
-            "CREATE TABLE IF NOT EXISTS auditoria (
-                AUD_ID       INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                USUARIOS_ID  INT UNSIGNED NOT NULL,
-                ACTUA_COMO   INT UNSIGNED NULL,
-                CAP          VARCHAR(40) NOT NULL,
-                DETALLE      VARCHAR(255) NULL,
-                IP           VARCHAR(45) NULL,
-                CREATED_AT   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_usuario (USUARIOS_ID),
-                INDEX idx_cap (CAP),
-                INDEX idx_fecha (CREATED_AT)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        // Respaldo de dev (la migración versionada es sql/auditoria.sql).
+        // Probe primero: CREATE es DDL y haría COMMIT implícito de cualquier
+        // transacción abierta, así que solo se ejecuta si la tabla falta
+        // (bootstrap de dev), una única vez por request.
+        static $tablaVerificada = false;
+        if (!$tablaVerificada) {
+            // PHP >= 8.1: mysqli lanza excepción en vez de devolver false
+            try { $probe = @mysqli_query($link, "SELECT 1 FROM auditoria LIMIT 1"); }
+            catch (\Throwable $e) { $probe = false; }
+            if ($probe === false) {
+                @mysqli_query($link,
+                    "CREATE TABLE IF NOT EXISTS auditoria (
+                        AUD_ID       INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        USUARIOS_ID  INT UNSIGNED NOT NULL,
+                        ACTUA_COMO   INT UNSIGNED NULL,
+                        CAP          VARCHAR(40) NOT NULL,
+                        DETALLE      VARCHAR(255) NULL,
+                        IP           VARCHAR(45) NULL,
+                        CREATED_AT   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_usuario (USUARIOS_ID),
+                        INDEX idx_cap (CAP),
+                        INDEX idx_fecha (CREATED_AT)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            }
+            $tablaVerificada = true;
+        }
         $uid  = (int)($_SESSION['usuario_id'] ?? 0);
         if ($uid <= 0) return;
         $como = ((int)($_SESSION['usuario_perfil'] ?? 0) === 1 && !empty($_SESSION['admin_as_dueno']))
