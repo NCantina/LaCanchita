@@ -57,12 +57,7 @@ $_SESSION['usuario_apellido'] = $user['USUARIOS_APELLIDO'];
 $_SESSION['usuario_email']    = $user['USUARIOS_EMAIL'];
 $_SESSION['usuario_perfil']   = (int)$user['PERFIL_ID'];
 
-// Redirigir según perfil
-if ((int)$user['PERFIL_ID'] === 5) {
-    header('Location: view/maquetaCliente/LaCanchitaCliente.php');
-} elseif (in_array((int)$user['PERFIL_ID'], [3, 4])) {
-    header('Location: view/maquetaEncargado/PanelEncargado.php');
-} else {
-    header('Location: view/maquetaAdmin/Dashboard.php');
-}
+// Redirigir según perfil (fuente de verdad: panel_url_para en capabilities.php)
+require_once __DIR__ . '/config/dist/script/php/capabilities.php';
+header('Location: ' . panel_url_para((int)$user['PERFIL_ID']));
 exit;
