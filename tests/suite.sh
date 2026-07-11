@@ -53,6 +53,8 @@ ck "doble reserva rechazada" "$(jpost $J/cli.jar $TC api/reservar_publico.php "{
 ck "fecha pasada rechazada" "$(jpost $J/cli.jar $TC api/reservar_publico.php '{"cancha_id":1,"fecha":"2020-01-01","hora":"10:00"}')" 'pasad'
 ck "sin sesión NO reserva" "$(curl -s -X POST $B/api/reservar_publico.php -H 'Content-Type: application/json' -d "{\"cancha_id\":1,\"fecha\":\"$MANANA\",\"hora\":\"11:00\"}")" '"ok":false'
 ck "slot 10:00 ahora ocupado" "$(curl -s "$B/api/buscar_canchas.php?localidad=1&fecha=$MANANA")" '"hora":"10:00","libre":false'
+# Mismo cliente ya tiene Cancha 1 a las 10:00 → no puede tomar OTRA cancha en simultáneo
+ck "mismo cliente NO doble turno simultaneo" "$(jpost $J/cli.jar $TC api/reservar_publico.php "{\"cancha_id\":2,\"fecha\":\"$MANANA\",\"hora\":\"10:00\"}")" 'simult'
 
 echo "══ PANEL CLIENTE ══"
 ck "mis_reservas" "$(curl -s -b $J/cli.jar "$B/view/maquetaCliente/api/reservas.php?action=mis_reservas")" 'Cancha 1'
