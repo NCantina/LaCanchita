@@ -3,8 +3,10 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';
+require_once '../../../config/dist/script/php/capabilities.php';
 
-require_perfil(2);
+require_perfil(3);              // dueño, encargado (y SA)
+require_cap('config.canchas');  // corta al empleado (4)
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
@@ -114,6 +116,7 @@ case 'crear':
             );
         }
         mysqli_commit($link);
+        registrar_evento($link, 'config.canchas', "horario #$fid creado");
         resp(true,'Franja creada correctamente.',['id'=>$fid]);
     } catch(Exception $ex){ mysqli_rollback($link); resp(false,'Error: '.$ex->getMessage()); }
 
@@ -171,6 +174,7 @@ case 'editar':
             );
         }
         mysqli_commit($link);
+        registrar_evento($link, 'config.canchas', 'horario: editar');
         resp(true,'Franja actualizada correctamente.');
     } catch(Exception $ex){ mysqli_rollback($link); resp(false,'Error: '.$ex->getMessage()); }
 
@@ -183,6 +187,7 @@ case 'toggle':
     if(!$cur) resp(false,'No encontrada.');
     $nuevo=$cur['ACTIVO']?0:1;
     mysqli_query($link,"UPDATE franja_horaria SET ACTIVO=$nuevo WHERE FRANJA_ID=$fid");
+    registrar_evento($link, 'config.canchas', 'horario: toggle');
     resp(true,$nuevo?'Franja activada.':'Franja desactivada.',['activo'=>$nuevo]);
 
 // ── Eliminar (soft delete) ──────────────────────────────────────────────
@@ -192,6 +197,7 @@ case 'eliminar':
     assert_franja($link, $fid);
     mysqli_query($link,"UPDATE franja_horaria SET ACTIVO=0 WHERE FRANJA_ID=$fid");
     mysqli_query($link,"DELETE FROM franja_dia WHERE FRANJA_ID=$fid");
+    registrar_evento($link, 'config.canchas', 'horario: eliminar');
     resp(true,'Franja eliminada.');
 
 default:

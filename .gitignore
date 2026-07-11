@@ -6,6 +6,9 @@ config/db.php
 # Dependencias
 vendor/
 
+# Contenido subido por usuarios (fotos de predios) — runtime, no código
+config/dist/img/predios/
+
 # Sistema
 .DS_Store
 Thumbs.db

@@ -122,6 +122,21 @@ if (!empty($link)) {
     if ($res3) while ($row = mysqli_fetch_assoc($res3)) $planes[] = $row;
 }
 
+// ── Datos: fotos del predio ───────────────────────────────────────────────────
+$fotos = [];
+$fotoPrincipal = '';
+if (!empty($link)) {
+    $res4 = @mysqli_query($link,
+        "SELECT FOTO_PATH, FOTO_PRINCIPAL FROM complejo_foto
+         WHERE COMPLEJO_ID = $id
+         ORDER BY FOTO_PRINCIPAL DESC, FOTO_ORDEN ASC, FOTO_ID ASC");
+    if ($res4) while ($row = mysqli_fetch_assoc($res4)) {
+        $fotos[] = $row['FOTO_PATH'];
+        if ($row['FOTO_PRINCIPAL'] == 1 && !$fotoPrincipal) $fotoPrincipal = $row['FOTO_PATH'];
+    }
+    if (!$fotoPrincipal && $fotos) $fotoPrincipal = $fotos[0];
+}
+
 // ── Preparar variables para la vista ─────────────────────────────────────────
 $nombre      = titleCasePHP($predio['COMPLEJO_NOMBRE']);
 $dir         = $predio['COMPLEJO_DIRECCION'] ?? '';
@@ -192,10 +207,17 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .hero{
   margin-top:64px;
   padding:60px 5% 52px;
+<?php if ($fotoPrincipal): ?>
+  background:
+    linear-gradient(180deg, rgba(9,9,15,.58) 0%, rgba(9,9,15,.84) 100%),
+    url('<?= esc($fotoPrincipal) ?>') center/cover no-repeat,
+    var(--s1);
+<?php else: ?>
   background:
     radial-gradient(ellipse at 20% 50%, rgba(<?= hex2rgb($gradA) ?>,.18) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 30%, rgba(<?= hex2rgb($gradB) ?>,.14) 0%, transparent 55%),
     var(--s1);
+<?php endif; ?>
   border-bottom:1px solid var(--border);
   position:relative;overflow:hidden
 }
@@ -231,6 +253,12 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-ap
 .stat-val{font-size:1.1rem;font-weight:800;line-height:1}
 .stat-lbl{font-size:.72rem;color:var(--muted);margin-top:2px}
 @media(max-width:640px){.stats-bar{flex-wrap:wrap}.stat{min-width:50%;border-bottom:1px solid var(--border)}}
+
+/* ── GALERÍA ── */
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.gallery-item{display:block;border-radius:14px;overflow:hidden;aspect-ratio:4/3;background:var(--s2);border:1px solid var(--border)}
+.gallery-item img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.gallery-item:hover img{transform:scale(1.04)}
 
 /* ── SECCIONES ── */
 .section{padding:56px 5%}
@@ -405,6 +433,23 @@ if ($email) $statItems[] = ['icon'=>'fa-envelope','color'=>'#9b59b6','val'=>$ema
     </div>
     <?php endforeach; ?>
 </div>
+<?php endif; ?>
+
+<!-- GALERÍA -->
+<?php if ($fotos): ?>
+<section class="section">
+    <div class="section-header">
+        <div class="section-eyebrow">Galería</div>
+        <h2 class="section-title">El predio en fotos</h2>
+    </div>
+    <div class="gallery-grid">
+        <?php foreach ($fotos as $foto): ?>
+        <a href="<?= esc($foto) ?>" target="_blank" rel="noopener" class="gallery-item">
+            <img src="<?= esc($foto) ?>" alt="<?= esc($nombre) ?>" loading="lazy">
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
 <?php endif; ?>
 
 <!-- SOBRE EL PREDIO -->

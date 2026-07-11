@@ -6,10 +6,26 @@ require_once '../../../config/dist/script/php/tenancy.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
+require_once '../../../config/dist/script/php/capabilities.php';
+
 // Acciones operativas de mostrador que también usa el staff (encargado/empleado).
-// El resto del archivo sigue siendo solo para dueño/SA.
 $STAFF_ACTIONS = ['crear_cliente_rapido', 'buscar_clientes'];
-require_perfil(in_array($action, $STAFF_ACTIONS, true) ? 4 : 2);
+// Gestión de equipo: el encargado (3) gestiona EMPLEADOS; el resto sigue siendo dueño/SA.
+$ENC_ACTIONS   = ['listar_staff','crear_staff','editar','toggle','asignar_canchas','canchas_asignables'];
+require_perfil(in_array($action, $STAFF_ACTIONS, true) ? 4
+             : (in_array($action, $ENC_ACTIONS, true) ? 3 : 2));
+if (in_array($action, $ENC_ACTIONS, true)) require_cap('staff.empleados'); // corta al empleado (4)
+
+/** Gestionar un usuario de perfil 3 exige staff.encargados; de perfil 4, staff.empleados. */
+function require_cap_para_perfil(int $perfilObjetivo): void {
+    if ($perfilObjetivo === 3)     require_cap('staff.encargados');
+    elseif ($perfilObjetivo === 4) require_cap('staff.empleados');
+}
+
+// Dueño al que pertenece el equipo gestionable por el usuario actual
+// (el propio uid si es dueño; su DUENO_ID si es staff; irrelevante para SA, que bypassa).
+$duenoEfectivo = is_dueno() ? current_uid() : (int)(current_dueno_id($link) ?? 0);
+
 function resp($ok,$msg,$data=null){ echo json_encode(['ok'=>$ok,'msg'=>$msg,'data'=>$data], JSON_UNESCAPED_UNICODE); exit; }
 function e($link,$v){ return mysqli_real_escape_string($link,trim($v??'')); }
 
@@ -24,8 +40,7 @@ case 'listar_staff':
     if (is_superadmin()) {
         $where = "1=1";
     } else {
-        $duenoId = current_uid();
-        $where   = "u.PERFIL_ID IN (3,4) AND u.DUENO_ID=$duenoId";
+        $where = "u.PERFIL_ID IN (3,4) AND u.DUENO_ID=$duenoEfectivo";
     }
     $rows = [];
     $q = mysqli_query($link,"
@@ -88,11 +103,12 @@ case 'crear_staff':
     if (!$email || !filter_var($_POST['email']??'',FILTER_VALIDATE_EMAIL)) resp(false,'Email inválido.');
     $perfilesPermitidos = is_superadmin() ? [3,4,5] : [3,4]; // perfil 1 (SA) y 2 (Dueño) solo desde Dev Panel
     if (!in_array($perfilId,$perfilesPermitidos)) resp(false,'El perfil Dueño solo puede asignarse desde el Panel Desarrollador.');
+    require_cap_para_perfil($perfilId); // encargado solo crea empleados
     if (strlen($pass)<6) resp(false,'La contraseña debe tener al menos 6 caracteres.');
 
     // DUENO_ID: requerido solo para staff (3,4)
     if (in_array($perfilId,[3,4])) {
-        $duenoId = is_dueno() ? current_uid() : ((int)($_POST['dueno_id']??0) ?: null);
+        $duenoId = is_staff() || is_dueno() ? $duenoEfectivo : ((int)($_POST['dueno_id']??0) ?: null);
         if (!$duenoId) resp(false,'Debe asignarse un dueño.');
     } else {
         $duenoId = null;
@@ -109,7 +125,10 @@ case 'crear_staff':
          USUARIOS_TELEFONO,USUARIOS_PASSWORD,PERFIL_ID,DUENO_ID,ACTIVO)
          VALUES ('$nombre','$apellido','$dni','$email','$tel','$hash',$perfilId,$duenoSQ,1)"
     );
-    resp(true,'Staff creado correctamente.',['id'=>mysqli_insert_id($link)]);
+    $nuevoId = mysqli_insert_id($link);
+    registrar_evento($link, $perfilId === 3 ? 'staff.encargados' : 'staff.empleados',
+        "alta staff #$nuevoId (perfil $perfilId)");
+    resp(true,'Staff creado correctamente.',['id'=>$nuevoId]);
 
 // ── CREAR DUEÑO (solo SuperAdmin) ──────────────────────────────────────
 case 'crear_dueno':
@@ -165,7 +184,8 @@ case 'editar':
     $target = mysqli_fetch_assoc(mysqli_query($link,
         "SELECT PERFIL_ID,DUENO_ID FROM usuarios WHERE USUARIOS_ID=$id"));
     if (!$target) resp(false,'Usuario no encontrado.');
-    if (!is_superadmin() && (int)$target['DUENO_ID']!==current_uid())
+    require_cap_para_perfil((int)$target['PERFIL_ID']); // encargado no edita encargados
+    if (!is_superadmin() && (int)$target['DUENO_ID']!==$duenoEfectivo)
         resp(false,'Sin permisos.');
 
     if (mysqli_fetch_assoc(mysqli_query($link,
@@ -193,10 +213,13 @@ case 'toggle':
     $target = mysqli_fetch_assoc(mysqli_query($link,
         "SELECT PERFIL_ID,DUENO_ID,ACTIVO FROM usuarios WHERE USUARIOS_ID=$id"));
     if (!$target) resp(false,'No encontrado.');
-    if (!is_superadmin() && (int)$target['DUENO_ID']!==current_uid()) resp(false,'Sin permisos.');
+    require_cap_para_perfil((int)$target['PERFIL_ID']); // encargado no da de baja encargados
+    if (!is_superadmin() && (int)$target['DUENO_ID']!==$duenoEfectivo) resp(false,'Sin permisos.');
 
     $nuevo = $target['ACTIVO'] ? 0 : 1;
     mysqli_query($link,"UPDATE usuarios SET ACTIVO=$nuevo WHERE USUARIOS_ID=$id");
+    registrar_evento($link, (int)$target['PERFIL_ID']===3 ? 'staff.encargados' : 'staff.empleados',
+        "toggle staff #$id -> " . ($nuevo ? 'activo' : 'inactivo'));
     resp(true,$nuevo?'Usuario activado.':'Usuario desactivado.',['activo'=>$nuevo]);
 
 // ── ASIGNAR CANCHAS A STAFF ─────────────────────────────────────────────
@@ -208,7 +231,8 @@ case 'asignar_canchas':
     $target = mysqli_fetch_assoc(mysqli_query($link,
         "SELECT PERFIL_ID,DUENO_ID FROM usuarios WHERE USUARIOS_ID=$staffId"));
     if (!$target || !in_array((int)$target['PERFIL_ID'],[3,4])) resp(false,'Usuario no válido.');
-    if (!is_superadmin() && (int)$target['DUENO_ID']!==current_uid()) resp(false,'Sin permisos.');
+    require_cap_para_perfil((int)$target['PERFIL_ID']); // encargado no reasigna a otros encargados
+    if (!is_superadmin() && (int)$target['DUENO_ID']!==$duenoEfectivo) resp(false,'Sin permisos.');
 
     mysqli_begin_transaction($link);
     try {

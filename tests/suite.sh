@@ -1,5 +1,8 @@
 #!/bin/bash
 # Suite funcional end-to-end de LaCanchita (token-aware: CSRF activo)
+# LC_ALL: en Git Bash (Windows) el locale default rompe grep -P ("supports only
+# unibyte and UTF-8 locales") y los tokens CSRF salen vacíos. C.UTF-8 lo arregla.
+export LC_ALL=C.UTF-8
 B=http://127.0.0.1:8088
 DB="${DB_NAME:-lacanchita_test}"   # misma base que usa la app (DB_NAME); NUNCA la de dev
 J=$(mktemp -d)
@@ -50,6 +53,8 @@ ck "doble reserva rechazada" "$(jpost $J/cli.jar $TC api/reservar_publico.php "{
 ck "fecha pasada rechazada" "$(jpost $J/cli.jar $TC api/reservar_publico.php '{"cancha_id":1,"fecha":"2020-01-01","hora":"10:00"}')" 'pasad'
 ck "sin sesión NO reserva" "$(curl -s -X POST $B/api/reservar_publico.php -H 'Content-Type: application/json' -d "{\"cancha_id\":1,\"fecha\":\"$MANANA\",\"hora\":\"11:00\"}")" '"ok":false'
 ck "slot 10:00 ahora ocupado" "$(curl -s "$B/api/buscar_canchas.php?localidad=1&fecha=$MANANA")" '"hora":"10:00","libre":false'
+# Mismo cliente ya tiene Cancha 1 a las 10:00 → no puede tomar OTRA cancha en simultáneo
+ck "mismo cliente NO doble turno simultaneo" "$(jpost $J/cli.jar $TC api/reservar_publico.php "{\"cancha_id\":2,\"fecha\":\"$MANANA\",\"hora\":\"10:00\"}")" 'simult'
 
 echo "══ PANEL CLIENTE ══"
 ck "mis_reservas" "$(curl -s -b $J/cli.jar "$B/view/maquetaCliente/api/reservas.php?action=mis_reservas")" 'Cancha 1'
@@ -128,5 +133,69 @@ echo "══ GEO / CATÁLOGO ══"
 ck "geo provincias" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/geo.php?action=provincias")" 'Buenos Aires'
 ck "catálogo tipos cancha" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/catalogo.php?action=listar&tabla=tipo_cancha")" "tbol 5"
 ck "catálogo tabla no permitida" "$(curl -s -b $J/due.jar "$B/view/maquetaAdmin/api/catalogo.php?action=listar&tabla=usuarios")" "no v"
+
+echo "══ ROLES / CAPACIDADES ══"
+# Reportes: encargado (3) SÍ, empleado (4) NO
+ck "empleado reportes 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/reportes.php?action=resumen")" 'permisos'
+ck "empleado export_reportes 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/export_reportes.php")" 'permisos'
+ck "empleado cierres 403" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/cierres.php?action=listar")" 'permisos'
+ck "encargado reportes ok" "$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/api/reportes.php?action=resumen")" '"ok":true'
+# Config de canchas/horarios/planes/fotos/turnos/complejos: encargado SÍ, empleado NO
+ck "empleado crear cancha 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/canchas.php 'action=crear&complejo_id=1&nombre=X&tipo_cancha_id=1')" 'permisos'
+ck "empleado crear horario 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/horarios.php 'action=crear&cancha_id=1&hora_inicio=20:00&hora_fin=21:00&precio=1')" 'permisos'
+ck "empleado crear plan 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/planes.php 'action=crear&complejo_id=1&nombre=X&precio=1&periodo=mensual')" 'permisos'
+ck "empleado tocar fotos 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/fotos.php 'action=eliminar&foto_id=1')" 'permisos'
+ck "empleado turno fijo 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/turnos_fijos.php 'action=crear&cancha_id=1')" 'permisos'
+ck "empleado editar complejo 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/complejos.php 'action=editar&id=1&nombre=X')" 'permisos'
+R=$(fpost $J/enc.jar $TE view/maquetaAdmin/api/canchas.php 'action=crear&complejo_id=1&nombre=Cancha Enc&tipo_cancha_id=1')
+ck "encargado crear cancha ok" "$R" '"ok":true'
+ck "encargado listar canchas ok" "$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/api/canchas.php?action=listar")" '"ok":true'
+AUDCFG=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP='config.canchas'")
+if [ "${AUDCFG:-0}" -ge 1 ]; then PASS=$((PASS+1)); echo "PASS: auditoria de config registrada"; else FAIL=$((FAIL+1)); echo "FAIL: sin auditoria config.canchas"; fi
+# Operativas: el empleado SÍ puede (caja corre local; reservas.php es [FULL-ENV] por vendor)
+HOY=$(date +%Y-%m-%d)
+ck "empleado arqueo caja ok" "$(curl -s -b $J/emp.jar "$B/view/maquetaAdmin/api/caja.php?action=arqueo&complejo_id=1&fecha=$HOY")" '"ok":true'
+R=$(fpost $J/emp.jar $TM view/maquetaAdmin/api/caja.php "action=cerrar&complejo_id=1&fondo_inicial=0&efectivo_declarado=0")
+ck "empleado cierra caja ok" "$R" '"ok":true'
+AUDCJ=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP='caja.cerrar' AND USUARIOS_ID=4")
+if [ "${AUDCJ:-0}" -ge 1 ]; then PASS=$((PASS+1)); echo "PASS: auditoria de cierre de caja"; else FAIL=$((FAIL+1)); echo "FAIL: sin auditoria caja.cerrar"; fi
+# Staff: encargado gestiona EMPLEADOS pero no encargados; empleado no gestiona nada
+ck "empleado crear staff 403" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/usuarios.php 'action=crear_staff&nombre=X&apellido=Y&dni=30000001&email=x1@test.com&telefono=1&perfil_id=4&password=test1234')" 'permisos'
+ck "encargado crea EMPLEADO ok" "$(fpost $J/enc.jar $TE view/maquetaAdmin/api/usuarios.php 'action=crear_staff&nombre=Emple&apellido=Nuevo&dni=30000002&email=empnuevo@test.com&telefono=1&perfil_id=4&password=test1234')" '"ok":true'
+ck "encargado crea ENCARGADO 403" "$(fpost $J/enc.jar $TE view/maquetaAdmin/api/usuarios.php 'action=crear_staff&nombre=Enc&apellido=Nuevo&dni=30000003&email=encnuevo@test.com&telefono=1&perfil_id=3&password=test1234')" 'permisos'
+ck "encargado lista staff ok" "$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/api/usuarios.php?action=listar_staff")" '"ok":true'
+ck "dueno crea ENCARGADO ok" "$(fpost $J/due.jar $TD view/maquetaAdmin/api/usuarios.php 'action=crear_staff&nombre=Enc2&apellido=Due&dni=30000004&email=enc2@test.com&telefono=1&perfil_id=3&password=test1234')" '"ok":true'
+AUDS=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP LIKE 'staff.%'")
+if [ "${AUDS:-0}" -ge 2 ]; then PASS=$((PASS+1)); echo "PASS: auditoria de staff registrada"; else FAIL=$((FAIL+1)); echo "FAIL: auditoria staff insuficiente ($AUDS)"; fi
+# Ruteo por superficie: empleado NO entra al Dashboard (302), encargado SÍ (200)
+ck "empleado Dashboard redirigido" "$(curl -s -o /dev/null -w '%{http_code}' -b $J/emp.jar "$B/view/maquetaAdmin/Dashboard.php")" '302'
+ck "encargado Dashboard entra" "$(curl -s -o /dev/null -w '%{http_code}' -b $J/enc.jar "$B/view/maquetaAdmin/Dashboard.php")" '200'
+ck "empleado PanelEncargado entra" "$(curl -s -o /dev/null -w '%{http_code}' -b $J/emp.jar "$B/view/maquetaEncargado/PanelEncargado.php")" '200'
+DASHENC=$(curl -s -b $J/enc.jar "$B/view/maquetaAdmin/Dashboard.php")
+ck "sidebar encargado tiene Reportes" "$DASHENC" 'data-view="reportes"'
+ck "sidebar encargado tiene Mi Staff" "$DASHENC" 'data-view="staff"'
+ck "CAPS inyectado al front" "$DASHENC" 'window.CAPS'
+# [FULL-ENV] Staff cancela una confirmada via rechazar (reservas.php incluye push/vendor)
+RIDX=$(mysql -uroot "$DB" -N -e "INSERT INTO reserva (CANCHA_ID,FRANJA_ID,USUARIOS_ID,RESERVA_FECHA,RESERVA_HORA_INICIO,RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_ESTADO) VALUES (1,1,5,DATE_ADD(CURDATE(), INTERVAL 3 DAY),'10:00','11:00',1000,'confirmada'); SELECT LAST_INSERT_ID();")
+ck "[FULL-ENV] empleado cancela confirmada ok" "$(fpost $J/emp.jar $TM view/maquetaAdmin/api/reservas.php "action=rechazar&reserva_id=$RIDX")" '"ok":true'
+AUDRC=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM auditoria WHERE CAP='reserva.cancelar' AND USUARIOS_ID=4")
+if [ "${AUDRC:-0}" -ge 1 ]; then PASS=$((PASS+1)); echo "PASS: [FULL-ENV] auditoria de cancelacion"; else FAIL=$((FAIL+1)); echo "FAIL: [FULL-ENV] sin auditoria reserva.cancelar"; fi
+
+echo "══ RECORDATORIOS DE TURNO ══"
+# Reserva "inminente" (~90 min → ventana 2h) y "previa" (~5 h → ventana 24h) para el cliente
+F1=$(date -d "+90 min" +%Y-%m-%d);  H1=$(date -d "+90 min" +%H:%M:%S);  H1F=$(date -d "+150 min" +%H:%M:%S)
+F2=$(date -d "+5 hours" +%Y-%m-%d); H2=$(date -d "+5 hours" +%H:%M:%S);  H2F=$(date -d "+6 hours" +%H:%M:%S)
+mysql -uroot "$DB" -e "INSERT INTO reserva (CANCHA_ID,FRANJA_ID,USUARIOS_ID,RESERVA_FECHA,RESERVA_HORA_INICIO,RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_ESTADO) SELECT 1,1,USUARIOS_ID,'$F1','$H1','$H1F',1000,'confirmada' FROM usuarios WHERE USUARIOS_EMAIL='cliente@test.com'"
+mysql -uroot "$DB" -e "INSERT INTO reserva (CANCHA_ID,FRANJA_ID,USUARIOS_ID,RESERVA_FECHA,RESERVA_HORA_INICIO,RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_ESTADO) SELECT 1,1,USUARIOS_ID,'$F2','$H2','$H2F',1000,'confirmada' FROM usuarios WHERE USUARIOS_EMAIL='cliente@test.com'"
+CRON1=$(DB_NAME=$DB php cron/recordatorios_turno.php)
+ck "cron responde ok" "$CRON1" '"ok":true'
+N1=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM recordatorio_turno")
+if [ "${N1:-0}" -ge 2 ]; then PASS=$((PASS+1)); echo "PASS: recordatorios registrados ($N1)"; else FAIL=$((FAIL+1)); echo "FAIL: esperaba >=2 recordatorios, obtuve ${N1:-0}"; fi
+ck "recordatorio inminente (2h) registrado" "$(mysql -uroot "$DB" -N -e "SELECT TIPO FROM recordatorio_turno WHERE TIPO='2h' LIMIT 1")" '2h'
+ck "recordatorio previo (24h) registrado" "$(mysql -uroot "$DB" -N -e "SELECT TIPO FROM recordatorio_turno WHERE TIPO='24h' LIMIT 1")" '24h'
+CRON2=$(DB_NAME=$DB php cron/recordatorios_turno.php)
+ck "cron 2da corrida no reenvía (total 0)" "$CRON2" '"total":0'
+N2=$(mysql -uroot "$DB" -N -e "SELECT COUNT(*) FROM recordatorio_turno")
+if [ "$N2" = "$N1" ]; then PASS=$((PASS+1)); echo "PASS: idempotente (sin filas nuevas)"; else FAIL=$((FAIL+1)); echo "FAIL: idempotencia rota $N1 -> $N2"; fi
 
 echo ""; echo "════════════════════════════"; echo "TOTAL: PASS=$PASS FAIL=$FAIL"

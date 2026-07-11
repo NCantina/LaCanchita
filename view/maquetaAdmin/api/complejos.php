@@ -4,8 +4,10 @@ header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';
 
-// Solo SuperAdmin (1) y Dueño (2) gestionan predios.
-require_perfil(2);
+// SuperAdmin (1), Dueño (2) y Encargado (3) gestionan predios; el empleado no.
+require_once '../../../config/dist/script/php/capabilities.php';
+require_perfil(3);
+require_cap('config.canchas');
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 

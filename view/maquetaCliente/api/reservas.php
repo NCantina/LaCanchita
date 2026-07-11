@@ -154,6 +154,17 @@ if ($action === 'crear') {
     );
     if ($cierre) { mysqli_rollback($link); resp(false,'El complejo está cerrado en ese horario.'); }
 
+    // El mismo cliente no puede tener dos turnos que se pisen (misma fecha, horarios
+    // solapados), sin importar la cancha: no puede estar en dos lugares a la vez.
+    $solapada = qfetch($link,
+        "SELECT RESERVA_ID FROM reserva
+         WHERE USUARIOS_ID=$uid AND RESERVA_FECHA='$eFecha'
+           AND RESERVA_ESTADO IN ('pendiente','confirmada') AND ACTIVO=1
+           AND RESERVA_HORA_INICIO < '".e($link,$hFin)."' AND RESERVA_HORA_FIN > '".e($link,$hIni)."'
+         LIMIT 1 FOR UPDATE"
+    );
+    if ($solapada) { mysqli_rollback($link); resp(false,'Ya tenés una reserva en ese horario. No podés reservar dos turnos en simultáneo.'); }
+
     $stmt = mysqli_prepare($link,
         "INSERT INTO reserva (CANCHA_ID,FRANJA_ID,USUARIOS_ID,RESERVA_FECHA,
           RESERVA_HORA_INICIO,RESERVA_HORA_FIN,RESERVA_PRECIO,RESERVA_SENA,

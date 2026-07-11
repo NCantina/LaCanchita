@@ -3,7 +3,9 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';
-require_perfil(2);
+require_once '../../../config/dist/script/php/capabilities.php';
+require_perfil(3);              // dueño, encargado (y SA)
+require_cap('reportes.ver');    // corta al empleado (4)
 
 $action = $_GET['action'] ?? '';
 

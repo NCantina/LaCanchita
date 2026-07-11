@@ -24,9 +24,9 @@ function require_view(int $min, int $max): void {
 
     if ($p >= $min && $p <= $max) return; // perfil autorizado, continuar
 
-    // Redirigir al panel que le corresponde según su perfil
-    if ($p === 5)    header('Location: ../maquetaCliente/LaCanchitaCliente.php');
-    elseif ($p <= 2) header('Location: ../maquetaAdmin/Dashboard.php');
-    else             header('Location: ../maquetaEncargado/PanelEncargado.php');
+    // Redirigir al panel que le corresponde según su perfil.
+    // panel_url_para devuelve la ruta desde la raíz; las vistas viven 2 niveles abajo.
+    require_once __DIR__ . '/capabilities.php';
+    header('Location: ../../' . panel_url_para($p));
     exit;
 }

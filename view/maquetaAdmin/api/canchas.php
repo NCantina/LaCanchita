@@ -4,8 +4,10 @@ header('Content-Type: application/json; charset=utf-8');
 require_once '../../../config/dist/script/php/conn.php';
 require_once '../../../config/dist/script/php/tenancy.php';
 
-// SuperAdmin (1) y Dueño (2) gestionan canchas. Staff opera reservas (otro API).
-require_perfil(2);
+// SuperAdmin (1), Dueño (2) y Encargado (3) gestionan canchas; el empleado no.
+require_once '../../../config/dist/script/php/capabilities.php';
+require_perfil(3);
+require_cap('config.canchas');
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
@@ -113,6 +115,7 @@ case 'crear':
             );
         }
         mysqli_commit($link);
+        registrar_evento($link, 'config.canchas', "cancha #$cid creada");
         resp(true,'Cancha creada correctamente.',['id'=>$cid]);
     } catch(Exception $ex){ mysqli_rollback($link); resp(false,'Error: '.$ex->getMessage()); }
 
@@ -147,6 +150,7 @@ case 'editar':
             );
         }
         mysqli_commit($link);
+        registrar_evento($link, 'config.canchas', 'cancha: editar');
         resp(true,'Cancha actualizada correctamente.');
     } catch(Exception $ex){ mysqli_rollback($link); resp(false,'Error: '.$ex->getMessage()); }
 
@@ -159,6 +163,7 @@ case 'toggle':
     if(!$cur) resp(false,'No encontrado.');
     $nuevo=$cur['ACTIVO']?0:1;
     mysqli_query($link,"UPDATE cancha SET ACTIVO=$nuevo WHERE CANCHA_ID=$id");
+    registrar_evento($link, 'config.canchas', 'cancha: toggle');
     resp(true,$nuevo?'Cancha activada.':'Cancha desactivada.',['activo'=>$nuevo]);
 
 default:

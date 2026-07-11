@@ -2,6 +2,7 @@
 session_start();
 require_once '../../config/dist/script/php/conn.php';
 require_once '../../config/dist/script/php/tenancy.php';
+require_once '../../config/dist/script/php/capabilities.php';
 
 // Perfiles 1-4 pueden entrar. Clientes (5+) redireccionan al panel cliente.
 if (!isset($_SESSION['usuario_perfil']) || (int)$_SESSION['usuario_perfil'] === 0) {
@@ -9,6 +10,10 @@ if (!isset($_SESSION['usuario_perfil']) || (int)$_SESSION['usuario_perfil'] === 
 }
 if ((int)$_SESSION['usuario_perfil'] >= 5) {
     header('Location: ../maquetaCliente/LaCanchitaCliente.php'); exit;
+}
+if ((int)$_SESSION['usuario_perfil'] === 4) {
+    // El empleado opera en su propio panel, no en el Dashboard
+    header('Location: ../maquetaEncargado/PanelEncargado.php'); exit;
 }
 
 $nombre = $_SESSION['usuario_nombre'] ?? 'Admin';
@@ -1535,16 +1540,29 @@ if ($perfil >= 2) {
         </div>
         <?php endif; ?>
 
-        <?php if($perfil === 3 || $perfil === 4): ?>
-        <!-- ── Staff: plataforma + operaciones ── -->
-        <div class="sb-section">Plataforma</div>
-        <div class="sb-item" data-view="planes" onclick="showView(this)">
-            <i class="fas fa-tags"></i> Tipos de plan
+        <?php if($perfil === 3): ?>
+        <!-- ── Encargado: opera y configura, sin billing ni gestión de encargados ── -->
+        <?php if (can('config.canchas')): ?>
+        <div class="sb-section">Mi negocio</div>
+        <div class="sb-item" data-view="canchas" onclick="showView(this)">
+            <i class="fas fa-futbol"></i> Canchas
         </div>
+        <div class="sb-item" data-view="horarios" onclick="showView(this)">
+            <i class="fas fa-clock"></i> Horarios y precios
+        </div>
+        <div class="sb-item" data-view="cierres" onclick="showView(this)">
+            <i class="fas fa-ban"></i> Cierres
+        </div>
+        <div class="sb-item" data-view="turnos" onclick="showView(this)">
+            <i class="fas fa-redo-alt"></i> Turnos fijos
+        </div>
+        <?php endif; ?>
         <div class="sb-section">Operaciones</div>
+        <?php if (can('reportes.ver')): ?>
         <div class="sb-item" data-view="reportes" onclick="showView(this)">
             <i class="fas fa-chart-bar"></i> Reportes
         </div>
+        <?php endif; ?>
         <div class="sb-item" data-view="agenda" onclick="showView(this)">
             <i class="fas fa-calendar-alt"></i> Agenda
         </div>
@@ -1554,6 +1572,18 @@ if ($perfil >= 2) {
         <div class="sb-item" data-view="pagos" onclick="showView(this)">
             <i class="fas fa-dollar-sign"></i> Cobros
         </div>
+        <?php if (can('config.canchas')): ?>
+        <div class="sb-section">Plataforma</div>
+        <div class="sb-item" data-view="planes" onclick="showView(this)">
+            <i class="fas fa-tags"></i> Tipos de plan
+        </div>
+        <?php endif; ?>
+        <?php if (can('staff.empleados')): ?>
+        <div class="sb-section">Personas</div>
+        <div class="sb-item" data-view="staff" onclick="showView(this)">
+            <i class="fas fa-id-badge"></i> Mi Staff
+        </div>
+        <?php endif; ?>
         <div class="sb-section">Mi cuenta</div>
         <div class="sb-item" data-view="perfil" onclick="showView(this)">
             <i class="fas fa-user-circle"></i> Mi perfil
@@ -2565,6 +2595,24 @@ if ($perfil >= 2) {
                 </div>
             </div>
 
+            <!-- Arqueo / cierre de caja -->
+            <div class="card" id="arqueoCard" style="margin-bottom:24px;padding:20px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <div class="kpi-icon g" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="fas fa-cash-register"></i></div>
+                        <div>
+                            <div style="font-weight:800;font-size:1rem">Arqueo de caja</div>
+                            <div style="font-size:.78rem;color:var(--muted)">Cierre del día por predio</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <select id="arqueoComplejo" class="form-select" style="padding:8px 12px;width:auto;min-width:160px" onchange="loadArqueo()"></select>
+                        <button class="btn btn-primary btn-sm" id="arqueoCerrarBtn" onclick="abrirCierre()"><i class="fas fa-lock"></i> Cerrar caja</button>
+                    </div>
+                </div>
+                <div id="arqueoBody"><div style="text-align:center;padding:20px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i></div></div>
+            </div>
+
             <div id="pagosLista"></div>
         </div><!-- /view-pagos -->
 
@@ -3270,6 +3318,33 @@ if ($perfil >= 2) {
     </div>
 </div>
 
+<!-- MODAL FOTOS DEL PREDIO -->
+<div class="modal-overlay" id="modalFotos">
+    <div class="modal" style="max-width:640px">
+        <div class="modal-head">
+            <div class="modal-head-icon b" style="background:rgba(52,152,219,.15);color:var(--blue)">
+                <i class="fas fa-camera"></i>
+            </div>
+            <div>
+                <h3>Fotos del predio</h3>
+                <p id="mFotosSub">Subí fotos para la landing y el buscador</p>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalFotos')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <label class="btn btn-primary btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px" id="mFotosSubirLbl">
+                <i class="fas fa-upload"></i> Subir foto
+                <input type="file" id="mFotosInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="subirFoto()">
+            </label>
+            <span style="font-size:.72rem;color:var(--muted);margin-left:10px">JPG/PNG/WEBP · máx 5 MB · hasta 8 fotos. La <strong>portada</strong> es la que se muestra primero.</span>
+            <div id="mFotosGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:16px"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalFotos')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════ TOASTS ═══════════ -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -3278,6 +3353,15 @@ if ($perfil >= 2) {
 // ═══════════════════════════════════════════════
 // ESTADO GLOBAL
 // ═══════════════════════════════════════════════
+// Capacidades del perfil actual (fuente: capabilities.php) para gatear la UI.
+// La seguridad real vive en el backend (require_cap); esto solo oculta acciones.
+window.CAPS = <?= json_encode([
+    'reportes.ver'        => can('reportes.ver'),
+    'config.canchas'      => can('config.canchas'),
+    'staff.empleados'     => can('staff.empleados'),
+    'staff.encargados'    => can('staff.encargados'),
+    'billing.suscripcion' => can('billing.suscripcion'),
+]) ?>;
 let currentCat   = 'tipo_cancha';
 let catData      = {};
 let filterActive = 'all';
@@ -4646,6 +4730,7 @@ function canTogglePredio(cid, btn) {
 // COMPLEJOS
 // ═══════════════════════════════════════════════
 const CMP_API    = 'api/complejos.php';
+const FOTOS_API  = 'api/fotos.php';
 let cmpData      = [];
 let cmpFilterVal = 'all';
 let cmpSearchVal = '';
@@ -4756,6 +4841,11 @@ function renderComplejos() {
                     <button class="act-btn edit" title="Editar datos" onclick="complejosAbrirEditar(${r.COMPLEJO_ID})">
                         <i class="fas fa-pen"></i>
                     </button>
+                    <button class="act-btn" title="Fotos del predio"
+                        onclick="abrirFotos(${r.COMPLEJO_ID},'${escHtml(r.COMPLEJO_NOMBRE).replace(/'/g,"\\'")}')"
+                        style="color:var(--blue);border-color:rgba(52,152,219,.2)">
+                        <i class="fas fa-camera"></i>
+                    </button>
                     <button class="act-btn toggle ${activo?'on':''}" title="${activo?'Desactivar':'Activar'}"
                         onclick="cmpToggle(${r.COMPLEJO_ID},this)">
                         <i class="fas ${activo?'fa-toggle-on':'fa-toggle-off'}"></i>
@@ -4770,6 +4860,76 @@ function renderComplejos() {
 
 function escHtml(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════
+// FOTOS DEL PREDIO
+// ═══════════════════════════════════════════════
+let _fotosCid = null;
+
+function abrirFotos(cid, nombre) {
+    _fotosCid = cid;
+    document.getElementById('mFotosSub').textContent = nombre;
+    document.getElementById('mFotosInput').value = '';
+    openModal('modalFotos');
+    loadFotos();
+}
+
+async function loadFotos() {
+    const grid = document.getElementById('mFotosGrid');
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px"><i class="fas fa-spinner fa-spin"></i></div>';
+    const j = await fetch(`${FOTOS_API}?action=listar&complejo_id=${_fotosCid}`).then(r => r.json()).catch(() => null);
+    if (!j?.ok) { grid.innerHTML = `<p class="form-error" style="grid-column:1/-1">${escHtml(j?.msg || 'Error al cargar las fotos.')}</p>`; return; }
+    renderFotos(j.data);
+}
+
+function renderFotos(fotos) {
+    const grid = document.getElementById('mFotosGrid');
+    if (!fotos.length) {
+        grid.innerHTML = '<p style="grid-column:1/-1;color:var(--muted);font-size:.85rem;text-align:center;padding:24px">Todavía no hay fotos. Subí la primera 📷</p>';
+        return;
+    }
+    grid.innerHTML = fotos.map(f => {
+        const principal = parseInt(f.FOTO_PRINCIPAL) === 1;
+        return `<div style="position:relative;border-radius:12px;overflow:hidden;border:2px solid ${principal ? 'var(--green)' : 'rgba(255,255,255,.1)'};aspect-ratio:4/3;background:#111">
+            <img src="../../${escHtml(f.FOTO_PATH)}" style="width:100%;height:100%;object-fit:cover" alt="" loading="lazy">
+            ${principal ? '<span style="position:absolute;top:6px;left:6px;background:var(--green);color:#000;font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:6px">PORTADA</span>' : ''}
+            <div style="position:absolute;bottom:0;left:0;right:0;display:flex;gap:4px;padding:6px;background:linear-gradient(0deg,rgba(0,0,0,.75),transparent)">
+                ${!principal ? `<button class="btn btn-ghost btn-sm" style="flex:1;font-size:.7rem;padding:4px" title="Marcar como portada" onclick="fotoPrincipal(${f.FOTO_ID})"><i class="fas fa-star"></i></button>` : ''}
+                <button class="btn btn-ghost btn-sm" style="flex:1;font-size:.7rem;padding:4px;color:var(--red)" title="Eliminar" onclick="fotoEliminar(${f.FOTO_ID})"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function subirFoto() {
+    const input = document.getElementById('mFotosInput');
+    if (!input.files.length) return;
+    const file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) { toast('La imagen supera los 5 MB.', 'err'); input.value = ''; return; }
+    const lbl = document.getElementById('mFotosSubirLbl'); const orig = lbl.innerHTML;
+    lbl.style.pointerEvents = 'none'; lbl.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Subiendo…';
+    const fd = new FormData();
+    fd.append('action', 'subir'); fd.append('complejo_id', _fotosCid); fd.append('foto', file);
+    const j = await fetch(FOTOS_API, { method: 'POST', body: fd }).then(r => r.json()).catch(() => null);
+    lbl.style.pointerEvents = ''; lbl.innerHTML = orig; input.value = '';
+    if (!j?.ok) { toast(j?.msg || 'Error al subir la foto.', 'err'); return; }
+    toast('Foto subida.', 'ok'); loadFotos();
+}
+
+async function fotoPrincipal(id) {
+    const fd = new FormData(); fd.append('action', 'principal'); fd.append('foto_id', id);
+    const j = await fetch(FOTOS_API, { method: 'POST', body: fd }).then(r => r.json()).catch(() => null);
+    if (!j?.ok) { toast(j?.msg || 'Error', 'err'); return; }
+    loadFotos();
+}
+
+async function fotoEliminar(id) {
+    if (!confirm('¿Seguro que querés eliminar esta foto?')) return;
+    const fd = new FormData(); fd.append('action', 'eliminar'); fd.append('foto_id', id);
+    const j = await fetch(FOTOS_API, { method: 'POST', body: fd }).then(r => r.json()).catch(() => null);
+    if (!j?.ok) { toast(j?.msg || 'Error al eliminar.', 'err'); return; }
+    toast('Foto eliminada.', 'ok'); loadFotos();
 }
 
 function cmpFilter()          { cmpSearchVal = document.getElementById('cmpSearch').value; renderComplejos(); }
@@ -6172,12 +6332,15 @@ function staffAbrirCrear() {
             <option value="5">Cliente</option>
             <option value="4">Empleado</option>
             <option value="3" selected>Encargado</option>`;
-    } else {
+    } else if (CAPS['staff.encargados']) {
         perfilSel.innerHTML = `
             <option value="3" selected>Encargado</option>
             <option value="4">Empleado</option>`;
+    } else {
+        // Encargado: solo puede crear empleados
+        perfilSel.innerHTML = `<option value="4" selected>Empleado</option>`;
     }
-    document.getElementById('mStaffPerfil').value  = '3';
+    document.getElementById('mStaffPerfil').value  = CAPS['staff.encargados'] ? '3' : '4';
     document.getElementById('mStaffTitle').textContent = 'Nuevo integrante';
     document.getElementById('mStaffPassLabel').textContent = '*';
     document.getElementById('mStaffPassLabel').title = 'Requerida al crear';
@@ -7551,6 +7714,7 @@ async function dashConfirmar(id, btn) {
 //  RESERVAS
 // ══════════════════════════════════════════════
 const RES_API = 'api/reservas.php';
+const CAJA_API = 'api/caja.php';
 let _resEstado = '';
 
 function resSetEstado(btn, estado) {
@@ -7731,6 +7895,8 @@ async function loadPagosView() {
     const opcFecha = { weekday:'long', day:'numeric', month:'long' };
     label.textContent = new Date(fecha+'T12:00:00').toLocaleDateString('es-AR', opcFecha);
 
+    loadArqueo(); // refrescar arqueo de caja del día
+
     lista.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i></div>';
 
     // Cargamos reservas del día y mostramos las que tienen movimiento de pago o saldo pendiente
@@ -7787,6 +7953,109 @@ async function loadPagosView() {
             </tbody>
         </table>
     </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ARQUEO / CIERRE DE CAJA
+// ══════════════════════════════════════════════════════════════════
+let _arqueoData = null;
+
+async function loadArqueoComplejos() {
+    const sel = document.getElementById('arqueoComplejo');
+    if (!sel || sel.dataset.loaded) return;
+    const j = await fetch(`${CAJA_API}?action=complejos`).then(r => r.json()).catch(() => null);
+    if (!j?.ok || !j.data.length) { sel.innerHTML = '<option value="">Sin predios</option>'; return; }
+    sel.innerHTML = j.data.map(c => `<option value="${c.COMPLEJO_ID}">${escHtml(c.COMPLEJO_NOMBRE)}</option>`).join('');
+    sel.dataset.loaded = '1';
+}
+
+async function loadArqueo() {
+    await loadArqueoComplejos();
+    const sel = document.getElementById('arqueoComplejo');
+    const body = document.getElementById('arqueoBody');
+    if (!sel || !body) return;
+    const cmp = sel.value;
+    const fecha = document.getElementById('pagosFecha').value;
+    const cerrarBtn = document.getElementById('arqueoCerrarBtn');
+    if (!cmp) { body.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No hay predios para arquear.</p>'; if (cerrarBtn) cerrarBtn.style.display = 'none'; return; }
+    if (cerrarBtn) cerrarBtn.style.display = '';
+    body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)"><i class="fas fa-spinner fa-spin"></i></div>';
+    const j = await fetch(`${CAJA_API}?action=arqueo&complejo_id=${cmp}&fecha=${fecha}`).then(r => r.json()).catch(() => null);
+    if (!j?.ok) { body.innerHTML = `<p class="form-error">${escHtml(j?.msg || 'Error al cargar el arqueo.')}</p>`; return; }
+    _arqueoData = j.data;
+    renderArqueo(j.data);
+}
+
+function _cajaFmt(n) { return '$' + parseFloat(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 }); }
+
+function renderArqueo(d) {
+    const medioLbl = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' };
+    const chips = (d.por_medio || []).map(m =>
+        `<span style="display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:.82rem"><strong>${medioLbl[m.PAGO_MEDIO] || m.PAGO_MEDIO}</strong> ${_cajaFmt(m.total)} <span style="color:var(--muted)">(${m.cnt})</span></span>`
+    ).join('') || '<span style="color:var(--muted);font-size:.85rem">Sin cobros este día</span>';
+    const emp = (d.por_empleado || []).map(e =>
+        `<tr><td>${escHtml(e.USUARIOS_NOMBRE + ' ' + e.USUARIOS_APELLIDO)}</td><td style="text-align:right">${_cajaFmt(e.efectivo)}</td><td style="text-align:right;font-weight:600">${_cajaFmt(e.total)}</td><td style="text-align:right;color:var(--muted)">${e.cnt}</td></tr>`
+    ).join('');
+    let cierreBanner = '';
+    if (d.cierre) {
+        const dif = parseFloat(d.cierre.DIFERENCIA || 0);
+        const col = dif === 0 ? 'var(--green)' : (dif < 0 ? 'var(--red)' : 'var(--orange)');
+        const esperado = parseFloat(d.cierre.EFECTIVO_SISTEMA || 0) + parseFloat(d.cierre.FONDO_INICIAL || 0);
+        cierreBanner = `<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(76,217,100,.08);border:1px solid rgba(76,217,100,.25);font-size:.85rem">
+            <i class="fas fa-check-circle" style="color:var(--green)"></i> Caja cerrada — contado ${_cajaFmt(d.cierre.EFECTIVO_DECLARADO)} · esperado ${_cajaFmt(esperado)} · diferencia <strong style="color:${col}">${_cajaFmt(dif)}</strong></div>`;
+    }
+    document.getElementById('arqueoBody').innerHTML = `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${chips}</div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px">
+            <div><div style="font-size:.72rem;color:var(--muted)">Total cobrado</div><div style="font-size:1.3rem;font-weight:800">${_cajaFmt(d.total_general)}</div></div>
+            <div><div style="font-size:.72rem;color:var(--muted)">Efectivo</div><div style="font-size:1.3rem;font-weight:800;color:var(--green)">${_cajaFmt(d.total_efectivo)}</div></div>
+        </div>
+        ${emp ? `<table class="tbl" style="margin:0;font-size:.85rem"><thead><tr><th>Empleado</th><th style="text-align:right">Efectivo</th><th style="text-align:right">Total</th><th style="text-align:right">#</th></tr></thead><tbody>${emp}</tbody></table>` : ''}
+        ${cierreBanner}`;
+    const btn = document.getElementById('arqueoCerrarBtn');
+    if (btn) btn.innerHTML = d.cierre ? '<i class="fas fa-rotate"></i> Re-cerrar' : '<i class="fas fa-lock"></i> Cerrar caja';
+}
+
+function abrirCierre() {
+    if (!_arqueoData) return;
+    const c = _arqueoData.cierre;
+    document.getElementById('mCierreEfectivo').textContent = _cajaFmt(_arqueoData.total_efectivo);
+    document.getElementById('mCierreFondo').value = c ? c.FONDO_INICIAL : '0';
+    document.getElementById('mCierreDeclarado').value = c ? c.EFECTIVO_DECLARADO : '';
+    document.getElementById('mCierreNotas').value = c ? (c.NOTAS || '') : '';
+    document.getElementById('mCierreErr').textContent = '';
+    document.getElementById('mCierreSub').textContent = document.getElementById('arqueoComplejo').selectedOptions[0]?.textContent || '';
+    cierreDif();
+    openModal('modalCierre');
+}
+
+function cierreDif() {
+    const ef = parseFloat(_arqueoData?.total_efectivo || 0);
+    const fondo = parseFloat(document.getElementById('mCierreFondo').value || 0);
+    const declInput = document.getElementById('mCierreDeclarado').value;
+    const el = document.getElementById('mCierreDif');
+    if (declInput === '') { el.innerHTML = ''; return; }
+    const dif = parseFloat(declInput || 0) - (ef + fondo);
+    const col = dif === 0 ? 'var(--green)' : (dif < 0 ? 'var(--red)' : 'var(--orange)');
+    el.innerHTML = `Diferencia: <span style="color:${col}">${dif >= 0 ? '+' : ''}${_cajaFmt(dif)}</span>`;
+}
+
+async function guardarCierre() {
+    const cmp = document.getElementById('arqueoComplejo').value;
+    const fecha = document.getElementById('pagosFecha').value;
+    const decl = document.getElementById('mCierreDeclarado').value;
+    if (decl === '') { document.getElementById('mCierreErr').textContent = 'Ingresá el efectivo contado.'; return; }
+    const btn = document.getElementById('mCierreBtn'); const orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Guardando…';
+    const fd = new FormData();
+    fd.append('action', 'cerrar'); fd.append('complejo_id', cmp); fd.append('fecha', fecha);
+    fd.append('fondo_inicial', document.getElementById('mCierreFondo').value || 0);
+    fd.append('efectivo_declarado', decl);
+    fd.append('notas', document.getElementById('mCierreNotas').value.trim());
+    const j = await fetch(CAJA_API, { method: 'POST', body: fd }).then(r => r.json()).catch(() => null);
+    btn.disabled = false; btn.innerHTML = orig;
+    if (!j?.ok) { document.getElementById('mCierreErr').textContent = j?.msg || 'Error al cerrar la caja.'; return; }
+    closeModal('modalCierre'); toast('Caja cerrada correctamente.', 'ok'); loadArqueo();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -9191,6 +9460,47 @@ function wizVerCliente() {
             <button class="btn btn-ghost" onclick="closeModal('modalPlan')">Cancelar</button>
             <button class="btn btn-primary" id="mPlanBtn" onclick="planesGuardar()">
                 <i class="fas fa-check"></i> Guardar tipo de plan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CIERRE DE CAJA -->
+<div class="modal-overlay" id="modalCierre">
+    <div class="modal" style="max-width:440px">
+        <div class="modal-head">
+            <div class="modal-head-icon b" style="background:rgba(76,217,100,.15);color:var(--green)">
+                <i class="fas fa-cash-register"></i>
+            </div>
+            <div>
+                <h3>Cerrar caja</h3>
+                <p id="mCierreSub">Arqueo del día</p>
+            </div>
+            <button class="modal-close" onclick="closeModal('modalCierre')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:.85rem">
+                Efectivo cobrado (sistema): <strong id="mCierreEfectivo" style="color:var(--green)">—</strong>
+            </div>
+            <div class="form-row">
+                <label class="form-label">Fondo inicial de caja</label>
+                <input type="number" class="form-input" id="mCierreFondo" value="0" min="0" step="0.01" oninput="cierreDif()">
+            </div>
+            <div class="form-row">
+                <label class="form-label">Efectivo contado (físico) <span style="color:var(--red)">*</span></label>
+                <input type="number" class="form-input" id="mCierreDeclarado" placeholder="0" min="0" step="0.01" oninput="cierreDif()">
+            </div>
+            <div class="form-row">
+                <label class="form-label">Notas</label>
+                <textarea class="form-input" id="mCierreNotas" rows="2" placeholder="Observaciones del cierre…" style="resize:vertical"></textarea>
+            </div>
+            <div id="mCierreDif" style="font-size:.9rem;font-weight:700;margin-top:6px"></div>
+            <div id="mCierreErr" class="form-error" style="margin-top:8px"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalCierre')">Cancelar</button>
+            <button class="btn btn-primary" id="mCierreBtn" onclick="guardarCierre()">
+                <i class="fas fa-lock"></i> Confirmar cierre
             </button>
         </div>
     </div>
