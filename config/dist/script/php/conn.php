@@ -2,6 +2,12 @@
 ini_set('display_errors', '0');
 error_reporting(0);
 
+// Zona horaria del negocio: Argentina (UTC-3, sin horario de verano).
+// Se fija explícita para que date()/time()/strtotime() no dependan de la config
+// del server (XAMPP local viene en Europe/Berlin; los hostings suelen estar en UTC),
+// evitando que las validaciones de "fecha/hora pasada" queden corridas.
+date_default_timezone_set('America/Argentina/Buenos_Aires');
+
 /*
  * Credenciales de la base de datos.
  * Prioridad: variables de entorno → config/db.php (gitignoreado) → defaults de dev.
@@ -31,3 +37,8 @@ if (!$link) {
 }
 
 mysqli_set_charset($link, 'utf8mb4');
+
+// Que NOW()/CURDATE() de MySQL coincidan con PHP en hora de Argentina (-03:00).
+// Offset numérico (no nombre de zona) para no depender de las tablas de tz de MySQL,
+// que en hostings compartidos casi nunca están cargadas.
+mysqli_query($link, "SET time_zone = '-03:00'");
